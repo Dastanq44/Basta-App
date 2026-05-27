@@ -3,9 +3,12 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-05-27 — by: Phase 1 prep / foundation cleanup session_
+_Last updated: 2026-05-27 — by: handoff snapshot session_
 
-## Status: PHASE 0 FOUNDATION IN PLACE (Phase 1 route shells stubbed)
+## Status: PHASE 0 FOUNDATION IN PLACE (Phase 1 route shells stubbed) — handoff checkpoint
+
+**Latest checks:** `npm run typecheck` → green ✅ · `npm run lint` → green ✅ · tests → none
+configured (W-007). Working tree clean; pushed to `origin/mvp`. Phase 1 auth not started.
 
 The Expo + TypeScript app skeleton exists and **passes `npm run typecheck` + `npm run lint`**.
 Foundation only — **no auth, groups, challenges, proof upload, or Supabase migrations** yet.

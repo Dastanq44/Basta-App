@@ -21,6 +21,56 @@
 
 ---
 
+## 2026-05-27 — HANDOFF SNAPSHOT (ready for next Claude; pre-Phase-1)
+
+> Clean checkpoint. No new implementation this session — verification + handoff only.
+
+**Completed work (project to date):**
+- Shared-memory/handoff system, architecture proposal (`docs/architecture/*`), two-Claude shared
+  config (`.claude/`, `.githooks/pre-commit`, `scripts/bootstrap-claude.md`).
+- **Phase 0 foundation** (`b004557`): Expo SDK 52 + expo-router + TS skeleton — navigation shell,
+  design tokens + UI primitives, domain entities, engine-agnostic offline skeleton, service
+  interfaces, feature index skeletons, ESLint import boundaries. tsc + lint green.
+- **Phase 1 prep** (`86bbcd0`): settled **D-007 = Expo SQLite + MMKV** (WatermelonDB deferred);
+  fixed `Card` to `StyleSheet.hairlineWidth`; added 5 Phase 1 route shells (auth + onboarding).
+
+**Changed files (latest unpushed commit `86bbcd0`):** 14 files —
+`app/(auth)/{sign-in,sign-up,verify-email}.tsx`, `app/(onboarding)/{profile-setup,join-or-create-group}.tsx`,
+`src/shared/ui/Card.tsx`, `src/offline/db/index.ts`, `src/offline/queue/types.ts`, and docs
+(ARCHITECTURE, OFFLINE_SYNC, DECISIONS, CURRENT_STATE, TASKS, HANDOFF). This handoff commit also
+touches CURRENT_STATE/TASKS/BUGS_AND_WARNINGS/HANDOFF.
+
+**Unfinished work:** No code is half-written. Phase 1 auth is entirely unstarted (T-020–T-023).
+The `(auth)`/`(onboarding)` route files are placeholders with no logic and no `_layout.tsx`.
+`useSessionState()` is a stub returning `signedIn`. Service SDKs (Sentry/analytics) are no-op
+interfaces awaiting real wiring (T-012).
+
+**Next recommended task:** Begin **Phase 1 auth (T-020)** — but FIRST create the Supabase project +
+credentials (put them in `.env`; only `EXPO_PUBLIC_*` ship in the bundle). Then: email/PKCE auth in
+`src/features/auth` (session hook + `expo-secure-store` tokens), terms gate (T-021), profile setup
+(T-022), group create/join (T-023). Wire the real session into `useSessionState()` and add redirects
++ group `_layout`s.
+
+**Known issues:** No test harness configured yet (see W-007 / T-060). `(auth)`/`(onboarding)` lack
+`_layout.tsx` (they render under the root Stack for now). `expo-env.d.ts` is gitignored — a fresh
+clone may warn on typecheck until `npx expo start` regenerates it.
+
+**Tests run:** `npm run typecheck` → exit 0 ✅ · `npm run lint` → exit 0 ✅.
+**Tests NOT run:** unit/component/E2E — **none exist; no `test` script configured** (T-060, deferred
+to Phase 5 but a Jest harness could land earlier). Maestro offline E2E is the must-have later.
+
+**Warnings for the next Claude:**
+- Run `npm install` after pulling — `node_modules` is gitignored.
+- Enable the secret-scan hook once per clone: `git config core.hooksPath .githooks` (NOT pulled).
+- Respect ESLint import boundaries — a `no-restricted-imports` error is intentional (`.eslintrc.js`).
+- Do NOT build post-MVP features (AI, Explore, global leaderboard, chat, XP) — DECISIONS D-006.
+- Keep streaks/leaderboards/verification/day-boundary server-authoritative (D-003).
+- New account? Follow `scripts/bootstrap-claude.md` and reload the window so repo skills register.
+
+**Branch / commit:** `mvp` @ `86bbcd0` + this handoff commit. Pushed to `origin/mvp` this session.
+
+**Decisions changed this session:** none (D-007 was settled in the prior commit `86bbcd0`).
+
 ## 2026-05-27 — Phase 1 prep / foundation cleanup
 **Did:**
 - **Settled D-007:** local persistence = **Expo SQLite (relational) + MMKV (key/value)**;

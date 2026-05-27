@@ -56,6 +56,14 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
 - **Follow-up:** a machine-level pre-commit secret-scan hook is queued as `TASKS.md` T-014 (add
   once the JS toolchain exists — gitleaks via husky/lint-staged).
 
+## [OPEN] W-007 — No test harness configured yet
+- **Date:** 2026-05-27 · **Area:** testing / CI
+- **Trap:** There is no `test` script and no test runner installed. `npm run typecheck` and
+  `npm run lint` are the only automated checks today — both green. Do not claim "tests pass"; there
+  are none. A Jest + React Native Testing Library setup (and Maestro for the offline-submit E2E) is
+  planned (T-060, Phase 5) but could land earlier. The offline-submit→reconnect E2E is the one that
+  protects the product's core promise — prioritize it once the queue exists (Phase 2).
+
 ---
 
 ## Bugs

@@ -62,7 +62,7 @@
 ### Quality & release
 | ID | Status | Task |
 |----|--------|------|
-| T-060 | TODO | Unit/component tests; offline-submit→reconnect E2E (Maestro) |
+| T-060 | TODO | Unit/component tests; offline-submit→reconnect E2E (Maestro). No test runner exists yet (W-007) — consider landing a Jest harness before Phase 5. |
 | T-061 | TODO | CI (typecheck/lint/test) + EAS build/submit pipeline; secrets via EAS/Actions |
 | T-062 | TODO | Store assets, privacy/data-safety forms, beta (TestFlight / Play Internal) |
 
