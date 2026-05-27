@@ -1,0 +1,97 @@
+# ──────────────────────────────────────────────────────────────
+# Basta — React Native / Expo + Supabase .gitignore
+# ──────────────────────────────────────────────────────────────
+
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# Expo
+.expo/
+.expo-shared/
+dist/
+web-build/
+expo-env.d.ts
+
+# EAS
+.easignore
+
+# Native — iOS
+ios/Pods/
+ios/build/
+ios/.xcode.env.local
+*.xcworkspace/xcuserdata/
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+
+# Native — Android
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+*.keystore
+!debug.keystore
+android/app/release/
+
+# Metro / React Native
+.metro-health-check*
+.haste_cache/
+*.jsbundle
+
+# Environment & secrets (NEVER commit) — see DECISIONS.md D-001
+.env
+.env.*
+!.env.example
+google-services.json
+GoogleService-Info.plist
+
+# Supabase (local dev)
+supabase/.branches/
+supabase/.temp/
+supabase/.env
+
+# Local offline databases (WatermelonDB / SQLite / MMKV)
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Testing / coverage
+coverage/
+.nyc_output/
+
+# Logs & debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.log
+
+# TypeScript / build caches
+*.tsbuildinfo
+.cache/
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+
+# Editor / IDE
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*.swo
+
+# Temporary
+*.orig
+*.tmp

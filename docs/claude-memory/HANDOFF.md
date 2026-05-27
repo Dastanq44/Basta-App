@@ -1,0 +1,47 @@
+# HANDOFF.md
+
+> **Session-to-session relay log.** The most important file for swapping between the two Claude
+> accounts. APPEND a new entry at the TOP at the end of every session. Never delete history.
+
+## How to use this file
+- **Starting a session:** read the latest entry (top). It tells you exactly where to pick up.
+- **Ending a session:** add a new entry at the top using the template below. Be concrete. Name
+  files, branches, commit hashes, and the exact next action.
+
+### Entry template
+```
+## YYYY-MM-DD — <account / session label>
+**Did:** <what got done this session>
+**In progress:** <anything half-finished + where it stands>
+**Next up:** <the precise next action(s) for whoever picks up>
+**Blockers / decisions needed:** <anything requiring the user or another account>
+**Branch / commit:** <branch name @ short hash, or "no repo yet">
+**Notes for next session:** <traps, context, things not obvious from the code>
+```
+
+---
+
+## 2026-05-27 — Setup session (memory/handoff system)
+**Did:** Created the shared-memory & handoff system: `CLAUDE.md`, `AGENTS.md`, and the eight
+`docs/claude-memory/*` files (PROJECT_BRIEF, CURRENT_STATE, HANDOFF, DECISIONS, TASKS, FILE_MAP,
+BUGS_AND_WARNINGS). Confirmed the working directory is empty and **not a git repo**. Locked the
+stack and core architecture decisions in `DECISIONS.md`.
+
+**In progress:** Nothing in code. System docs are complete.
+
+**Next up (do these in order, after the user approves starting implementation):**
+1. `T-001` — `git init`, add a sensible `.gitignore` (Node/Expo/RN), make the first commit.
+2. `T-002` — Scaffold the Expo + TypeScript app (Expo Dev Build, expo-router) and the
+   feature-folder structure per `DECISIONS.md` D-002 and `FILE_MAP.md`.
+3. `T-003` — Create the Supabase project; define the initial schema + RLS (groups, memberships,
+   challenges, submissions, verifications) — server-authoritative scoring stubs.
+
+**Blockers / decisions needed:**
+- User must confirm they want to begin implementation (this session was explicitly docs-only).
+- Supabase project + credentials need to be created by the user (or with their go-ahead).
+
+**Branch / commit:** no repo yet.
+
+**Notes for next session:** Do NOT relitigate the stack — it's locked in `DECISIONS.md` D-001.
+Read `PROJECT_BRIEF.md` for scope guardrails (don't build excluded features). Keep streaks &
+leaderboards server-side from day one — retrofitting that later is expensive.
