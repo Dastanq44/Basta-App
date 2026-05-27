@@ -11,7 +11,7 @@
 | T-001 | DONE | setup | `git init` + `.gitignore` + first commit; remote + `mvp` branch | git live on `mvp` |
 | T-004 | DONE | mvp | Architecture proposal (`docs/architecture/*`) | Proposal only — not implemented |
 | T-015 | TODO | setup | Settle D-007: local persistence engine (WatermelonDB vs SQLite+MMKV) | Decide before Phase 0 DB work |
-| T-002 | TODO | mvp | Scaffold Expo + TS app (expo-router) + feature folders | Per D-002 / FILE_MAP |
+| T-002 | DONE | mvp | Scaffold Expo + TS app (expo-router) + feature folders | Phase 0 foundation; tsc+lint green |
 | T-003 | TODO | mvp | Supabase project + apply schema + RLS | Use SUPABASE_SCHEMA_DRAFT; **not applied yet** |
 
 ## Backlog — MVP (grouped)
@@ -19,10 +19,10 @@
 ### Foundations `[setup]/[mvp]`
 | ID | Status | Task |
 |----|--------|------|
-| T-010 | TODO | Design system: token module + variant primitives (Button, Text, Card, SyncBadge) |
-| T-011 | TODO | ESLint import-boundary rules (`import/no-restricted-paths`) |
-| T-012 | TODO | Sentry (crash) + analytics (typed events) wiring |
-| T-013 | TODO | Theming (light/dark) + safe areas + accessibility baseline |
+| T-010 | DONE | Design system: token module + variant primitives (Text, Button, Card, Screen). SyncBadge deferred to Phase 2 (needs the queue). |
+| T-011 | DONE | Import-boundary rules — used core `no-restricted-imports` patterns (not `import/no-restricted-paths`, avoids resolver dep). Caught a real entities→offline violation during setup. |
+| T-012 | TODO | Sentry (crash) + analytics (typed events) **wiring**. No-op interfaces (`src/services/*`) already exist; wire real SDKs here. |
+| T-013 | DONE | Theming (light/dark via tokens), safe areas (Screen), accessibility baseline (≥44pt targets, roles in primitives). |
 | T-014 | DONE | Pre-commit secret-scan hook in `.githooks/pre-commit` (gitleaks if present, else regex) — enforces W-006. Enable per clone: `git config core.hooksPath .githooks`. Husky/lint-staged optional once JS toolchain exists. |
 | T-016 | DONE | Two-Claude shared config: repo `.claude/skills/mobile-app-architect`, `.claude/settings.json`, `scripts/bootstrap-claude.md` |
 

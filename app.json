@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "Basta",
+    "slug": "basta",
+    "version": "0.0.1",
+    "orientation": "portrait",
+    "scheme": "basta",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "app.basta.mobile"
+    },
+    "android": {
+      "package": "app.basta.mobile"
+    },
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

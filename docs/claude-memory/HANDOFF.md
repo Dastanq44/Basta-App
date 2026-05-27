@@ -21,6 +21,43 @@
 
 ---
 
+## 2026-05-27 — Phase 0 foundation session
+**Did:** Implemented the **Phase 0 foundation** (skeleton only — no features). Expo SDK 52 +
+expo-router v4 + TypeScript.
+- Config: `package.json`, `tsconfig.json` (`@/*`→`src/*`, strict), `app.json` (expo-router +
+  typedRoutes), `babel.config.js`, `.eslintrc.js` (layered import boundaries via core
+  `no-restricted-imports`), `.env.example`.
+- Navigation shell: `app/_layout` (SafeAreaProvider + QueryClientProvider + ThemeProvider + Stack),
+  `app/(tabs)` (Today/Challenges/Groups/Profile), `app/challenge/[id]`, `app/+not-found`.
+- Design system: `src/shared/ui` — semantic tokens (light/dark), `ThemeProvider`, primitives
+  (Text/Button/Card/Screen) with a11y baked in.
+- Domain: `src/entities` (user, group, challenge, submission, verification + mappers/). `SyncStatus`
+  lives in entities (domain owns lifecycle); offline imports it.
+- Offline: `src/offline` engine-agnostic skeleton (db interface, queue types + backoff, upload
+  interface). **No engine chosen — D-007 still PENDING.**
+- Services: `src/services` analytics (typed events)/crash/notifications — no-op interfaces.
+- Features: `src/features/<9 domains>` index.ts public-surface skeletons.
+- Navigation helpers: `src/navigation` routes/guards/linking.
+- **Ran `npm install` (1131 pkgs), `npm run typecheck` → green, `npm run lint` → green.** Lint
+  caught a real `entities → @/offline` boundary violation; fixed by moving `SyncStatus` into entities.
+
+**In progress:** Nothing half-done. Foundation is complete and green.
+
+**Next up:** Settle **D-007** (T-015) before building `src/offline/db`. Then Phase 1 auth
+(T-020–T-023). Phase 2 (proof + queue, critical path) is where `SyncBadge` and the queue processor
+land. Wire real Sentry/analytics SDKs into the existing `src/services` interfaces (T-012).
+
+**Blockers / decisions needed:** D-007 (local DB engine). Supabase project/credentials still need
+creating before Phase 1 auth can talk to a backend.
+
+**Branch / commit:** `mvp` + `chore: add mobile app foundation`.
+
+**Notes for next session:** `node_modules` is gitignored — run `npm install` after pulling.
+`expo-env.d.ts` is gitignored but a local copy exists for tsc; `npx expo start` regenerates it.
+Import boundaries are enforced by ESLint — if you get a `no-restricted-imports` error, respect the
+layer (it's intentional, see `.eslintrc.js`). The app shell currently shows tabs unconditionally
+because `useSessionState()` is a placeholder returning `signedIn` (real auth = Phase 1).
+
 ## 2026-05-27 — Two-Claude shared-config session
 **Did:** Set up shared configuration so both Claude accounts are interchangeable from the repo:
 - Vendored the project skill into `.claude/skills/mobile-app-architect/` (auto-loads; no per-account install).

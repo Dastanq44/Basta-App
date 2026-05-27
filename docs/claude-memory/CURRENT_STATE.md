@@ -3,12 +3,18 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-05-27 — by: architecture-proposal session_
+_Last updated: 2026-05-27 — by: Phase 0 foundation session_
 
-## Status: PRE-IMPLEMENTATION (architecture proposal saved)
+## Status: PHASE 0 FOUNDATION IN PLACE
 
-The shared-memory system and the **architecture proposal** are in place. **App implementation has
-NOT started; no Supabase migrations applied.**
+The Expo + TypeScript app skeleton exists and **passes `npm run typecheck` + `npm run lint`**.
+Foundation only — **no auth, groups, challenges, proof upload, or Supabase migrations** yet.
+
+## How to run
+- `npm install` (1131 pkgs; node_modules gitignored). Then `npm start` (Expo dev server).
+- `npm run typecheck` (tsc --noEmit) and `npm run lint` (eslint + import boundaries) — both green.
+- `expo-env.d.ts` is gitignored; Expo regenerates it on `npx expo start`. A copy was created so a
+  fresh checkout can typecheck immediately.
 
 ## Repository
 - **Git:** ✅ Initialized (branch `main`); local identity set (repo-local).
@@ -27,7 +33,17 @@ NOT started; no Supabase migrations applied.**
   permissions), `.claude/skills/mobile-app-architect/` (project skill), `.githooks/pre-commit`
   (secret scanner — enable per clone with `git config core.hooksPath .githooks`),
   `scripts/bootstrap-claude.md` (Claude 2 onboarding).
-- _No app code, no `package.json`, no Expo project yet._
+- **App foundation (Phase 0):** `package.json`, `tsconfig.json`, `app.json` (expo-router +
+  typedRoutes), `babel.config.js`, `.eslintrc.js` (import boundaries), `.env.example`.
+  - `app/` — navigation shell: root `_layout` (providers), `(tabs)/` (Today/Challenges/Groups/
+    Profile), `challenge/[id]`, `+not-found`.
+  - `src/shared/ui/` — theme tokens + `ThemeProvider` + primitives (Text, Button, Card, Screen).
+  - `src/shared/lib/` — `queryClient`, `env`.
+  - `src/entities/` — domain models (user, group, challenge, submission, verification) + mappers/.
+  - `src/offline/` — engine-agnostic skeleton (db, queue types, upload interface) — **D-007 pending**.
+  - `src/services/` — analytics (typed events), crash, notifications — no-op interfaces.
+  - `src/features/<9 domains>/` — `index.ts` public-surface skeletons.
+  - `src/navigation/` — `routes` (typed helpers), `guards`, `linking`.
 
 ## Per-clone setup (each Claude account must do once)
 - `git config core.hooksPath .githooks` to activate the secret-scan hook.
