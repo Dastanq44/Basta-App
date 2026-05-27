@@ -47,14 +47,39 @@ Date · Status · Decision · Why · Consequences
 
 ## D-004 — Offline-first with a durable mutation/upload queue   [Accepted]
 - **Date:** 2026-05-27
-- **Decision:** Local SQLite (WatermelonDB) + MMKV for KV. Proof drafts + captured media are saved
-  to the app sandbox at capture time, before any network attempt. Writes flow through a durable,
-  persisted mutation queue with exponential backoff + jitter and client UUID idempotency keys.
-  Media uses **tus** resumable uploads.
+- **Decision:** Proof drafts + captured media are saved to the app sandbox at capture time, before
+  any network attempt. Writes flow through a durable, persisted mutation queue with exponential
+  backoff + jitter and client UUID idempotency keys. This offline drafts + upload queue is the
+  **MVP critical path.** _(The specific local persistence engine and the upload mechanism are
+  separate decisions — see D-007 and D-008; this decision no longer hard-commits WatermelonDB or
+  tus.)_
 - **Why:** Users capture proof in elevators/tunnels. We must never lose user-generated content to
   connectivity, and retries must not double-submit.
 - **Consequences:** A unique constraint `(challenge, user, day)` guards double submission; the
   unique-violation error is treated as success and the queue job is dropped.
+
+## D-007 — Local persistence engine: WatermelonDB vs SQLite + MMKV   [PENDING — decide before Phase 0 DB work]
+- **Date:** 2026-05-27
+- **Status:** Open. Decide deliberately before building the `src/offline/db` layer; do not default.
+- **Options:**
+  - **WatermelonDB** — reactive ORM over SQLite; observables drive UI; scales to large lists and
+    gives reactive queries out of the box. Cost: heavier dependency, schema/migration ceremony,
+    learning curve.
+  - **SQLite (op-sqlite / expo-sqlite) + MMKV** — raw/lightly-wrapped SQL plus MMKV for KV. Simpler
+    mental model, fewer dependencies, full SQL control. Cost: you hand-roll reactivity/sync glue.
+- **Lean toward:** **SQLite + MMKV** for the MVP — list sizes are bounded (≤50 members/group), so
+  the simpler stack likely wins; revisit WatermelonDB if reactive queries / large-list perf become
+  a real need. **Not locked — confirm with the team first.** Full comparison in
+  `docs/architecture/OFFLINE_SYNC.md`.
+
+## D-008 — Media upload: standard Supabase Storage first, tus/resumable deferred   [Accepted]
+- **Date:** 2026-05-27
+- **Decision:** Use **standard Supabase Storage upload** for MVP photo proof. **Defer
+  tus/resumable uploads** until video proof (larger files on flaky networks) actually needs them.
+- **Why:** Photos are small; resumable adds client setup + server config complexity not justified
+  by the photo-first MVP scope.
+- **Consequences:** The upload layer (`src/offline/upload`) is abstracted behind the queue so the
+  implementation can be swapped to tus later without touching feature code.
 
 ## D-005 — Mobile-first UI; shadcn as a mindset, not a runtime dep   [Accepted]
 - **Date:** 2026-05-27

@@ -6,16 +6,25 @@
 ## Currently on disk
 ```
 Basta_App/
+├── .gitignore                    # RN/Expo + Supabase ignores (hardened for secrets)
+├── README.md                     # short project description
 ├── CLAUDE.md                     # operating manual (read first)
 ├── AGENTS.md                     # condensed agent rules
-└── docs/claude-memory/
-    ├── PROJECT_BRIEF.md          # what/why + MVP scope
-    ├── CURRENT_STATE.md          # live repo snapshot
-    ├── HANDOFF.md                # session-to-session relay log
-    ├── DECISIONS.md              # locked architecture decisions (ADR)
-    ├── TASKS.md                  # shared task board
-    ├── FILE_MAP.md               # this file
-    └── BUGS_AND_WARNINGS.md      # known issues & traps
+└── docs/
+    ├── architecture/             # ARCHITECTURE PROPOSAL (pre-implementation, nothing applied)
+    │   ├── ARCHITECTURE.md       # umbrella: overview, folder structure, MVP phases
+    │   ├── DATA_MODEL.md         # entities + ER diagram
+    │   ├── OFFLINE_SYNC.md       # sync state machine, queue, D-007/D-008 notes
+    │   ├── NAVIGATION.md         # nav flows (Today tab; Explore = post-MVP)
+    │   └── SUPABASE_SCHEMA_DRAFT.md  # DRAFT SQL — DO NOT APPLY YET
+    └── claude-memory/
+        ├── PROJECT_BRIEF.md      # what/why + MVP scope
+        ├── CURRENT_STATE.md      # live repo snapshot
+        ├── HANDOFF.md            # session-to-session relay log
+        ├── DECISIONS.md          # architecture decisions (ADR)
+        ├── TASKS.md              # shared task board
+        ├── FILE_MAP.md           # this file
+        └── BUGS_AND_WARNINGS.md  # known issues & traps
 ```
 
 ## Planned structure (target — per DECISIONS.md D-002)

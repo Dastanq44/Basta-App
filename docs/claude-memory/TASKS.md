@@ -8,9 +8,11 @@
 | ID | Status | Phase | Task | Notes |
 |----|--------|-------|------|-------|
 | T-000 | DONE | setup | Create shared-memory & handoff system | This system of files |
-| T-001 | TODO | setup | `git init` + `.gitignore` (Node/Expo/RN) + first commit | First code action |
+| T-001 | DONE | setup | `git init` + `.gitignore` + first commit; remote + `mvp` branch | git live on `mvp` |
+| T-004 | DONE | mvp | Architecture proposal (`docs/architecture/*`) | Proposal only — not implemented |
+| T-015 | TODO | setup | Settle D-007: local persistence engine (WatermelonDB vs SQLite+MMKV) | Decide before Phase 0 DB work |
 | T-002 | TODO | mvp | Scaffold Expo + TS app (expo-router) + feature folders | Per D-002 / FILE_MAP |
-| T-003 | TODO | mvp | Supabase project + initial schema + RLS | Server-authoritative stubs |
+| T-003 | TODO | mvp | Supabase project + apply schema + RLS | Use SUPABASE_SCHEMA_DRAFT; **not applied yet** |
 
 ## Backlog — MVP (grouped)
 

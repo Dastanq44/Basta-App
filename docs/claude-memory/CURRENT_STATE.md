@@ -3,22 +3,31 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-05-27 — by: setup session (memory/handoff system creation)_
+_Last updated: 2026-05-27 — by: architecture-proposal session_
 
-## Status: PRE-IMPLEMENTATION
+## Status: PRE-IMPLEMENTATION (architecture proposal saved)
 
-The project memory & handoff system has been created. **App implementation has NOT started.**
+The shared-memory system and the **architecture proposal** are in place. **App implementation has
+NOT started; no Supabase migrations applied.**
 
 ## Repository
-- **Git:** ❌ Not yet initialized (`git init` is the first task — see `TASKS.md` T-001).
-- **Branch:** _n/a (no repo yet)_
-- **Last commit:** _n/a_
+- **Git:** ✅ Initialized (branch `main`); local identity set (repo-local).
+- **Current branch:** `mvp` (feature branch; pushed to `origin/mvp`).
+- **Remote:** `origin` → https://github.com/Dastanq44/Basta-App (`mvp` pushed; `main` local only).
+- **Recent commits (mvp):** `fa77c05` initial setup → `66b813f` secrets hardening → + this
+  session's `docs: add MVP architecture proposal` (see `git log`).
 - **Working dir:** `c:\Users\Дастан\Documents\Basta_App`
 
 ## What exists
-- `CLAUDE.md`, `AGENTS.md` — operating rules.
-- `docs/claude-memory/*` — this shared-memory system (8 files).
+- `.gitignore` (hardened for secrets), `README.md`, `CLAUDE.md`, `AGENTS.md`.
+- `docs/claude-memory/*` — shared-memory system (8 files).
+- `docs/architecture/*` — **architecture proposal** (ARCHITECTURE, DATA_MODEL, OFFLINE_SYNC,
+  NAVIGATION, SUPABASE_SCHEMA_DRAFT). Proposal only — no code, no applied migrations.
 - _No app code, no `package.json`, no Expo project yet._
+
+## Open decisions to settle before/early in Phase 0
+- **D-007** — local persistence engine (WatermelonDB vs SQLite + MMKV): PENDING.
+- **D-008** — media upload: standard Supabase Storage first; tus/resumable deferred (accepted).
 
 ## What runs
 - Nothing yet — there is no app to run.

@@ -21,6 +21,42 @@
 
 ---
 
+## 2026-05-27 — Architecture-proposal session
+**Did:**
+- Set up Git: `git init` (branch `main`), `.gitignore`, first commit `fa77c05`; hardened
+  `.gitignore` for secrets + added a standing "never commit secrets / warn before staging" rule to
+  `CLAUDE.md` and `BUGS_AND_WARNINGS.md` (W-006), commit `66b813f`. Added remote `origin`
+  (Dastanq44/Basta-App) and pushed branch `mvp`.
+- Wrote the **architecture proposal** under `docs/architecture/`: `ARCHITECTURE.md`,
+  `DATA_MODEL.md`, `OFFLINE_SYNC.md`, `NAVIGATION.md`, `SUPABASE_SCHEMA_DRAFT.md`.
+- Applied scope adjustments: renamed the tab **"Today/Feed" → "Today"**; added explicit
+  **Explore/public feed = POST-MVP** notes; added **D-007** (local DB engine: WatermelonDB vs
+  SQLite+MMKV — PENDING) and **D-008** (media upload: standard Supabase Storage first, tus
+  deferred) to `DECISIONS.md`; softened D-004 accordingly.
+- Updated memory files: `FILE_MAP.md`, `CURRENT_STATE.md`, `TASKS.md`, `DECISIONS.md`.
+
+**In progress:** Nothing in code. Proposal is complete and committed (`docs: add MVP architecture
+proposal`).
+
+**Next up (only after the user approves starting implementation):**
+1. `T-015` — settle **D-007** (local persistence engine). Lean: SQLite + MMKV; confirm with team.
+2. `T-002` — scaffold the Expo + TypeScript app (expo-router) + feature folders per D-002.
+3. `T-003` — create the Supabase project and apply the (reviewed) schema + RLS. **Schema draft is
+   NOT applied yet** — harden RLS + add pgTAP tests first.
+
+**Blockers / decisions needed:**
+- User must confirm starting implementation (this session was docs-only).
+- D-007 needs a team decision before building `src/offline/db`.
+- Supabase project + credentials need creating (by the user / with go-ahead). No secrets in repo.
+
+**Branch / commit:** `mvp` @ `66b813f` + this session's `docs: add MVP architecture proposal`
+(ahead of `origin/mvp`; not pushed this session unless asked).
+
+**Notes for next session:** Read `docs/architecture/ARCHITECTURE.md` first — it links the rest.
+Keep streaks/leaderboards/day-boundary/verification server-authoritative (D-003). Offline drafts +
+upload queue is the critical path (D-004). Do NOT build Explore/public feed (post-MVP, D-006). Do
+NOT apply the Supabase schema draft as-is — RLS is a sketch.
+
 ## 2026-05-27 — Setup session (memory/handoff system)
 **Did:** Created the shared-memory & handoff system: `CLAUDE.md`, `AGENTS.md`, and the eight
 `docs/claude-memory/*` files (PROJECT_BRIEF, CURRENT_STATE, HANDOFF, DECISIONS, TASKS, FILE_MAP,
