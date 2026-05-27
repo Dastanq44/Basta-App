@@ -10,6 +10,13 @@ Basta_App/
 ├── README.md                     # short project description
 ├── CLAUDE.md                     # operating manual (read first)
 ├── AGENTS.md                     # condensed agent rules
+├── .claude/                      # SHARED Claude config (travels via repo)
+│   ├── settings.json             # model=opus, permissions allow/ask/deny
+│   └── skills/mobile-app-architect/   # project skill (auto-loads)
+├── .githooks/
+│   └── pre-commit                # secret-scan hook (W-006/T-014); enable: core.hooksPath .githooks
+├── scripts/
+│   └── bootstrap-claude.md       # one-time setup for a new Claude account ("Claude 2")
 └── docs/
     ├── architecture/             # ARCHITECTURE PROPOSAL (pre-implementation, nothing applied)
     │   ├── ARCHITECTURE.md       # umbrella: overview, folder structure, MVP phases

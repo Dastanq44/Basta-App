@@ -23,7 +23,15 @@ NOT started; no Supabase migrations applied.**
 - `docs/claude-memory/*` — shared-memory system (8 files).
 - `docs/architecture/*` — **architecture proposal** (ARCHITECTURE, DATA_MODEL, OFFLINE_SYNC,
   NAVIGATION, SUPABASE_SCHEMA_DRAFT). Proposal only — no code, no applied migrations.
+- **Shared Claude config (two-agent workflow):** `.claude/settings.json` (model=opus,
+  permissions), `.claude/skills/mobile-app-architect/` (project skill), `.githooks/pre-commit`
+  (secret scanner — enable per clone with `git config core.hooksPath .githooks`),
+  `scripts/bootstrap-claude.md` (Claude 2 onboarding).
 - _No app code, no `package.json`, no Expo project yet._
+
+## Per-clone setup (each Claude account must do once)
+- `git config core.hooksPath .githooks` to activate the secret-scan hook.
+- New accounts: follow `scripts/bootstrap-claude.md` (install shared skills, set identity).
 
 ## Open decisions to settle before/early in Phase 0
 - **D-007** — local persistence engine (WatermelonDB vs SQLite + MMKV): PENDING.

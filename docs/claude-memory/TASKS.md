@@ -23,7 +23,8 @@
 | T-011 | TODO | ESLint import-boundary rules (`import/no-restricted-paths`) |
 | T-012 | TODO | Sentry (crash) + analytics (typed events) wiring |
 | T-013 | TODO | Theming (light/dark) + safe areas + accessibility baseline |
-| T-014 | TODO | Pre-commit secret-scan hook (gitleaks via husky/lint-staged) — enforces W-006 |
+| T-014 | DONE | Pre-commit secret-scan hook in `.githooks/pre-commit` (gitleaks if present, else regex) — enforces W-006. Enable per clone: `git config core.hooksPath .githooks`. Husky/lint-staged optional once JS toolchain exists. |
+| T-016 | DONE | Two-Claude shared config: repo `.claude/skills/mobile-app-architect`, `.claude/settings.json`, `scripts/bootstrap-claude.md` |
 
 ### Auth & onboarding
 | ID | Status | Task |

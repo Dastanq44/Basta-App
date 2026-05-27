@@ -9,6 +9,13 @@ There is **no shared private chat memory between them.** The files under
 source of truth, keep them current, and never assume the other account "remembers" something
 that isn't written down.
 
+> **What is shared vs. account-local.** Shared = everything in this repo (these docs, plus
+> `.claude/settings.json` and the `mobile-app-architect` skill in `.claude/skills/`). **NOT shared**
+> = each account's private chat memory, its personal auto-memory (`~/.claude/projects/.../memory/`),
+> and account-local skills installed under `~/.claude/skills/`. If you are a freshly set-up account,
+> run [`scripts/bootstrap-claude.md`](scripts/bootstrap-claude.md) first to match the other Claude
+> (enable the git hooks, install the shared skills, match settings/identity).
+
 ---
 
 ## 🛑 Start-of-session checklist (do this every time, in order)

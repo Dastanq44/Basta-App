@@ -1,0 +1,47 @@
+#!/bin/sh
+# Basta pre-commit secret scanner (enforces W-006 / TASKS T-014).
+# Blocks commits that add real-looking secrets or sensitive files.
+# Runs on Windows too — Git for Windows executes hooks via its bundled sh.
+#
+# Enable once per clone:   git config core.hooksPath .githooks
+# Prefer gitleaks if installed; otherwise fall back to a high-signal regex scan.
+
+set -e
+
+# 1) Block sensitive file NAMES from being added (backstop to .gitignore).
+blocked_files=$(git diff --cached --name-only --diff-filter=A | grep -iE \
+  '(^|/)\.env($|\.)|\.(pem|key|p12|pfx|jks|keystore|mobileprovision|cer|crt|der)$|(^|/)(id_rsa|id_ed25519)|google-services\.json|GoogleService-Info\.plist' \
+  | grep -viE '\.env\.example$' || true)
+if [ -n "$blocked_files" ]; then
+  echo "✖ pre-commit: refusing to commit sensitive file(s):"
+  echo "$blocked_files" | sed 's/^/    /'
+  echo "  If this is intentional and safe, bypass with: git commit --no-verify"
+  exit 1
+fi
+
+# 2) Prefer gitleaks for staged-content scanning if available.
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks protect --staged --redact --no-banner || {
+    echo "✖ pre-commit: gitleaks flagged a potential secret. Review above."
+    exit 1
+  }
+  exit 0
+fi
+
+# 3) Fallback: high-signal regex scan of ADDED lines only.
+#    High-signal on purpose — matches real key/token shapes, not the word "secret",
+#    so documentation about secrets (CLAUDE.md, BUGS_AND_WARNINGS.md) is not blocked.
+#    Exclude this hook itself: it legitimately contains the detection patterns.
+added=$(git diff --cached -U0 --no-color -- . ':(exclude).githooks/pre-commit' \
+  | grep -E '^\+' | grep -vE '^\+\+\+' || true)
+hits=$(printf '%s\n' "$added" | grep -nE \
+  'sk_live_[0-9A-Za-z]{16,}|service_role|eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|AKIA[0-9A-Z]{16}|gh[pousr]_[0-9A-Za-z]{30,}|xox[baprs]-[0-9A-Za-z-]{10,}' \
+  || true)
+if [ -n "$hits" ]; then
+  echo "✖ pre-commit: possible secret value in staged changes:"
+  printf '%s\n' "$hits" | sed 's/^/    /'
+  echo "  Remove the secret (use env vars / Supabase Edge Functions). To override: git commit --no-verify"
+  exit 1
+fi
+
+exit 0

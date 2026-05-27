@@ -21,6 +21,31 @@
 
 ---
 
+## 2026-05-27 — Two-Claude shared-config session
+**Did:** Set up shared configuration so both Claude accounts are interchangeable from the repo:
+- Vendored the project skill into `.claude/skills/mobile-app-architect/` (auto-loads; no per-account install).
+- Added `.claude/settings.json` (model=opus; permissions allow/ask/deny incl. deny-read on secret files).
+- Added `.githooks/pre-commit` secret scanner (gitleaks if present, else high-signal regex) and ran
+  `git config core.hooksPath .githooks`; smoke-tested — it blocks a fake `sk_live_…`. Marks **T-014 DONE**.
+- Added `scripts/bootstrap-claude.md` (one-time setup for a new "Claude 2": enable hooks, install
+  shared third-party skills, match settings/identity).
+- Added a "shared vs account-local" caveat to `CLAUDE.md`. Updated `FILE_MAP`, `CURRENT_STATE`, `TASKS`.
+
+**In progress:** Nothing in code.
+
+**Next up (only after user approves implementation):** unchanged from prior entry — T-015 (settle
+D-007 local DB engine), then T-002 (scaffold Expo app), then T-003 (Supabase schema, not applied yet).
+
+**Blockers / decisions needed:** Each clone must run `git config core.hooksPath .githooks` once
+(not auto — git stores hooksPath locally). A brand-new Claude account must run
+`scripts/bootstrap-claude.md` to install the third-party skills (those are NOT vendored).
+
+**Branch / commit:** `mvp` + this session's `chore: shared Claude config for two-agent workflow`.
+
+**Notes for next session:** The git hook only catches secrets via the `core.hooksPath` config —
+verify it's set in your clone (`git config core.hooksPath` → `.githooks`). The behavioral W-006 rule
+still applies as the primary control; the hook is the backstop.
+
 ## 2026-05-27 — Architecture-proposal session
 **Did:**
 - Set up Git: `git init` (branch `main`), `.gitignore`, first commit `fa77c05`; hardened
