@@ -64,6 +64,16 @@ Update the handoff files so the next account can continue seamlessly:
 - Keep **streaks and leaderboards server-authoritative.** The client is the source of truth ONLY
   for drafts and the offline upload queue, never for scores, streaks, or verification results.
 
+**Security (never commit secrets)**
+- **NEVER stage or commit** `.env` files, secrets, API keys, tokens, private keys/certificates
+  (`*.pem` `*.key` `*.p12` `*.pfx` `*.jks` `*.mobileprovision` `id_rsa*`), `google-services.json`,
+  `GoogleService-Info.plist`, or machine-specific files (`local.properties`, IDE configs).
+- **Before staging, inspect what you're about to add.** If any file looks like it carries a real
+  secret — even if `.gitignore` doesn't catch the filename — **STOP and warn the user** before
+  staging. `.gitignore` is defense-in-depth, not the primary control; you are.
+- Ship only public/anon keys in the app; service-role keys live in Edge Functions / CI secrets.
+  Auth tokens go in secure storage (Keychain/Keystore), never AsyncStorage/MMKV.
+
 **Why these rules exist:** see `PROJECT_BRIEF.md` and `DECISIONS.md`. They prevent the failure
 modes that sink mobile apps — lost proof on bad networks, cheatable client-side streaks, god
 components, and web patterns that feel wrong on a phone.

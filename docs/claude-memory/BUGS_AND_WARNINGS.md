@@ -44,6 +44,18 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
   only in Edge Functions / CI secrets. Auth tokens go in secure storage (Keychain/Keystore), never
   AsyncStorage/MMKV. No sensitive data in deep links.
 
+## [OPEN] W-006 — Never commit secrets; warn before staging
+- **Date:** 2026-05-27 · **Area:** security / git
+- **Rule (user-mandated, standing):** NEVER stage or commit `.env`, secrets, API keys, tokens,
+  private keys/certificates (`*.pem` `*.key` `*.p12` `*.pfx` `*.jks` `*.mobileprovision`
+  `id_rsa*`), `google-services.json`, `GoogleService-Info.plist`, or machine-specific files.
+- **Trap:** `.gitignore` was hardened (commit on `mvp`) to cover these patterns, BUT globs can't
+  catch every filename (e.g. `my-secret.txt`). So before any `git add`, inspect the change set —
+  if anything looks like it holds a real secret, **STOP and warn the user before staging.** The
+  behavioral check is the primary control; `.gitignore` is the backstop.
+- **Follow-up:** a machine-level pre-commit secret-scan hook is queued as `TASKS.md` T-014 (add
+  once the JS toolchain exists — gitleaks via husky/lint-staged).
+
 ---
 
 ## Bugs

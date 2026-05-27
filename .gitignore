@@ -50,8 +50,26 @@ android/app/release/
 .env
 .env.*
 !.env.example
+secret*
+secrets*
+*.secret
+*.secrets.json
 google-services.json
 GoogleService-Info.plist
+
+# Private keys & certificates (NEVER commit)
+*.pem
+*.key
+*.p12
+*.pfx
+*.cer
+*.crt
+*.der
+*.jks
+*.mobileprovision
+id_rsa*
+id_ed25519*
+*.asc
 
 # Supabase (local dev)
 supabase/.branches/

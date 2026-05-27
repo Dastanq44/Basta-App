@@ -21,6 +21,7 @@
 | T-011 | TODO | ESLint import-boundary rules (`import/no-restricted-paths`) |
 | T-012 | TODO | Sentry (crash) + analytics (typed events) wiring |
 | T-013 | TODO | Theming (light/dark) + safe areas + accessibility baseline |
+| T-014 | TODO | Pre-commit secret-scan hook (gitleaks via husky/lint-staged) — enforces W-006 |
 
 ### Auth & onboarding
 | ID | Status | Task |
