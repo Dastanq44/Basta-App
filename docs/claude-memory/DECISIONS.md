@@ -58,19 +58,23 @@ Date · Status · Decision · Why · Consequences
 - **Consequences:** A unique constraint `(challenge, user, day)` guards double submission; the
   unique-violation error is treated as success and the queue job is dropped.
 
-## D-007 — Local persistence engine: WatermelonDB vs SQLite + MMKV   [PENDING — decide before Phase 0 DB work]
-- **Date:** 2026-05-27
-- **Status:** Open. Decide deliberately before building the `src/offline/db` layer; do not default.
-- **Options:**
-  - **WatermelonDB** — reactive ORM over SQLite; observables drive UI; scales to large lists and
-    gives reactive queries out of the box. Cost: heavier dependency, schema/migration ceremony,
-    learning curve.
-  - **SQLite (op-sqlite / expo-sqlite) + MMKV** — raw/lightly-wrapped SQL plus MMKV for KV. Simpler
-    mental model, fewer dependencies, full SQL control. Cost: you hand-roll reactivity/sync glue.
-- **Lean toward:** **SQLite + MMKV** for the MVP — list sizes are bounded (≤50 members/group), so
-  the simpler stack likely wins; revisit WatermelonDB if reactive queries / large-list perf become
-  a real need. **Not locked — confirm with the team first.** Full comparison in
-  `docs/architecture/OFFLINE_SYNC.md`.
+## D-007 — Local persistence engine: Expo SQLite + MMKV   [Accepted]
+- **Date:** 2026-05-27 (settled before Phase 1)
+- **Decision:** Use **`expo-sqlite` for relational/structured local data** (drafts, queued
+  mutations, cached lists) and **MMKV for key/value** (flags, cursors, lightweight prefs). This is
+  the MVP local persistence engine.
+- **Why:** MVP list sizes are bounded (≤50 members/group, per-challenge feeds), so we don't need a
+  reactive ORM. `expo-sqlite` is first-party (no extra native-config burden under Expo), gives full
+  SQL control, and keeps the dependency surface small; MMKV is synchronous and fast for KV. Fewer
+  moving parts = less to get wrong on the critical path.
+- **WatermelonDB is DEFERRED**, not rejected. Revisit it only if offline **relational sync** gets
+  materially more complex — e.g. large/unbounded lists needing lazy loading, reactive observable
+  queries driving the UI, or multi-table sync/migration churn that hand-rolled SQL makes painful.
+  The `src/offline/db` layer is kept behind an engine-agnostic interface (see `LocalDatabase`), so
+  swapping to WatermelonDB later would not touch feature/data callers.
+- **Consequences:** Add `expo-sqlite` + an MMKV package in Phase 2 when the queue/draft store is
+  implemented (not now — this is a decision, not an implementation). Auth tokens still go in
+  `expo-secure-store`, never SQLite/MMKV (W-005).
 
 ## D-008 — Media upload: standard Supabase Storage first, tus/resumable deferred   [Accepted]
 - **Date:** 2026-05-27

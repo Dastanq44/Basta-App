@@ -3,9 +3,9 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-05-27 — by: Phase 0 foundation session_
+_Last updated: 2026-05-27 — by: Phase 1 prep / foundation cleanup session_
 
-## Status: PHASE 0 FOUNDATION IN PLACE
+## Status: PHASE 0 FOUNDATION IN PLACE (Phase 1 route shells stubbed)
 
 The Expo + TypeScript app skeleton exists and **passes `npm run typecheck` + `npm run lint`**.
 Foundation only — **no auth, groups, challenges, proof upload, or Supabase migrations** yet.
@@ -36,7 +36,8 @@ Foundation only — **no auth, groups, challenges, proof upload, or Supabase mig
 - **App foundation (Phase 0):** `package.json`, `tsconfig.json`, `app.json` (expo-router +
   typedRoutes), `babel.config.js`, `.eslintrc.js` (import boundaries), `.env.example`.
   - `app/` — navigation shell: root `_layout` (providers), `(tabs)/` (Today/Challenges/Groups/
-    Profile), `challenge/[id]`, `+not-found`.
+    Profile), `challenge/[id]`, `+not-found`. Phase 1 **route shells** (placeholders, no logic):
+    `(auth)/` sign-in · sign-up · verify-email; `(onboarding)/` profile-setup · join-or-create-group.
   - `src/shared/ui/` — theme tokens + `ThemeProvider` + primitives (Text, Button, Card, Screen).
   - `src/shared/lib/` — `queryClient`, `env`.
   - `src/entities/` — domain models (user, group, challenge, submission, verification) + mappers/.
@@ -49,9 +50,10 @@ Foundation only — **no auth, groups, challenges, proof upload, or Supabase mig
 - `git config core.hooksPath .githooks` to activate the secret-scan hook.
 - New accounts: follow `scripts/bootstrap-claude.md` (install shared skills, set identity).
 
-## Open decisions to settle before/early in Phase 0
-- **D-007** — local persistence engine (WatermelonDB vs SQLite + MMKV): PENDING.
-- **D-008** — media upload: standard Supabase Storage first; tus/resumable deferred (accepted).
+## Decisions (resolved)
+- **D-007** — local persistence engine: **Expo SQLite + MMKV** (Accepted; WatermelonDB deferred).
+  Implementation lands in Phase 2. No open foundation decisions remain.
+- **D-008** — media upload: standard Supabase Storage first; tus/resumable deferred (Accepted).
 
 ## What runs
 - Nothing yet — there is no app to run.

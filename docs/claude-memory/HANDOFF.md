@@ -21,6 +21,38 @@
 
 ---
 
+## 2026-05-27 — Phase 1 prep / foundation cleanup
+**Did:**
+- **Settled D-007:** local persistence = **Expo SQLite (relational) + MMKV (key/value)**;
+  WatermelonDB **deferred** (revisit only if offline relational sync gets materially more complex).
+  Updated DECISIONS.md (D-007 → Accepted), OFFLINE_SYNC.md, ARCHITECTURE.md, TASKS.md (T-015 DONE),
+  and the `src/offline` code comments (no longer say "PENDING"; placeholder error now says "lands
+  in Phase 2"). No DB deps added yet — implementation is Phase 2.
+- **Fixed `Card.tsx`:** border now uses `StyleSheet.hairlineWidth` (density-aware) instead of the
+  custom `StyleSheetHairline = 1` constant (removed).
+- **Added Phase 1 route shells** (thin placeholders, NO auth logic): `app/(auth)/sign-in`,
+  `sign-up`, `verify-email`; `app/(onboarding)/profile-setup`, `join-or-create-group`.
+- Ran `npm run typecheck` → green, `npm run lint` → green.
+
+**Scope respected:** no full auth, no Supabase migrations, no post-MVP features.
+
+**In progress:** Nothing half-done.
+
+**Next up — Phase 1 auth (T-020–T-023):** create the Supabase project + credentials (env via
+`.env`, only EXPO_PUBLIC_* in the bundle), implement email/PKCE auth in `src/features/auth`
+(session hook, secure-token storage), terms-acceptance gate, profile setup, group create/join.
+Wire the auth guard in `useSessionState()` (currently a placeholder returning `signedIn`) and add
+redirects in `app/_layout`. The route shells above are ready to receive that logic.
+
+**Blockers / decisions needed:** Supabase project/credentials must be created before auth can talk
+to a backend. No open foundation decisions remain (D-007 settled).
+
+**Branch / commit:** `mvp` + `chore: prepare Phase 1 auth foundation`.
+
+**Notes for next session:** `(auth)`/`(onboarding)` are route groups with no `_layout.tsx` yet —
+they currently render under the root Stack; add group `_layout`s when wiring the auth flow. Run
+`npm install` after pulling (node_modules gitignored).
+
 ## 2026-05-27 — Phase 0 foundation session
 **Did:** Implemented the **Phase 0 foundation** (skeleton only — no features). Expo SDK 52 +
 expo-router v4 + TypeScript.

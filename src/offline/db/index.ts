@@ -1,9 +1,9 @@
 // Local persistence — engine-agnostic contract (skeleton).
 //
-// ⚠️ The concrete engine is DECISION D-007 (PENDING): WatermelonDB vs SQLite + MMKV.
-// This interface lets feature/data layers be written against an abstraction so the
-// engine can be chosen/swapped without touching callers. Do NOT import a specific
-// engine here until D-007 is settled. See docs/architecture/OFFLINE_SYNC.md.
+// Engine chosen (D-007): Expo SQLite (relational) + MMKV (key/value). WatermelonDB deferred.
+// This interface keeps feature/data layers decoupled from the engine so it can be swapped
+// without touching callers. Implementation lands in Phase 2 (the offline critical path).
+// See docs/architecture/OFFLINE_SYNC.md and DECISIONS.md D-007.
 
 export interface LocalDatabase {
   init(): Promise<void>;
@@ -13,18 +13,19 @@ export interface LocalDatabase {
   delete(key: string): Promise<void>;
 }
 
-/** Placeholder until D-007 is decided; throws if used so misuse is loud, not silent. */
+/** Not implemented until Phase 2 (engine = Expo SQLite + MMKV, D-007); throws so misuse is loud. */
+const NOT_IMPLEMENTED = 'Local DB not implemented yet — Expo SQLite + MMKV, lands in Phase 2 (D-007).';
 export const localDatabase: LocalDatabase = {
   async init() {
-    throw new Error('Local DB engine not selected yet (DECISIONS.md D-007).');
+    throw new Error(NOT_IMPLEMENTED);
   },
   async get() {
-    throw new Error('Local DB engine not selected yet (DECISIONS.md D-007).');
+    throw new Error(NOT_IMPLEMENTED);
   },
   async set() {
-    throw new Error('Local DB engine not selected yet (DECISIONS.md D-007).');
+    throw new Error(NOT_IMPLEMENTED);
   },
   async delete() {
-    throw new Error('Local DB engine not selected yet (DECISIONS.md D-007).');
+    throw new Error(NOT_IMPLEMENTED);
   },
 };

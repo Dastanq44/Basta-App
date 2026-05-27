@@ -1,6 +1,6 @@
 // Durable mutation/upload queue — type contracts only (skeleton).
 // The offline drafts + upload queue is the MVP critical path (DECISIONS.md D-004).
-// Storage engine is intentionally abstracted (D-007 PENDING — WatermelonDB vs SQLite+MMKV).
+// Backing store is Expo SQLite + MMKV (D-007); the QueueStore interface keeps callers decoupled.
 
 // SyncStatus is a domain concept and lives in entities; infra imports it from there.
 import type { SyncStatus } from '@/entities';

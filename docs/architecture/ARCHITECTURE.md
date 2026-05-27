@@ -29,7 +29,7 @@ flowchart TB
     FH["Feature hooks (domain logic)"]
     Q["TanStack Query (server cache)"]
     MQ["Durable mutation/upload queue"]
-    DB[("Local DB + KV (engine TBD - D-007)")]
+    DB[("Expo SQLite + MMKV (D-007)")]
     UI --> FH --> Q
     FH --> MQ
     Q <--> DB
@@ -117,7 +117,7 @@ leaderboards, full chat, health integrations, XP/badges/duels, widgets, or monet
 architecture leaves only thin placeholders (e.g. a future `verification_source` column for AI).
 
 ## Open decisions referenced here
-- **D-007** — local persistence engine (WatermelonDB vs SQLite + MMKV): **PENDING**, decide before
-  Phase 0 DB work. See DECISIONS.md.
+- **D-007** — local persistence engine: **Expo SQLite + MMKV** (Accepted; WatermelonDB deferred).
+  See DECISIONS.md.
 - **D-008** — media upload: start with **standard Supabase Storage upload**; **defer tus/resumable**
   unless/until video proof needs it. See DECISIONS.md.

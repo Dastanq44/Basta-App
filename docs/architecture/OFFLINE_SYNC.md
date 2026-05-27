@@ -70,20 +70,24 @@ success and dropped; (if/when resumable) partial upload resumes; and an end-to-e
 
 ---
 
-## Decision note — local persistence engine (D-007, PENDING)
+## Decision note — local persistence engine (D-007, ACCEPTED)
 
-We must choose before Phase 0 DB work. Decide deliberately; do not default.
+**Chosen: `expo-sqlite` (relational/structured) + MMKV (key/value).** Settled before Phase 1.
 
-| | WatermelonDB | SQLite (op-sqlite/expo-sqlite) + MMKV |
+| | WatermelonDB (deferred) | **Expo SQLite + MMKV (chosen)** |
 |---|---|---|
-| Model | Reactive ORM over SQLite; observables drive UI | Raw SQL (or light wrapper) + MMKV for KV |
-| Strength | Lazy loading, observability, scales to large lists out of the box | Simpler mental model, fewer deps, full SQL control |
+| Model | Reactive ORM over SQLite; observables drive UI | Raw/lightly-wrapped SQL + MMKV for KV |
+| Strength | Lazy loading, observability, scales to large lists out of the box | Simpler mental model, fewer deps, full SQL control, first-party under Expo |
 | Cost | Heavier dep, schema/migration ceremony, learning curve | You hand-roll reactivity/sync glue |
 | Fit for Basta | Good if feeds/leaderboards get large and we want reactive queries | Good for a lean MVP where lists are bounded (≤50/group) |
 
-**Recommendation to evaluate:** start lean with **SQLite + MMKV** for the MVP (bounded list sizes,
-fewer moving parts), and revisit WatermelonDB if reactive queries / large-list performance become a
-real need. **Not yet locked** — confirm with the team before building the `offline/db` layer.
+**Rationale:** MVP lists are bounded, so a reactive ORM isn't needed; the simpler, first-party stack
+wins on fewer moving parts along the critical path. **WatermelonDB is deferred, not rejected** —
+revisit it only if offline *relational sync* becomes materially more complex (large/unbounded lists
+needing lazy loading, reactive observable queries, or multi-table sync/migration churn). The
+`offline/db` layer stays behind the engine-agnostic `LocalDatabase` interface so a later swap won't
+touch callers. Full decision in DECISIONS.md D-007. (Auth tokens use `expo-secure-store`, never
+SQLite/MMKV — W-005.)
 
 ## Decision note — media upload approach (D-008)
 
