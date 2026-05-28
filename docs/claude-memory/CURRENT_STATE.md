@@ -3,9 +3,13 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-05-28 — by: Claude 1 / Phase 1 onboarding (T-021/T-022/T-023)_
+_Last updated: 2026-05-28 — by: Claude 1 / Phase 1 debugging pass_
 
-## Status: PHASE 1 ONBOARDING IMPLEMENTED (T-021/T-022/T-023) · migration awaiting USER apply
+## Status: PHASE 1 ONBOARDING IMPLEMENTED + hardened · migration awaiting USER apply (W-010)
+
+Latest session was a small targeted debugging pass: B-003 (gate no longer loops on profile
+error), B-004 (env.ts validates URL shape), B-005 (sign-out clears query cache), plus a
+profile-setup prefill guard. No scope change, no feature work. All checks green.
 
 **Stack now:** Expo SDK 54 · React 19.1.0 · RN 0.81.5 · expo-router 6.0.23 · TS 5.9.2 ·
 @types/react 19.1.10 · eslint-config-expo 10. **Native-only** (`platforms: ["ios","android"]` in

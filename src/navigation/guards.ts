@@ -3,15 +3,19 @@
 //
 // Redirect matrix (server profile is the source of truth — D-003):
 //
-//   sessionStatus | profile         | terms_version vs CURRENT | onboarded | target
-//   ------------- | --------------- | ------------------------ | --------- | ------------------------------
-//   loading       | -               | -                        | -         | (no redirect — show loader)
-//   signedOut     | -               | -                        | -         | /(auth)/sign-in
-//   signedIn      | error/loading   | -                        | -         | (no redirect — show loader)
-//   signedIn      | null            | -                        | -         | /(onboarding)/profile-setup
-//   signedIn      | present         | mismatch                 | -         | /(onboarding)/profile-setup
-//   signedIn      | present         | match                    | false     | /(onboarding)/join-or-create-group
-//   signedIn      | present         | match                    | true      | /(tabs)
+//   sessionStatus | profile             | terms_version vs CURRENT | onboarded | target
+//   ------------- | ------------------- | ------------------------ | --------- | ------------------------------
+//   loading       | -                   | -                        | -         | (no redirect — show loader)
+//   signedOut     | -                   | -                        | -         | /(auth)/sign-in
+//   signedIn      | loading             | -                        | -         | (no redirect — show loader)
+//   signedIn      | error (no cache)    | -                        | -         | /(onboarding)/profile-setup *
+//   signedIn      | null (no row)       | -                        | -         | /(onboarding)/profile-setup
+//   signedIn      | present             | mismatch                 | -         | /(onboarding)/profile-setup
+//   signedIn      | present             | match                    | false     | /(onboarding)/join-or-create-group
+//   signedIn      | present             | match                    | true      | /(tabs)
+//
+// * The error case routes to profile-setup so the user sees a real error from upsertProfile
+//   rather than staring at an infinite loading splash. Common cause: W-010 (migration unapplied).
 //
 // The gate returns the *target* group/path; the layout compares against current segments
 // and only navigates when they differ — preventing redirect loops.
@@ -40,9 +44,12 @@ export function useOnboardingGate(): GateState {
   // Signed in. Wait until the profile query has either succeeded or definitively errored.
   if (profile.isPending) return { status: 'loading', target: null };
 
-  // On a transient error, hold the user on whatever they're seeing rather than bouncing —
-  // the inner Query retries (see useProfile). The error is also surfaced by individual screens.
-  if (profile.isError && !profile.data) return { status: 'loading', target: null };
+  // Profile fetch errored with nothing cached — most commonly because the migration hasn't been
+  // applied yet (W-010), or RLS is misconfigured. Route the user to profile-setup so they see a
+  // real error from the next mutation rather than staring at a loading spinner forever.
+  if (profile.isError && !profile.data) {
+    return { status: 'ready', target: '/(onboarding)/profile-setup' };
+  }
 
   const user = profile.data ?? null;
   if (!user) return { status: 'ready', target: '/(onboarding)/profile-setup' };

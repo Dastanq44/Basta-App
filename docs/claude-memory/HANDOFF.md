@@ -21,6 +21,54 @@
 
 ---
 
+## 2026-05-28 — Claude 1 / Phase 1 debugging pass (no scope change)
+
+**Did:** Focused debugging/optimization pass. Four small, targeted fixes — no refactoring, no
+feature work, no scope change. All checks green; behavior unchanged on the happy path.
+- **B-003 (RESOLVED) — Gate infinite-loop on profile error.** `useOnboardingGate` now routes to
+  `/(onboarding)/profile-setup` on `isError && !data` (most often W-010). Matrix + comment + the
+  table in `NAVIGATION.md` all updated. `app/_layout.tsx` unchanged.
+- **B-004 (RESOLVED) — env URL shape validation.** `src/shared/lib/env.ts` trims values and
+  rejects malformed URLs (missing https, trailing slash, embedded path) at module load, with
+  error messages that name the exact fix. Catches the "Invalid path specified in request URL"
+  class of errors before they reach the Supabase edge.
+- **B-005 (RESOLVED) — Cache survived sign-out.** `useSignOut` calls `queryClient.clear()` in
+  `onSettled`. Closes a real privacy hole (next signed-in user would see previous user's cached
+  profile until staleTime).
+- **Profile-setup prefill bug.** `app/(onboarding)/profile-setup.tsx` now uses a `useRef`
+  one-shot guard so a background refetch can't overwrite what the user is typing.
+
+**Did NOT change:** any auth/groups/onboarding feature surface, the API layer, screens (beyond
+the prefill guard fix), the migration, or any decisions.
+
+**In progress:** Nothing half-done.
+
+**Next up:** Unchanged from prior entry — apply migration (W-010), confirm email template
+(W-008), smoke-test sign-up → OTP → profile-setup → join/create → tabs on Expo Go. Phase 2 is
+the next milestone.
+
+**Blockers / decisions needed:** none from this pass. Same blockers as prior entry (W-008, W-010).
+
+**Branch / commit:** `mvp` + this session's `fix: small Phase 1 debugging pass`. Pushed.
+
+**Notes for next session:**
+- The gate's error case now exits to `/(onboarding)/profile-setup` — don't reintroduce the
+  infinite-loading behavior. The intent: surface real errors to the user, never trap them.
+- `env.ts` validation is strict on shape, not content. If a future env var doesn't fit the
+  Supabase URL pattern (different backend, etc.), tailor the validator — don't loosen it.
+- `useSignOut` cache-clear is fire-and-forget (`onSettled`). Don't move it to `onSuccess` —
+  sign-out may fail server-side but still have cleared the local Supabase session, and you
+  want the local cache cleared either way.
+- The profile-setup `prefilled` ref guards the lifetime of the screen. If the user navigates
+  away and back, the new mount re-prefills (correct).
+
+**Tests run:** `npm run typecheck` → 0 ✅ · `npm run lint` → 0 ✅ · `npx expo-doctor` 18/18 ✅.
+**Tests NOT run:** unit/E2E (W-007); runtime (W-008/W-010 still pending USER actions).
+
+**Decisions changed this session:** none.
+
+---
+
 ## 2026-05-28 — Claude 1 / Phase 1 onboarding (T-003 file, T-021, T-022, T-023)
 
 **Did:** Implemented the minimum real backend + onboarding flow needed after auth. No Phase 2

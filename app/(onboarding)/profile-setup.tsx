@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 import { router } from 'expo-router';
 import { ZodError } from 'zod';
@@ -32,12 +32,16 @@ export default function ProfileSetupScreen() {
   const [accepted, setAccepted] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
 
-  // Prefill from any existing profile (e.g. terms-bump re-entry).
+  // Prefill from the existing profile EXACTLY ONCE per mount. Without the ref guard, a refetch
+  // (e.g. window-focus, background sync) would clobber whatever the user has typed.
+  const prefilled = useRef(false);
   useEffect(() => {
+    if (prefilled.current) return;
     if (profile.data) {
       setUsername(profile.data.username);
       setDisplayName(profile.data.displayName);
       setAccepted(profile.data.termsVersion === CURRENT_TERMS_VERSION);
+      prefilled.current = true;
     }
   }, [profile.data]);
 

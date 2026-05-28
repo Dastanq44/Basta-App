@@ -60,15 +60,19 @@ proofs/verifications from the user's groups). It is intentionally named **"Today
 The gate centralizes routing decisions so `app/_layout.tsx` stays thin. The server profile is
 the source of truth (D-003); local state never decides routing.
 
-| Session     | Profile       | Terms vs CURRENT | Onboarded | Target                              |
-|-------------|---------------|------------------|-----------|-------------------------------------|
-| `loading`   | —             | —                | —         | (no redirect — loading splash)      |
-| `signedOut` | —             | —                | —         | `/(auth)/sign-in`                   |
-| `signedIn`  | loading/error | —                | —         | (no redirect — loading splash)      |
-| `signedIn`  | `null`        | —                | —         | `/(onboarding)/profile-setup`       |
-| `signedIn`  | present       | mismatch         | —         | `/(onboarding)/profile-setup`       |
-| `signedIn`  | present       | match            | `false`   | `/(onboarding)/join-or-create-group`|
-| `signedIn`  | present       | match            | `true`    | `/(tabs)`                           |
+| Session     | Profile          | Terms vs CURRENT | Onboarded | Target                              |
+|-------------|------------------|------------------|-----------|-------------------------------------|
+| `loading`   | —                | —                | —         | (no redirect — loading splash)      |
+| `signedOut` | —                | —                | —         | `/(auth)/sign-in`                   |
+| `signedIn`  | loading          | —                | —         | (no redirect — loading splash)      |
+| `signedIn`  | error (no cache) | —                | —         | `/(onboarding)/profile-setup` ★     |
+| `signedIn`  | `null` (no row)  | —                | —         | `/(onboarding)/profile-setup`       |
+| `signedIn`  | present          | mismatch         | —         | `/(onboarding)/profile-setup`       |
+| `signedIn`  | present          | match            | `false`   | `/(onboarding)/join-or-create-group`|
+| `signedIn`  | present          | match            | `true`    | `/(tabs)`                           |
+
+★ Routing-on-error avoids the infinite-loading trap if the migration (W-010) isn't applied or
+RLS is misconfigured. The next mutation surfaces the underlying Supabase error inline.
 
 Loop avoidance: the layout only calls `router.replace(target)` when `isAtTarget(segments,
 target)` is false. Auth → on signed-in transition → goes through full gate, never lands on `(tabs)`

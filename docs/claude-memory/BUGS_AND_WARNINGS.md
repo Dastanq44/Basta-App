@@ -125,6 +125,35 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
 - **Status:** Open / accept-the-risk. Revisit during T-061 (CI/release) or the next planned SDK
   upgrade.
 
+## [RESOLVED] B-003 — Onboarding gate infinite-looped on profile fetch error
+- **Date:** 2026-05-28 · **Area:** navigation / gate
+- **What:** `useOnboardingGate` returned `{ status: 'loading' }` when `useProfile()` errored
+  with no cache. Under common conditions (W-010 — migration not applied; profiles table missing),
+  this manifested as an infinite spinner inside the app, no path to recovery.
+- **Fix:** Gate now routes to `/(onboarding)/profile-setup` on error. The next mutation surfaces
+  the underlying Supabase error inline, the user can retry or see what's wrong. Doc-comment +
+  redirect matrix in `NAVIGATION.md` updated.
+- **Commit:** `fix: small Phase 1 debugging pass` (this commit).
+
+## [RESOLVED] B-004 — env.ts only validated presence, not shape
+- **Date:** 2026-05-28 · **Area:** config / DX
+- **What:** A malformed `EXPO_PUBLIC_SUPABASE_URL` (trailing slash, missing scheme, pasted path)
+  produced the Supabase edge's cryptic "Invalid path specified in request URL" at sign-up time
+  instead of a clear startup error.
+- **Fix:** `src/shared/lib/env.ts` now trims values and validates the URL shape (must start with
+  `https://`, must not end with `/`, must not contain a path). Each branch's error message names
+  the exact fix.
+- **Commit:** `fix: small Phase 1 debugging pass`.
+
+## [RESOLVED] B-005 — Stale cache survived sign-out
+- **Date:** 2026-05-28 · **Area:** auth / cache hygiene
+- **What:** `useSignOut` did not clear the TanStack Query cache. After sign-out, cached `profile`
+  remained until `staleTime` expired — if a different user signed in next, they'd briefly see
+  the previous user's data. Real privacy/data-leak surface, not just a UX glitch.
+- **Fix:** `useSignOut` calls `queryClient.clear()` in `onSettled` (runs whether sign-out succeeds
+  or throws — the local session may have been cleared regardless).
+- **Commit:** `fix: small Phase 1 debugging pass`.
+
 ## [OPEN] B-002 — Brief route-flash on signed-out cold start
 - **Date:** 2026-05-28 · **Area:** auth / navigation
 - **What:** Root layout returns `<View><ActivityIndicator/></View>` while `useSession()` is
