@@ -13,6 +13,7 @@
 | T-015 | DONE | setup | Settle D-007: local persistence engine | **Expo SQLite + MMKV** chosen; WatermelonDB deferred |
 | T-002 | DONE | mvp | Scaffold Expo + TS app (expo-router) + feature folders | Phase 0 foundation; tsc+lint green |
 | T-020 | DONE | mvp | Email auth (PKCE), secure token storage, session hook | Supabase + secure-store wired; tsc+lint green; runtime NOT yet exercised (W-008) |
+| T-061a | DONE | setup | **Expo SDK 52 → 54 upgrade** (pulled early from T-061) | 18/18 expo-doctor; tsc+lint+`expo start --clear` green. ⚠️ DO NOT downgrade to SDK 52 — iOS Expo Go tracks latest. ⚠️ Use `npx expo install <pkg>` for all new Expo-related deps to preserve SDK 54 alignment. |
 | T-003 | TODO | mvp | Supabase project + apply schema + RLS | Project created (`lppfqzqeaizbzunrxnpn`); schema still **not applied** |
 | T-021 | TODO | mvp | Terms acceptance gate (versioned) | Next up after auth smoke-test |
 | T-022 | TODO | mvp | Profile setup; onboarding gate on server `onboarded` flag | Needs T-003 schema for `users.onboarded` |
@@ -66,7 +67,7 @@
 | ID | Status | Task |
 |----|--------|------|
 | T-060 | TODO | Unit/component tests; offline-submit→reconnect E2E (Maestro). No test runner exists yet (W-007) — consider landing a Jest harness before Phase 5. |
-| T-061 | TODO | CI (typecheck/lint/test) + EAS build/submit pipeline; secrets via EAS/Actions |
+| T-061 | TODO | CI (typecheck/lint/test) + EAS build/submit pipeline; secrets via EAS/Actions. **SDK upgrade portion pulled out as T-061a (DONE — SDK 54).** |
 | T-062 | TODO | Store assets, privacy/data-safety forms, beta (TestFlight / Play Internal) |
 
 ## Backlog — Post-MVP `[post-mvp]` (do NOT build until MVP ships)

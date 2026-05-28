@@ -3,13 +3,18 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-05-28 — by: Claude 2 / Phase 1 auth implementation_
+_Last updated: 2026-05-28 — by: Claude 1 / Expo SDK 52→54 upgrade_
 
-## Status: PHASE 1 AUTH IMPLEMENTED (T-020) — UNCOMMITTED; runtime untested
+## Status: SDK 54 UPGRADE COMPLETE · PHASE 1 AUTH (T-020) IMPLEMENTED · runtime untested
 
-**Latest checks:** `npm run typecheck` → green ✅ · `npm run lint` → green ✅ · tests → none
-configured (W-007). **Working tree dirty** — T-020 code + doc-drift fixes not yet committed.
-Runtime auth flow has NOT been exercised end-to-end (see HANDOFF "Next up #2").
+**Stack now:** Expo SDK 54 · React 19.1.0 · RN 0.81.5 · expo-router 6.0.23 · TS 5.9.2 ·
+@types/react 19.1.10 · eslint-config-expo 10. **Native-only** (`platforms: ["ios","android"]` in
+app.json; `react-native-web` removed — consistent with D-006).
+
+**Latest checks:** `npm run typecheck` → green ✅ · `npm run lint` → green ✅ ·
+`npx expo-doctor` → **18/18** ✅ · `npx expo start --clear` → Metro booted, env loaded ✅ · tests
+→ none configured (W-007). Runtime auth flow has NOT been exercised end-to-end (see HANDOFF →
+"2026-05-28 — Claude 2 / Phase 1 auth").
 
 Email-auth (sign-up / sign-in / verify-OTP / sign-out / session) is wired, including a
 SecureStore-backed Supabase client, a root-layout redirect gate, and field-validated forms.

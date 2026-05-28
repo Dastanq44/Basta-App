@@ -64,6 +64,19 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
   planned (T-060, Phase 5) but could land earlier. The offline-submit→reconnect E2E is the one that
   protects the product's core promise — prioritize it once the queue exists (Phase 2).
 
+## [OPEN] W-009 — Native-only setup: do NOT reintroduce react-native-web
+- **Date:** 2026-05-28 · **Area:** build / SDK 54
+- **Trap:** During the SDK 52→54 upgrade, `react-native-web` was removed (it caused a peer
+  conflict between `react-dom@19.2.x` and `react@19.1.0`). We also set
+  `"platforms": ["ios", "android"]` in `app.json`. This is intentional and consistent with D-006
+  (no web/Explore in MVP).
+- **What can re-break it:**
+  - `npx expo install` for a new package may try to re-add `react-native-web` (it won't if
+    `platforms` excludes web; verify).
+  - Removing or modifying the `platforms` array in `app.json`.
+- **Do not** add `react-native-web`, `react-dom`, or web build config unless web is officially in
+  scope (it's not).
+
 ## [OPEN] W-008 — Supabase email template must include `{{ .Token }}` for OTP flow
 - **Date:** 2026-05-28 · **Area:** auth / config
 - **Trap:** The verify-email screen ([`app/(auth)/verify-email.tsx`](../../app/(auth)/verify-email.tsx))
@@ -82,15 +95,19 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
 
 ## Bugs
 
-## [OPEN] B-001 — `npm install` reports 19 transitive-dep vulnerabilities
-- **Date:** 2026-05-28 · **Area:** deps / supply chain
-- **What:** `npm install` after adding `@supabase/supabase-js` + `expo-secure-store` reports
-  "19 vulnerabilities (13 moderate, 6 high)". The new packages are clean; the warnings come from
-  transitive deps in the existing Expo/RN tree (e.g. old `glob`, `tar`, `inflight`, `xmldom`).
-- **Repro:** `npm install` (any time).
-- **Workaround:** Not actionable in app code. `npm audit fix --force` would bump major versions
-  and break the SDK. Revisit during T-061 (CI/release pipeline) and after Expo SDK upgrades.
-- **Status:** Open / accept-the-risk for now (no exploitable surface — these are build-time deps).
+## [OPEN] B-001 — `npm install` reports transitive-dep vulnerabilities (post-SDK-54)
+- **Date:** 2026-05-28 (updated post-SDK-54) · **Area:** deps / supply chain
+- **What:** `npm install` reports transitive vulnerabilities in build-time tooling (`xmldom`,
+  `postcss`, `tar`, `uuid`, `cacache`) reachable via Expo CLI / config plugins. Pre-upgrade count
+  was 19 (13 moderate, 6 high) on SDK 52; SDK 54 may differ — re-measure on demand with
+  `npm audit`.
+- **Repro:** `npm audit` after `npm install`.
+- **Why not "fix":** `npm audit fix --force` would jump to SDK 56 (breaking). The right path is a
+  deliberate, tested SDK upgrade — which is exactly what we just did for 52→54. Audit may resolve
+  further only when SDK 54 itself bumps these transitives.
+- **Risk:** Low — these are dev/build-time deps, not in the shipped app bundle.
+- **Status:** Open / accept-the-risk. Revisit during T-061 (CI/release) or the next planned SDK
+  upgrade.
 
 ## [OPEN] B-002 — Brief route-flash on signed-out cold start
 - **Date:** 2026-05-28 · **Area:** auth / navigation
