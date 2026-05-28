@@ -21,6 +21,97 @@
 
 ---
 
+## 2026-05-28 — Claude 1 / Phase 1 onboarding (T-003 file, T-021, T-022, T-023)
+
+**Did:** Implemented the minimum real backend + onboarding flow needed after auth. No Phase 2
+features. tsc/lint green; runtime not yet exercised (W-008, W-010).
+
+- **Migration (T-003 file written):**
+  [`supabase/migrations/20260528000000_phase1_profiles_groups.sql`](../../supabase/migrations/20260528000000_phase1_profiles_groups.sql)
+  creates `profiles`/`groups`/`group_members` + RLS + helpers + the `join_group_by_invite` RPC.
+  **NOT YET APPLIED** to the Supabase project — see W-010 for the one-time USER action.
+  Key choices: `profiles.username`/`display_name` nullable (so client upsert can land cleanly,
+  no race on unique username); `trg_groups_add_owner` adds the creator as `role='owner'`
+  automatically; `is_group_member`/`is_group_admin` are `SECURITY DEFINER` to **avoid RLS
+  recursion** when `group_members` policies query `group_members`; `join_group_by_invite` is
+  `SECURITY DEFINER` so non-members can resolve invite codes without a broad `groups` SELECT.
+- **Onboarding feature** (`src/features/onboarding/*`): `CURRENT_TERMS_VERSION="2026-05-28"`,
+  `profileSetupInput` zod (username 3–30 `[a-z0-9_]`, display 1–50, `acceptedTerms: literal(true)`),
+  `useProfile` (TanStack query enabled only when signed-in), `useUpsertProfile` (atomic upsert
+  on `id`), `useCompleteOnboarding` (flips `onboarded=true`), and `hasAcceptedCurrentTerms`
+  helper exposed for the gate. DB row → `User` domain mapping is colocated in the api module
+  (the only mapper so far; will move to `entities/mappers` if a second one appears).
+- **Groups feature** (`src/features/groups/*`): `createGroup(name)` (insert; trigger handles
+  membership), `joinGroupByInvite(code)` via `supabase.rpc(...)`. Mutations expose error.message
+  surface for screens. The `index.ts` is the public surface — features/onboarding imports here,
+  not into internals (boundary rule).
+- **Profile setup screen** (`app/(onboarding)/profile-setup.tsx`): mobile-first form, real
+  errors, `KeyboardAvoidingView` on iOS, autocomplete hints (`username-new`/`textContentType`),
+  timezone via `Intl.DateTimeFormat().resolvedOptions().timeZone` with `'UTC'` fallback. On
+  success → `router.replace('/(onboarding)/join-or-create-group')`. **Does NOT** mark
+  `onboarded` true.
+- **Join-or-create-group screen**: segmented toggle (Create / Join). Create: name → `createGroup`
+  → `completeOnboarding` → `replace('/(tabs)')`. Join: invite code → `joinGroupByInvite` →
+  `completeOnboarding` → `replace('/(tabs)')`. Submit error surface is unified across the three
+  mutations.
+- **Onboarding gate** (`src/navigation/guards.ts` → `useOnboardingGate`): full redirect matrix
+  (see [`docs/architecture/NAVIGATION.md`](../architecture/NAVIGATION.md#onboarding-gate)).
+  `isAtTarget(segments, target)` prevents redirect loops. `app/_layout.tsx` is now thin — it
+  only mounts providers, reads the gate, calls `router.replace(target)` if the user isn't
+  already at the target, otherwise renders `<Stack>` (or a loading splash while gate resolves).
+- **Domain entity**: `src/entities/user.ts` gained `termsVersion?: string`.
+
+**Did NOT do (out of scope):** challenge/proof/verification/streak/leaderboard/push tables,
+client-side anything related to those, AI verification, Explore feed, global leaderboards, full
+chat, XP/badges/duels, health integrations, monetization.
+
+**In progress:** Nothing half-done. Onboarding is code-complete; verification is gated on W-010
++ W-008.
+
+**Next up (precedence order):**
+1. **USER ACTION — W-010:** apply the migration in Supabase Dashboard → SQL editor (or
+   `supabase db push`). Verify with `select count(*) from profiles;` (= 0) and the function
+   exists.
+2. **USER ACTION — W-008:** Supabase Auth → Email Templates → "Confirm signup" includes
+   `{{ .Token }}`. (Unchanged from prior session.)
+3. **Smoke-test the onboarding flow** on Expo Go SDK 54: sign-up → OTP → profile-setup →
+   join-or-create-group → tabs. Test both Create and Join paths. Then sign-out (note: sign-out
+   UI still not wired anywhere — add a button on the Profile tab when convenient).
+4. **Begin Phase 2** (NOT in this commit, NOT for the immediate next Claude unless directed) —
+   the offline drafts + upload queue is the MVP critical path (D-004). D-007 settled engine
+   is Expo SQLite + MMKV.
+
+**Blockers / decisions needed:**
+- W-010 (migration apply) and W-008 (email template) block runtime smoke-test.
+- No decisions opened or changed this session.
+
+**Branch / commit:** `mvp` + this session's `feat(onboarding): implement profile and group setup`,
+pushed to `origin/mvp` after all checks green.
+
+**Notes for next session:**
+- The gate is the only place that touches navigation routing. If you need to change the redirect
+  matrix (e.g. add an email-verified gate), edit `useOnboardingGate` — do not put logic in
+  screens or layouts.
+- `useProfile` is intentionally disabled while signed-out so RLS doesn't throw when nobody is
+  authenticated.
+- Username is `toLowerCase`d at the zod boundary so casing variations don't fragment identity.
+- `profiles.username` and `display_name` are nullable in DB (intentional) but enforced non-null
+  at the client zod boundary on profile-setup submission.
+- Owner-as-member is enforced by a DB trigger, not the client. If you want to add an "add
+  multiple owners" UI later, go through `group_members` directly with the admin RLS.
+- **Migration is hand-maintained.** No `supabase` CLI is wired into the project; if you adopt
+  it, point it at `supabase/migrations/`.
+- **No tests still** (W-007). Hand-traced redirect matrix is in the doc-comment of
+  `useOnboardingGate`.
+
+**Tests run:** `npm run typecheck` → 0 ✅ · `npm run lint` → 0 ✅ · `npx expo-doctor` 18/18 ✅
+(plan to also `npx expo start --clear` before push).
+**Tests NOT run:** unit/E2E (W-007). Runtime onboarding flow (W-010 + W-008).
+
+**Decisions changed this session:** none. D-001..D-008 stand.
+
+---
+
 ## 2026-05-28 — Claude 1 / Expo SDK 52 → 54 upgrade
 
 **Did:** Upgraded the project from **Expo SDK 52 → SDK 54** to match the user's physical iOS

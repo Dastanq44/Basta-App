@@ -1,8 +1,18 @@
 # Basta — Supabase Schema Draft
 
-> ⛔ **DRAFT — DO NOT APPLY YET.** This is illustrative intent, not a final migration. RLS here is
-> sketched and **must be hardened and tested (pgTAP) before being trusted.** When implementation
-> begins, the reviewed version moves into `supabase/migrations/`. No migrations have been applied.
+> 📝 **Status (2026-05-28):** The **Phase 1 subset** (`profiles`, `groups`, `group_members`, RLS,
+> `join_group_by_invite` RPC, `is_group_member`/`is_group_admin` helpers) has been **promoted to a
+> real migration**:
+> [`supabase/migrations/20260528000000_phase1_profiles_groups.sql`](../../supabase/migrations/20260528000000_phase1_profiles_groups.sql).
+> It still needs the USER to apply it in the Supabase Dashboard SQL editor (W-010).
+> The Phase 1 file differs from this draft in a few places — most notably **`profiles.username`
+> and `display_name` are nullable** so a row can be inserted at first profile-setup without a
+> race on the unique username (no `on auth.users insert` trigger; client inserts via upsert).
+>
+> The sections below remain the long-term **full-MVP** sketch for Phase 2+ (challenges,
+> submissions, verifications, streaks, reports, blocks, push). Those tables are NOT in the
+> applied migration yet. RLS here is sketched and must be hardened + pgTAP-tested before
+> being trusted.
 >
 > Domain model: [`DATA_MODEL.md`](DATA_MODEL.md). Server-authoritative scoring is locked (D-003).
 

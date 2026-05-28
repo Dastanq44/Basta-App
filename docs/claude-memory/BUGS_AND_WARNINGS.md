@@ -64,6 +64,22 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
   planned (T-060, Phase 5) but could land earlier. The offline-submit→reconnect E2E is the one that
   protects the product's core promise — prioritize it once the queue exists (Phase 2).
 
+## [OPEN] W-010 — Phase 1 Supabase migration must be applied before onboarding works at runtime
+- **Date:** 2026-05-28 · **Area:** backend / Supabase
+- **Trap:** [`supabase/migrations/20260528000000_phase1_profiles_groups.sql`](../../supabase/migrations/20260528000000_phase1_profiles_groups.sql)
+  creates `profiles`, `groups`, `group_members` + RLS + helper fns + the `join_group_by_invite`
+  RPC. **Until this is applied to the Supabase project**, profile-setup and group create/join
+  fail at runtime with "relation does not exist". The auth flow (sign-up / OTP / sign-in) still
+  works without the migration because Supabase's built-in `auth.users` is unaffected.
+- **Fix (one-time, USER ACTION):**
+  - **Easiest:** Supabase Dashboard → **SQL editor** → paste the migration file's contents → Run.
+  - **Or, with Supabase CLI:** `supabase link --project-ref lppfqzqeaizbzunrxnpn` then
+    `supabase db push`.
+- **Verify:** After applying, in the SQL editor run
+  `select count(*) from profiles;` (should return 0) and
+  `select pg_get_functiondef('public.join_group_by_invite'::regproc);` (should return SQL).
+- **Status:** Open until applied.
+
 ## [OPEN] W-009 — Native-only setup: do NOT reintroduce react-native-web
 - **Date:** 2026-05-28 · **Area:** build / SDK 54
 - **Trap:** During the SDK 52→54 upgrade, `react-native-web` was removed (it caused a peer

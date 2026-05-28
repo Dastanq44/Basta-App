@@ -17,6 +17,21 @@ Basta_App/
 │   └── pre-commit                # secret-scan hook (W-006/T-014); enable: core.hooksPath .githooks
 ├── scripts/
 │   └── bootstrap-claude.md       # one-time setup for a new Claude account ("Claude 2")
+├── supabase/
+│   └── migrations/
+│       └── 20260528000000_phase1_profiles_groups.sql   # T-003 (apply via Dashboard SQL — W-010)
+├── src/features/
+│   ├── auth/                     # T-020: PKCE email auth, useSession, secure-store tokens
+│   ├── onboarding/               # T-021/T-022: terms, profile setup, completeOnboarding
+│   │   ├── api/index.ts          #   fetchProfile/upsertProfile/completeOnboarding + row→User map
+│   │   ├── hooks/                #   useProfile · useUpsertProfile · useCompleteOnboarding
+│   │   └── model/                #   CURRENT_TERMS_VERSION · profileSetupInput zod
+│   └── groups/                   # T-023: createGroup, join via invite RPC
+│       ├── api/index.ts          #   createGroup · joinGroupByInvite (rpc)
+│       ├── hooks/                #   useCreateGroup · useJoinGroup
+│       └── model/                #   createGroupInput · joinGroupInput zod
+├── src/navigation/
+│   └── guards.ts                 # useOnboardingGate(): GateState — full redirect matrix
 └── docs/
     ├── architecture/             # ARCHITECTURE PROPOSAL (pre-implementation, nothing applied)
     │   ├── ARCHITECTURE.md       # umbrella: overview, folder structure, MVP phases

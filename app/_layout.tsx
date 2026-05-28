@@ -4,12 +4,13 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { useSession } from '@/features/auth';
 import { queryClient } from '@/shared/lib/queryClient';
 import { ThemeProvider, useTheme } from '@/shared/ui';
+import { isAtTarget, useOnboardingGate } from '@/navigation/guards';
 
 // Root layout = providers + root stack. Thin: composition + provider wiring only (D-002).
-// The session gate lives in <RootNav> so it can read the theme + run inside QueryClientProvider.
+// The session+onboarding gate lives in <RootNav> so it can read the theme + run inside
+// QueryClientProvider. All routing decisions are in `src/navigation/guards.ts`.
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
@@ -25,21 +26,18 @@ export default function RootLayout() {
 
 function RootNav() {
   const t = useTheme();
-  const session = useSession();
-  const segments = useSegments();
+  const gate = useOnboardingGate();
+  const segments = useSegments() as string[];
   const router = useRouter();
 
   useEffect(() => {
-    if (session.status === 'loading') return;
-    const inAuthGroup = segments[0] === '(auth)';
-    if (session.status === 'signedOut' && !inAuthGroup) {
-      router.replace('/(auth)/sign-in');
-    } else if (session.status === 'signedIn' && inAuthGroup) {
-      router.replace('/(tabs)');
+    if (gate.status !== 'ready') return;
+    if (!isAtTarget(segments, gate.target)) {
+      router.replace(gate.target);
     }
-  }, [session.status, segments, router]);
+  }, [gate, segments, router]);
 
-  if (session.status === 'loading') {
+  if (gate.status === 'loading') {
     return (
       <View
         style={{

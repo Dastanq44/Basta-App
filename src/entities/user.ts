@@ -11,4 +11,6 @@ export type User = {
   /** Drives day-boundary math server-side (D-003). */
   timezone: string;
   onboarded: boolean;
+  /** Version of T&S the user has accepted; compared against CURRENT_TERMS_VERSION (T-021). */
+  termsVersion?: string;
 };

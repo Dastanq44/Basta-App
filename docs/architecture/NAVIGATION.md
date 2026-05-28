@@ -54,3 +54,22 @@ proofs/verifications from the user's groups). It is intentionally named **"Today
   implementations.
 - Auth + onboarding guards redirect at the layout level (`app/_layout.tsx`), not inside screens.
 - Deep links never carry sensitive data.
+
+## Onboarding gate (implemented — `src/navigation/guards.ts` → `useOnboardingGate`)
+
+The gate centralizes routing decisions so `app/_layout.tsx` stays thin. The server profile is
+the source of truth (D-003); local state never decides routing.
+
+| Session     | Profile       | Terms vs CURRENT | Onboarded | Target                              |
+|-------------|---------------|------------------|-----------|-------------------------------------|
+| `loading`   | —             | —                | —         | (no redirect — loading splash)      |
+| `signedOut` | —             | —                | —         | `/(auth)/sign-in`                   |
+| `signedIn`  | loading/error | —                | —         | (no redirect — loading splash)      |
+| `signedIn`  | `null`        | —                | —         | `/(onboarding)/profile-setup`       |
+| `signedIn`  | present       | mismatch         | —         | `/(onboarding)/profile-setup`       |
+| `signedIn`  | present       | match            | `false`   | `/(onboarding)/join-or-create-group`|
+| `signedIn`  | present       | match            | `true`    | `/(tabs)`                           |
+
+Loop avoidance: the layout only calls `router.replace(target)` when `isAtTarget(segments,
+target)` is false. Auth → on signed-in transition → goes through full gate, never lands on `(tabs)`
+unconditionally.

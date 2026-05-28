@@ -14,9 +14,10 @@
 | T-002 | DONE | mvp | Scaffold Expo + TS app (expo-router) + feature folders | Phase 0 foundation; tsc+lint green |
 | T-020 | DONE | mvp | Email auth (PKCE), secure token storage, session hook | Supabase + secure-store wired; tsc+lint green; runtime NOT yet exercised (W-008) |
 | T-061a | DONE | setup | **Expo SDK 52 → 54 upgrade** (pulled early from T-061) | 18/18 expo-doctor; tsc+lint+`expo start --clear` green. ⚠️ DO NOT downgrade to SDK 52 — iOS Expo Go tracks latest. ⚠️ Use `npx expo install <pkg>` for all new Expo-related deps to preserve SDK 54 alignment. |
-| T-003 | TODO | mvp | Supabase project + apply schema + RLS | Project created (`lppfqzqeaizbzunrxnpn`); schema still **not applied** |
-| T-021 | TODO | mvp | Terms acceptance gate (versioned) | Next up after auth smoke-test |
-| T-022 | TODO | mvp | Profile setup; onboarding gate on server `onboarded` flag | Needs T-003 schema for `users.onboarded` |
+| T-003 | DOING | mvp | Supabase project + apply schema + RLS | **Migration file written** (`supabase/migrations/20260528000000_phase1_profiles_groups.sql`); USER must apply via Dashboard SQL editor — see W-010 |
+| T-021 | DONE | mvp | Terms acceptance gate (versioned) | `CURRENT_TERMS_VERSION` + `profiles.terms_version`; gate redirects to profile-setup on mismatch |
+| T-022 | DONE | mvp | Profile setup; onboarding gate on server `onboarded` flag | Real form (username/displayName/timezone/terms); `onboarded` only flips true after group setup |
+| T-023 | DONE | mvp | Friend invite links + search; group create / join | `createGroup` + `joinGroupByInvite` RPC; on success flips `onboarded=true` and redirects to tabs |
 
 ## Backlog — MVP (grouped)
 
@@ -34,9 +35,9 @@
 | ID | Status | Task |
 |----|--------|------|
 | T-020 | DONE | Email auth (PKCE), secure token storage, session hook. `src/features/auth/*`; root-layout redirect gate; SecureStore-backed Supabase client. |
-| T-021 | TODO | Terms acceptance gate (versioned) |
-| T-022 | TODO | Profile setup; onboarding gate on server `onboarded` flag |
-| T-023 | TODO | Friend invite links + search; group create / join |
+| T-021 | DONE | Terms acceptance gate (versioned) |
+| T-022 | DONE | Profile setup; onboarding gate on server `onboarded` flag |
+| T-023 | DONE | Friend invite links + search; group create / join |
 
 ### Challenges & proof (core)
 | ID | Status | Task |

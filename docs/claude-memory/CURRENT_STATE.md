@@ -3,18 +3,31 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-05-28 — by: Claude 1 / Expo SDK 52→54 upgrade_
+_Last updated: 2026-05-28 — by: Claude 1 / Phase 1 onboarding (T-021/T-022/T-023)_
 
-## Status: SDK 54 UPGRADE COMPLETE · PHASE 1 AUTH (T-020) IMPLEMENTED · runtime untested
+## Status: PHASE 1 ONBOARDING IMPLEMENTED (T-021/T-022/T-023) · migration awaiting USER apply
 
 **Stack now:** Expo SDK 54 · React 19.1.0 · RN 0.81.5 · expo-router 6.0.23 · TS 5.9.2 ·
 @types/react 19.1.10 · eslint-config-expo 10. **Native-only** (`platforms: ["ios","android"]` in
 app.json; `react-native-web` removed — consistent with D-006).
 
 **Latest checks:** `npm run typecheck` → green ✅ · `npm run lint` → green ✅ ·
-`npx expo-doctor` → **18/18** ✅ · `npx expo start --clear` → Metro booted, env loaded ✅ · tests
-→ none configured (W-007). Runtime auth flow has NOT been exercised end-to-end (see HANDOFF →
-"2026-05-28 — Claude 2 / Phase 1 auth").
+`npx expo-doctor` → 18/18 ✅ · tests → none configured (W-007). Runtime onboarding flow has NOT
+been exercised end-to-end — **blocked on W-010 (apply the migration in Supabase)** and W-008
+(email template).
+
+**This session added:**
+- `supabase/migrations/20260528000000_phase1_profiles_groups.sql` — profiles/groups/group_members
+  + RLS + `is_group_member`/`is_group_admin` helpers + `join_group_by_invite` RPC.
+- `src/features/onboarding/*` — terms constant, zod schemas, `useProfile`/`useUpsertProfile`/
+  `useCompleteOnboarding` hooks, DB row → User mapper.
+- `src/features/groups/{api,hooks,model}/*` — `createGroup`, `joinGroupByInvite`,
+  `useCreateGroup`/`useJoinGroup`, group/invite schemas.
+- Real `app/(onboarding)/profile-setup.tsx` (form: username/displayName/terms; auto-detect tz).
+- Real `app/(onboarding)/join-or-create-group.tsx` (create OR join-with-invite-code).
+- `src/navigation/guards.ts` — `useOnboardingGate()` with the full redirect matrix; `app/_layout`
+  is now a thin caller (≈45 LOC) that only routes when current segment ≠ target.
+- `src/entities/user.ts` — added `termsVersion?: string`.
 
 Email-auth (sign-up / sign-in / verify-OTP / sign-out / session) is wired, including a
 SecureStore-backed Supabase client, a root-layout redirect gate, and field-validated forms.
