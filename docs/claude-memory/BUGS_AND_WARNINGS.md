@@ -64,7 +64,42 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
   planned (T-060, Phase 5) but could land earlier. The offline-submit→reconnect E2E is the one that
   protects the product's core promise — prioritize it once the queue exists (Phase 2).
 
+## [OPEN] W-008 — Supabase email template must include `{{ .Token }}` for OTP flow
+- **Date:** 2026-05-28 · **Area:** auth / config
+- **Trap:** The verify-email screen ([`app/(auth)/verify-email.tsx`](../../app/(auth)/verify-email.tsx))
+  calls `supabase.auth.verifyOtp({ type: 'signup', token, email })`, which expects the user to
+  paste a 6-digit code from their email. By default, Supabase's "Confirm signup" email template
+  only includes `{{ .ConfirmationURL }}` (a magic link). With that default, our screen has nothing
+  to verify against and the flow breaks silently — user gets the email, no code is in it.
+- **Fix (one-time, USER ACTION):** Supabase Dashboard → **Authentication → Email Templates →
+  "Confirm signup"**. Edit the body to include something like:
+  `<p>Your verification code is: <strong>{{ .Token }}</strong></p>`
+  (Leave the `{{ .ConfirmationURL }}` if you want both options.) Save.
+- **Why our code can't fix this:** template config is project-level, not client-controlled.
+- **Status:** Open until confirmed in the dashboard.
+
 ---
 
 ## Bugs
-_(none logged yet — add as they appear, with repro steps)_
+
+## [OPEN] B-001 — `npm install` reports 19 transitive-dep vulnerabilities
+- **Date:** 2026-05-28 · **Area:** deps / supply chain
+- **What:** `npm install` after adding `@supabase/supabase-js` + `expo-secure-store` reports
+  "19 vulnerabilities (13 moderate, 6 high)". The new packages are clean; the warnings come from
+  transitive deps in the existing Expo/RN tree (e.g. old `glob`, `tar`, `inflight`, `xmldom`).
+- **Repro:** `npm install` (any time).
+- **Workaround:** Not actionable in app code. `npm audit fix --force` would bump major versions
+  and break the SDK. Revisit during T-061 (CI/release pipeline) and after Expo SDK upgrades.
+- **Status:** Open / accept-the-risk for now (no exploitable surface — these are build-time deps).
+
+## [OPEN] B-002 — Brief route-flash on signed-out cold start
+- **Date:** 2026-05-28 · **Area:** auth / navigation
+- **What:** Root layout returns `<View><ActivityIndicator/></View>` while `useSession()` is
+  loading, then `<Stack>` once resolved. For signed-out cold starts, the Stack briefly mounts
+  the initial route (likely `(tabs)/index`) before the redirect `useEffect` fires and bounces to
+  `/(auth)/sign-in`. One-frame flash.
+- **Repro:** Cold start the app with no persisted session.
+- **Fix:** Use `expo-router`'s `SplashScreen.preventAutoHideAsync()` at module load and
+  `SplashScreen.hideAsync()` once `useSession().status !== 'loading'`. Keeps the native splash
+  up until session is known. Small, isolated change — can land standalone.
+- **Status:** Open / cosmetic.

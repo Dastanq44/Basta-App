@@ -5,5 +5,7 @@ export type { ButtonProps } from './Button';
 export { Card } from './Card';
 export { Screen } from './Screen';
 export type { ScreenProps } from './Screen';
+export { Input } from './Input';
+export type { InputProps } from './Input';
 export { ThemeProvider, useTheme, lightTheme, darkTheme } from './theme';
 export type { ThemeTokens, ColorTokens } from './theme';

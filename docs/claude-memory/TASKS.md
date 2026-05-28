@@ -12,7 +12,10 @@
 | T-004 | DONE | mvp | Architecture proposal (`docs/architecture/*`) | Proposal only — not implemented |
 | T-015 | DONE | setup | Settle D-007: local persistence engine | **Expo SQLite + MMKV** chosen; WatermelonDB deferred |
 | T-002 | DONE | mvp | Scaffold Expo + TS app (expo-router) + feature folders | Phase 0 foundation; tsc+lint green |
-| T-003 | TODO | mvp | Supabase project + apply schema + RLS | Use SUPABASE_SCHEMA_DRAFT; **not applied yet** |
+| T-020 | DONE | mvp | Email auth (PKCE), secure token storage, session hook | Supabase + secure-store wired; tsc+lint green; runtime NOT yet exercised (W-008) |
+| T-003 | TODO | mvp | Supabase project + apply schema + RLS | Project created (`lppfqzqeaizbzunrxnpn`); schema still **not applied** |
+| T-021 | TODO | mvp | Terms acceptance gate (versioned) | Next up after auth smoke-test |
+| T-022 | TODO | mvp | Profile setup; onboarding gate on server `onboarded` flag | Needs T-003 schema for `users.onboarded` |
 
 ## Backlog — MVP (grouped)
 
@@ -29,7 +32,7 @@
 ### Auth & onboarding
 | ID | Status | Task |
 |----|--------|------|
-| T-020 | TODO | Email auth (PKCE), secure token storage, session hook |
+| T-020 | DONE | Email auth (PKCE), secure token storage, session hook. `src/features/auth/*`; root-layout redirect gate; SecureStore-backed Supabase client. |
 | T-021 | TODO | Terms acceptance gate (versioned) |
 | T-022 | TODO | Profile setup; onboarding gate on server `onboarded` flag |
 | T-023 | TODO | Friend invite links + search; group create / join |

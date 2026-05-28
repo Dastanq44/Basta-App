@@ -29,5 +29,5 @@ friend verification, streaks, group leaderboards, push reminders, offline proof 
 queue. **Excluded from MVP:** AI verification, Explore feed, global leaderboard, full chat.
 
 ## Stack
-React Native + TypeScript + Expo/EAS · Supabase/Postgres · WatermelonDB + MMKV offline · tus uploads.
-(See `DECISIONS.md` D-001 for rationale.)
+React Native + TypeScript + Expo/EAS · Supabase/Postgres · Expo SQLite + MMKV offline ·
+Supabase Storage uploads (tus deferred). (See `DECISIONS.md` D-001, D-007, D-008 for rationale.)

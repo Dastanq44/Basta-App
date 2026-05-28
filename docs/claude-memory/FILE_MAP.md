@@ -37,26 +37,26 @@ Basta_App/
 ## Planned structure (target — per DECISIONS.md D-002)
 ```
 app/                              # routes = THIN screens (expo-router)
-│   _layout.tsx                   # providers, theme, query client, auth guard      (planned)
-│   (auth)/ (onboarding)/ (tabs)/                                                   (planned)
-│   challenge/[id]/  group/[id]/  verify/[submissionId].tsx                          (planned)
+│   _layout.tsx                   # providers + session gate / redirect              (live)
+│   (auth)/ (onboarding)/ (tabs)/                                                    (live; onboarding screens are stubs)
+│   challenge/[id]/  group/[id]/  verify/[submissionId].tsx                          (challenge stub; rest planned)
 src/
-├── features/<domain>/            # auth, proof, challenges, verification, groups,   (planned)
-│   ├── api/                      #   leaderboard, feed, moderation
+├── features/<domain>/            # auth (live), proof, challenges, verification,    (most planned)
+│   ├── api/                      #   groups, leaderboard, feed, moderation
 │   ├── hooks/                    # feature business logic
 │   ├── model/                    # zod schemas, feature state
 │   ├── ui/                       # feature-local components
 │   └── index.ts                  # public surface (others import only this)
-├── entities/                     # domain models                                   (planned)
+├── entities/                     # domain models                                    (live)
 │   └── mappers/                  # DTO → domain
 ├── shared/
-│   ├── ui/                       # design system: theme/tokens + variant primitives (planned)
-│   ├── lib/                      # supabase client, query client, mmkv             (planned)
-│   ├── gestures/  utils/                                                            (planned)
-├── offline/
-│   ├── db/                       # WatermelonDB schema + models                     (planned)
+│   ├── ui/                       # design system: theme/tokens + primitives + Input (live)
+│   ├── lib/                      # supabase client, query client, env (mmkv pending) (live)
+│   ├── gestures/  utils/                                                             (planned)
+├── offline/                       # engine = Expo SQLite + MMKV (D-007); tus deferred (D-008)
+│   ├── db/                       # expo-sqlite schema + queries; MMKV for K/V       (planned)
 │   ├── queue/                    # durable mutation queue + backoff                 (planned)
-│   └── upload/                   # tus resumable upload manager                     (planned)
+│   └── upload/                   # Supabase Storage uploader (swappable to tus)     (planned)
 ├── services/
 │   ├── analytics/                # typed events                                     (planned)
 │   ├── notifications/            # push registration + handlers                     (planned)
@@ -77,10 +77,18 @@ app.config.ts  eas.json  package.json                                           
 ## Key-file quick index (fill in as code lands)
 | Concern | File(s) | Status |
 |---------|---------|--------|
-| Supabase client | `src/shared/lib/supabase.ts` | planned |
-| Generated DB types | `src/shared/lib/supabase.types.ts` | planned |
-| Offline queue processor | `src/offline/queue/processor.ts` | planned |
-| Sync state machine type | `src/entities/submission.ts` | planned |
+| Supabase client (SecureStore + PKCE) | `src/shared/lib/supabase.ts` | live (T-020) |
+| Env validation | `src/shared/lib/env.ts` | live (throws on missing) |
+| Auth feature (api/hooks/model) | `src/features/auth/{api,hooks,model}/` | live (T-020) |
+| Session hook | `src/features/auth/hooks/useSession.ts` | live |
+| Root session gate / redirect | `app/_layout.tsx` (RootNav) | live |
+| Auth group layout | `app/(auth)/_layout.tsx` | live |
+| Onboarding group layout | `app/(onboarding)/_layout.tsx` | live (back disabled) |
+| Auth screens (forms) | `app/(auth)/{sign-in,sign-up,verify-email}.tsx` | live (T-020) |
+| Input primitive | `src/shared/ui/Input.tsx` | live |
+| Generated DB types | `src/shared/lib/supabase.types.ts` | planned (after T-003) |
+| Offline queue processor | `src/offline/queue/processor.ts` | planned (Phase 2) |
+| Sync state machine type | `src/entities/submission.ts` | live (skeleton) |
 | Streak function | `supabase/migrations/*_streaks.sql` | planned |
 | Leaderboard function | `supabase/migrations/*_leaderboard.sql` | planned |
-| Design tokens | `src/shared/ui/theme/tokens.ts` | planned |
+| Design tokens | `src/shared/ui/theme/tokens.ts` | live |

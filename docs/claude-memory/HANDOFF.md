@@ -21,6 +21,96 @@
 
 ---
 
+## 2026-05-28 — Claude 2 / Phase 1 auth (T-020) implementation
+**Did:** Implemented **Phase 1 email auth (T-020)** end-to-end — code only; runtime not yet
+exercised against the live Supabase project.
+- **Supabase wiring:** created local `.env` (gitignored, verified via `git check-ignore`) with
+  project URL + anon key; hardened [`src/shared/lib/env.ts`](../../src/shared/lib/env.ts) to throw
+  at module load if vars missing; built [`src/shared/lib/supabase.ts`](../../src/shared/lib/supabase.ts)
+  with `expo-secure-store` token adapter, `flowType: 'pkce'`, `detectSessionInUrl: false`.
+- **Deps added:** `@supabase/supabase-js@^2.106.2`, `expo-secure-store@~14.0.1`
+  (`npx expo install` for the latter to get SDK 52-compatible version).
+- **Auth feature module** ([`src/features/auth/`](../../src/features/auth/)):
+  - `model/schemas.ts` — zod schemas; email is `trim().toLowerCase().email()`, password 8–72,
+    OTP `/^\d{6}$/`.
+  - `api/index.ts` — thin Supabase wrappers (signUp / signInWithPassword / verifyOtp(type:'signup')
+    / signOut / getSession). All throw on error.
+  - `hooks/useSession.ts` — `{ status: 'loading' | 'signedIn' | 'signedOut', session }`; reads
+    initial session once, then subscribes to `onAuthStateChange`.
+  - `hooks/{useSignIn,useSignUp,useVerifyOtp,useSignOut}.ts` — TanStack `useMutation` wrappers
+    that re-validate via zod before calling api (defense in depth).
+  - Public surface: hooks + schemas + types only. `api/` and `model/schemas.ts` internals are
+    private (not exported from `index.ts`).
+- **Design system:** added `Input` primitive ([`src/shared/ui/Input.tsx`](../../src/shared/ui/Input.tsx))
+  — label/hint/error, focus border via `ring` token, ≥44pt minHeight, `StyleSheet.hairlineWidth`
+  border. Exported from `src/shared/ui/index.ts`.
+- **Group layouts:** new [`app/(auth)/_layout.tsx`](../../app/(auth)/_layout.tsx) (Stack, headers
+  visible, title set per screen via `<Stack.Screen options=…>`) and
+  [`app/(onboarding)/_layout.tsx`](../../app/(onboarding)/_layout.tsx) (Stack, `headerBackVisible:
+  false` so onboarding steps can't be skipped).
+- **Auth screens fleshed out:** [`app/(auth)/sign-in.tsx`](../../app/(auth)/sign-in.tsx),
+  [`sign-up.tsx`](../../app/(auth)/sign-up.tsx), [`verify-email.tsx`](../../app/(auth)/verify-email.tsx)
+  — real forms with field-level zod errors, KeyboardAvoidingView (iOS `padding`), proper
+  autocomplete/textContentType hints, OTP input strips non-digits + maxLength 6 + `oneTimeCode`
+  autofill. Sign-up `router.replace`s to verify-email with `email` query param. Sign-in/verify
+  success relies on `onAuthStateChange` → root layout redirect (no manual nav).
+- **Root layout** ([`app/_layout.tsx`](../../app/_layout.tsx)): added internal `<RootNav>` that
+  reads `useSession()`, watches `useSegments()`, and `router.replace()`s — signed-out users out
+  of non-`(auth)` routes, signed-in users out of `(auth)`. Loading state shows centered
+  `ActivityIndicator` (token-coloured).
+- **Verification:** `npm run typecheck` → exit 0 ✅ · `npm run lint` → exit 0 ✅.
+
+**In progress:** Nothing half-done.
+
+**Next up:**
+1. **USER ACTION — Supabase email template:** Dashboard → Auth → Email Templates →
+   *"Confirm signup"*. Make sure the body includes `{{ .Token }}` (the 6-digit OTP). Default
+   templates often only include `{{ .ConfirmationURL }}` (magic link) — with that default, the
+   verify-email screen has nothing to verify. See W-008 below.
+2. **Smoke-test the auth flow:** `npm start` → sign up with a real email → enter OTP →
+   confirm app lands on (tabs). Then sign in. The `useSignOut` hook exists but isn't yet wired
+   to any UI — add a button on Profile tab when convenient.
+3. **T-021 — terms acceptance gate** (versioned).
+4. **T-022 — profile setup + server `onboarded` flag.** Extend `<RootNav>` redirect: signed in
+   + !onboarded → `/(onboarding)/profile-setup`.
+5. **T-023 — friend invite links + group create/join.**
+6. **T-003 — apply Supabase schema + RLS** (still TODO; needed for `onboarded` flag, profiles,
+   groups, etc.). RLS draft in `docs/architecture/SUPABASE_SCHEMA_DRAFT.md` is sketch quality —
+   harden + add pgTAP tests before applying.
+
+**Blockers / decisions needed:**
+- W-008: Supabase email-template config (USER) — without `{{ .Token }}` in the template, OTP
+  flow doesn't work end-to-end. Code is correct; config is one toggle in the dashboard.
+- T-003 schema not applied. Auth itself works without it (Supabase `auth.users` is built-in),
+  but T-022 (profile/onboarded) needs the `users` table from the schema draft.
+
+**Branch / commit:** `mvp` — this session's commit `feat(auth): implement Phase 1 email auth
+(T-020)` includes 23 file changes (T-020 implementation + 3 earlier doc-drift fixes for D-007 in
+`AGENTS.md` / `FILE_MAP.md` / `CURRENT_STATE.md`). Pushed to `origin/mvp`.
+
+**Notes for next session:**
+- **Brief flash on cold start.** `RootNav` returns `<View><ActivityIndicator/></View>` during
+  loading, then `<Stack>` once session resolves. For signed-out cold starts, the Stack briefly
+  mounts the initial route (likely `(tabs)`) before the redirect `useEffect` runs. Fix: use
+  `expo-router`'s `SplashScreen.preventAutoHideAsync()` / `hideAsync()` to hold the native splash
+  until session is known. Logged as B-002.
+- **`.env` is at repo root, gitignored** — contains the Supabase URL + anon key. If you re-clone
+  / move machines, recreate it from Dashboard → Settings → API. **Never commit** (W-006 + the
+  `.githooks/pre-commit` regex blocks `eyJ`-style JWTs too, as a backstop).
+- **npm install audit:** "19 vulnerabilities (13 moderate, 6 high)" reported. These are
+  transitive in the existing Expo/RN tree, not from the new Supabase/secure-store packages.
+  Not actionable today; revisit during T-061 (CI/release). Logged as B-001.
+- **The `(auth)`/`(onboarding)` route groups are URL-invisible** — `/(auth)/sign-in` maps to
+  `/sign-in` in deep links. Fine for now.
+- **Sign-out UI:** none. `useSignOut()` is exported but unused — add a button on the Profile
+  tab in any of the next sessions.
+
+**Tests run:** `npm run typecheck` → 0 ✅ · `npm run lint` → 0 ✅.
+**Tests NOT run:** unit/E2E (W-007 — none configured); **runtime auth flow** (no device run).
+
+**Decisions changed this session:** none. D-007 (Expo SQLite + MMKV) and D-008 (Supabase Storage
+first) remain accepted.
+
 ## 2026-05-27 — HANDOFF SNAPSHOT (ready for next Claude; pre-Phase-1)
 
 > Clean checkpoint. No new implementation this session — verification + handoff only.

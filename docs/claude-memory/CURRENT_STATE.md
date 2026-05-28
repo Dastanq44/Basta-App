@@ -3,15 +3,17 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-05-27 — by: handoff snapshot session_
+_Last updated: 2026-05-28 — by: Claude 2 / Phase 1 auth implementation_
 
-## Status: PHASE 0 FOUNDATION IN PLACE (Phase 1 route shells stubbed) — handoff checkpoint
+## Status: PHASE 1 AUTH IMPLEMENTED (T-020) — UNCOMMITTED; runtime untested
 
 **Latest checks:** `npm run typecheck` → green ✅ · `npm run lint` → green ✅ · tests → none
-configured (W-007). Working tree clean; pushed to `origin/mvp`. Phase 1 auth not started.
+configured (W-007). **Working tree dirty** — T-020 code + doc-drift fixes not yet committed.
+Runtime auth flow has NOT been exercised end-to-end (see HANDOFF "Next up #2").
 
-The Expo + TypeScript app skeleton exists and **passes `npm run typecheck` + `npm run lint`**.
-Foundation only — **no auth, groups, challenges, proof upload, or Supabase migrations** yet.
+Email-auth (sign-up / sign-in / verify-OTP / sign-out / session) is wired, including a
+SecureStore-backed Supabase client, a root-layout redirect gate, and field-validated forms.
+**Still no groups, challenges, proof upload, or Supabase migrations.**
 
 ## How to run
 - `npm install` (1131 pkgs; node_modules gitignored). Then `npm start` (Expo dev server).
@@ -25,7 +27,7 @@ Foundation only — **no auth, groups, challenges, proof upload, or Supabase mig
 - **Remote:** `origin` → https://github.com/Dastanq44/Basta-App (`mvp` pushed; `main` local only).
 - **Recent commits (mvp):** `fa77c05` initial setup → `66b813f` secrets hardening → + this
   session's `docs: add MVP architecture proposal` (see `git log`).
-- **Working dir:** `c:\Users\Дастан\Documents\Basta_App`
+- **Working dir:** repo root (machine-relative — each Claude clones to their own path).
 
 ## What exists
 - `.gitignore` (hardened for secrets), `README.md`, `CLAUDE.md`, `AGENTS.md`.
@@ -38,15 +40,22 @@ Foundation only — **no auth, groups, challenges, proof upload, or Supabase mig
   `scripts/bootstrap-claude.md` (Claude 2 onboarding).
 - **App foundation (Phase 0):** `package.json`, `tsconfig.json`, `app.json` (expo-router +
   typedRoutes), `babel.config.js`, `.eslintrc.js` (import boundaries), `.env.example`.
-  - `app/` — navigation shell: root `_layout` (providers), `(tabs)/` (Today/Challenges/Groups/
-    Profile), `challenge/[id]`, `+not-found`. Phase 1 **route shells** (placeholders, no logic):
-    `(auth)/` sign-in · sign-up · verify-email; `(onboarding)/` profile-setup · join-or-create-group.
-  - `src/shared/ui/` — theme tokens + `ThemeProvider` + primitives (Text, Button, Card, Screen).
-  - `src/shared/lib/` — `queryClient`, `env`.
+  - `app/` — navigation shell: root `_layout` (providers + **session gate / redirect**),
+    `(tabs)/` (Today/Challenges/Groups/Profile), `challenge/[id]`, `+not-found`. Phase 1 routes
+    **wired**: `(auth)/_layout` + `sign-in` · `sign-up` · `verify-email` (real forms);
+    `(onboarding)/_layout` + `profile-setup` · `join-or-create-group` (still placeholders —
+    T-022/T-023).
+  - `src/shared/ui/` — theme tokens + `ThemeProvider` + primitives (Text, Button, Card, Screen,
+    **Input**).
+  - `src/shared/lib/` — `queryClient`, `env` (now validates Supabase vars), **`supabase`** (client
+    with SecureStore adapter + PKCE).
   - `src/entities/` — domain models (user, group, challenge, submission, verification) + mappers/.
-  - `src/offline/` — engine-agnostic skeleton (db, queue types, upload interface) — **D-007 pending**.
+  - `src/offline/` — engine-agnostic skeleton (db, queue types, upload interface). D-007 settled
+    = Expo SQLite + MMKV; implementation lands in Phase 2.
   - `src/services/` — analytics (typed events), crash, notifications — no-op interfaces.
-  - `src/features/<9 domains>/` — `index.ts` public-surface skeletons.
+  - `src/features/auth/` — **implemented (T-020)**: api/, hooks/ (`useSession`, `useSignIn`,
+    `useSignUp`, `useVerifyOtp`, `useSignOut`), model/ (zod schemas). All other features remain
+    `index.ts`-only skeletons.
   - `src/navigation/` — `routes` (typed helpers), `guards`, `linking`.
 
 ## Per-clone setup (each Claude account must do once)
@@ -67,9 +76,13 @@ Foundation only — **no auth, groups, challenges, proof upload, or Supabase mig
   register only after a Claude Code session reload.
 
 ## Not yet decided / needs setup
-- Supabase project not created; no env vars / secrets configured.
-- No CI/CD, no EAS config, no analytics/crash SDK wired.
+- **Supabase project exists** (`lppfqzqeaizbzunrxnpn`); URL + anon key in local `.env`. **Schema
+  not applied yet** (T-003).
+- **Supabase email-template config (USER):** confirm `{{ .Token }}` is in the "Confirm signup"
+  template — required for OTP flow (W-008).
+- No CI/CD, no EAS config, no analytics/crash SDK wired (T-012, T-061).
 
 ## Next concrete step
-See `HANDOFF.md` → Next Up. In short: initialize git, then scaffold the Expo + TypeScript project
-and the feature-folder structure (after the user approves starting implementation).
+See `HANDOFF.md` → Next Up. Short version: user toggles the Supabase email template + smoke-tests
+the auth flow; then T-021 (terms gate) or T-022 (profile setup + onboarded flag), gated on T-003
+(apply Supabase schema + RLS).
