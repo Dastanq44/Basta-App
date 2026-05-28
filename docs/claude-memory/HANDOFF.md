@@ -60,6 +60,9 @@ touched. tsc/lint/expo-doctor all green; `expo start --clear` boots cleanly.
 - **npm run lint passes:** ✅ exit 0. (eslint-config-expo v10 still works with legacy `.eslintrc.js`.)
 - **npx expo start --clear was tested:** ✅ Booted cleanly on port 8082 (8081 was occupied by the
   user's earlier orphaned `npm start` session — not an upgrade issue).
+- **Post-upgrade fix-up:** SDK 54 requires `babel-preset-expo` as an **explicit** dep
+  (in SDK 52 it was implicit). Added to `devDependencies` as `~54.0.10` after Metro complained
+  "Cannot find module 'babel-preset-expo'". Don't remove it.
 - **Remaining warnings:**
   - npm reports transitive vulnerabilities post-install (count may differ from B-001's earlier 19).
     Re-evaluate in B-001 once on SDK 54; do NOT run `npm audit fix --force` (would jump to SDK 56).
