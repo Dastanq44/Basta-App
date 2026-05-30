@@ -8,5 +8,11 @@ export {
   useSignOut,
   type SessionState,
 } from './hooks';
-export { signInInput, signUpInput, verifyOtpInput } from './model';
+export {
+  signInInput,
+  signUpInput,
+  verifyOtpInput,
+  OTP_MIN_LENGTH,
+  OTP_MAX_LENGTH,
+} from './model';
 export type { SignInInput, SignUpInput, VerifyOtpInput } from './model';

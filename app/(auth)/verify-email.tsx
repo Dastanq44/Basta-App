@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, View } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
-import { useVerifyOtp, verifyOtpInput } from '@/features/auth';
+import { OTP_MAX_LENGTH, useVerifyOtp, verifyOtpInput } from '@/features/auth';
 import { Button, Input, Screen, Text, useTheme } from '@/shared/ui';
 
 // Email verification via 6-digit OTP delivered to the user's inbox.
@@ -36,18 +36,20 @@ export default function VerifyEmailScreen() {
         <View style={{ flex: 1, justifyContent: 'center', gap: t.spacing.lg }}>
           <Text variant="title">Check your email</Text>
           <Text variant="muted">
-            We sent a 6-digit code to {email || 'your inbox'}. Enter it below to finish creating
-            your account.
+            We sent a verification code to {email || 'your inbox'}. Enter it below to finish
+            creating your account.
           </Text>
           <Input
             label="Verification code"
             value={token}
-            onChangeText={(v) => setToken(v.replace(/\D/g, '').slice(0, 6))}
-            placeholder="000000"
+            // Strip non-digits; cap at the OTP_MAX_LENGTH so the input can't accept more than the
+            // schema would ever accept. The schema's regex enforces the actual valid range.
+            onChangeText={(v) => setToken(v.replace(/\D/g, '').slice(0, OTP_MAX_LENGTH))}
+            placeholder="123456"
             keyboardType="number-pad"
             autoComplete="one-time-code"
             textContentType="oneTimeCode"
-            maxLength={6}
+            maxLength={OTP_MAX_LENGTH}
             error={fieldError}
             editable={!mutation.isPending}
           />

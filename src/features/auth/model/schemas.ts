@@ -8,9 +8,20 @@ export const passwordSchema = z
 
 export const signUpInput = z.object({ email: emailSchema, password: passwordSchema });
 export const signInInput = z.object({ email: emailSchema, password: passwordSchema });
+// Supabase's signup OTP length is configurable in Project → Auth → Settings (4–10 digits).
+// We accept the full configurable range here so the client adapts to whatever the project is
+// set to, rather than pinning a length that won't match the email the user actually receives.
+export const OTP_MIN_LENGTH = 4;
+export const OTP_MAX_LENGTH = 10;
 export const verifyOtpInput = z.object({
   email: emailSchema,
-  token: z.string().trim().regex(/^\d{6}$/, 'Enter the 6-digit code'),
+  token: z
+    .string()
+    .trim()
+    .regex(
+      new RegExp(`^\\d{${OTP_MIN_LENGTH},${OTP_MAX_LENGTH}}$`),
+      `Enter the code from your email (${OTP_MIN_LENGTH}–${OTP_MAX_LENGTH} digits)`,
+    ),
 });
 
 export type SignUpInput = z.infer<typeof signUpInput>;
