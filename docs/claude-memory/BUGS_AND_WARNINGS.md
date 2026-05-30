@@ -65,6 +65,10 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
   protects the product's core promise — prioritize it once the queue exists (Phase 2).
 
 ## [OPEN] W-010 — Phase 1 Supabase migration must be applied before onboarding works at runtime
+> **2026-05-28 UPDATE:** The migration file was updated to fix B-006 (trigger now
+> `SECURITY DEFINER`). If you've **already applied** the original version of W-010, also run
+> the small CREATE OR REPLACE FUNCTION snippet from B-006 — otherwise `createGroup` will fail
+> silently with an RLS error.
 - **Date:** 2026-05-28 · **Area:** backend / Supabase
 - **Trap:** [`supabase/migrations/20260528000000_phase1_profiles_groups.sql`](../../supabase/migrations/20260528000000_phase1_profiles_groups.sql)
   creates `profiles`, `groups`, `group_members` + RLS + helper fns + the `join_group_by_invite`
@@ -124,6 +128,48 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
 - **Risk:** Low — these are dev/build-time deps, not in the shipped app bundle.
 - **Status:** Open / accept-the-risk. Revisit during T-061 (CI/release) or the next planned SDK
   upgrade.
+
+## [RESOLVED] B-006 — `createGroup` rejected by RLS: trigger was SECURITY INVOKER
+- **Date:** 2026-05-28 · **Area:** Supabase / RLS
+- **What:** The `add_owner_member()` trigger fires AFTER INSERT on `groups` and inserts the
+  creator as `role='owner'` in `group_members`. Default trigger security is INVOKER → the
+  trigger ran with the calling user's privileges, but the RLS policy on `group_members`
+  (`gm_insert_admin`) requires being an admin of the target group — which the user only
+  becomes via this trigger. Chicken-and-egg → RLS denied → `createGroup` failed with
+  "new row violates row-level security policy" → on a small mobile screen this looked like
+  "nothing happened" to the user.
+- **Fix:** Trigger function is now `SECURITY DEFINER` (and `set search_path = public`), same
+  pattern as `is_group_member` / `is_group_admin`. Migration file updated.
+- **If your project already has the broken trigger applied**, run this in Supabase SQL editor:
+  ```sql
+  create or replace function add_owner_member()
+  returns trigger
+  language plpgsql
+  security definer
+  set search_path = public
+  as $$
+  begin
+    insert into group_members (group_id, user_id, role)
+      values (new.id, new.owner_id, 'owner');
+    return new;
+  end $$;
+  ```
+  Trigger doesn't need re-creation — `create or replace function` is enough.
+- **Diagnostic added:** `createGroup`, `joinGroupByInvite`, `upsertProfile`, `completeOnboarding`
+  now `console.error('[basta] ...', e)` on failure + use a 10s `AbortSignal` timeout. So future
+  silent failures show up in the Expo terminal.
+
+## [RESOLVED] B-007 — No path to verify-email after closing the app mid-signup
+- **Date:** 2026-05-28 · **Area:** auth / UX
+- **What:** After sign-up, the user is unverified (no session). If they close and reopen the
+  app, the gate routes them to sign-in. Trying sign-up again triggers Supabase's per-email
+  rate limit ("Email rate limit exceeded") — and they had no UI path to the verify-email
+  screen to enter the code they already received.
+- **Fix:** (1) Sign-in screen now has a "Have a verification code? Verify your email" link
+  to `/(auth)/verify-email`. (2) `verify-email` accepts manual email input when navigated to
+  without a query param.
+- **Note:** Supabase signup OTPs expire after 1h (configurable). If too much time has passed,
+  the user must wait out the rate limit (default 1h per email) and sign up again.
 
 ## [RESOLVED] B-003 — Onboarding gate infinite-looped on profile fetch error
 - **Date:** 2026-05-28 · **Area:** navigation / gate

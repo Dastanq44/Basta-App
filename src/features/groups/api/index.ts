@@ -3,6 +3,14 @@
 import { supabase } from '@/shared/lib/supabase';
 import type { Group, GroupId } from '@/entities';
 
+const REQUEST_TIMEOUT_MS = 10_000;
+
+function withTimeout(): AbortController {
+  const ctrl = new AbortController();
+  setTimeout(() => ctrl.abort(new Error(`request timed out after ${REQUEST_TIMEOUT_MS}ms`)), REQUEST_TIMEOUT_MS);
+  return ctrl;
+}
+
 type GroupRow = {
   id: string;
   name: string;
@@ -20,17 +28,24 @@ function toGroup(row: GroupRow): Group {
 }
 
 export async function createGroup(name: string): Promise<Group> {
-  const { data: auth } = await supabase.auth.getUser();
-  const uid = auth.user?.id;
-  if (!uid) throw new Error('Not signed in');
+  const ctrl = withTimeout();
+  try {
+    const { data: auth } = await supabase.auth.getUser();
+    const uid = auth.user?.id;
+    if (!uid) throw new Error('Not signed in');
 
-  const { data, error } = await supabase
-    .from('groups')
-    .insert({ name, owner_id: uid })
-    .select('id, name, owner_id, invite_code')
-    .single();
-  if (error) throw error;
-  return toGroup(data as GroupRow);
+    const { data, error } = await supabase
+      .from('groups')
+      .insert({ name, owner_id: uid })
+      .select('id, name, owner_id, invite_code')
+      .abortSignal(ctrl.signal)
+      .single();
+    if (error) throw error;
+    return toGroup(data as GroupRow);
+  } catch (e) {
+    console.error('[basta] createGroup failed:', e);
+    throw e;
+  }
 }
 
 /**
@@ -40,10 +55,18 @@ export async function createGroup(name: string): Promise<Group> {
  * Returns the group_id of the joined group.
  */
 export async function joinGroupByInvite(code: string): Promise<GroupId> {
-  const { data, error } = await supabase.rpc('join_group_by_invite', { p_code: code });
-  if (error) {
-    // Surface the Postgres exception message ("invalid invite code") verbatim.
-    throw new Error(error.message || 'Could not join group');
+  const ctrl = withTimeout();
+  try {
+    const { data, error } = await supabase
+      .rpc('join_group_by_invite', { p_code: code })
+      .abortSignal(ctrl.signal);
+    if (error) {
+      // Surface the Postgres exception message ("invalid invite code") verbatim.
+      throw new Error(error.message || 'Could not join group');
+    }
+    return data as GroupId;
+  } catch (e) {
+    console.error('[basta] joinGroupByInvite failed:', e);
+    throw e;
   }
-  return data as GroupId;
 }

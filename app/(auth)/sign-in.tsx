@@ -72,6 +72,11 @@ export default function SignInScreen() {
               Don't have an account? Sign up
             </Text>
           </Link>
+          <Link href="/(auth)/verify-email">
+            <Text variant="muted" style={{ textAlign: 'center' }}>
+              Have a verification code? Verify your email
+            </Text>
+          </Link>
         </View>
       </KeyboardAvoidingView>
     </Screen>

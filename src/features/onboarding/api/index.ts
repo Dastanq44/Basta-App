@@ -72,42 +72,62 @@ export type UpsertProfilePayload = {
  * it flips to true only after group setup (see `completeOnboarding`).
  */
 export async function upsertProfile(payload: UpsertProfilePayload): Promise<User> {
-  const { data: auth } = await supabase.auth.getUser();
-  const uid = auth.user?.id;
-  if (!uid) throw new Error('Not signed in');
+  const ctrl = new AbortController();
+  const tid = setTimeout(() => ctrl.abort(new Error('upsertProfile timed out')), PROFILE_FETCH_TIMEOUT_MS);
+  try {
+    const { data: auth } = await supabase.auth.getUser();
+    const uid = auth.user?.id;
+    if (!uid) throw new Error('Not signed in');
 
-  const { data, error } = await supabase
-    .from('profiles')
-    .upsert(
-      {
-        id: uid,
-        username: payload.username,
-        display_name: payload.displayName,
-        timezone: payload.timezone,
-        terms_version: payload.termsVersion,
-      },
-      { onConflict: 'id' },
-    )
-    .select('id, username, display_name, avatar_url, timezone, onboarded, terms_version')
-    .single();
-  if (error) throw error;
-  return toUser(data as ProfileRow);
+    const { data, error } = await supabase
+      .from('profiles')
+      .upsert(
+        {
+          id: uid,
+          username: payload.username,
+          display_name: payload.displayName,
+          timezone: payload.timezone,
+          terms_version: payload.termsVersion,
+        },
+        { onConflict: 'id' },
+      )
+      .select('id, username, display_name, avatar_url, timezone, onboarded, terms_version')
+      .abortSignal(ctrl.signal)
+      .single();
+    if (error) throw error;
+    return toUser(data as ProfileRow);
+  } catch (e) {
+    console.error('[basta] upsertProfile failed:', e);
+    throw e;
+  } finally {
+    clearTimeout(tid);
+  }
 }
 
 /** Mark onboarding complete. Called once the user has joined or created a group. */
 export async function completeOnboarding(): Promise<User> {
-  const { data: auth } = await supabase.auth.getUser();
-  const uid = auth.user?.id;
-  if (!uid) throw new Error('Not signed in');
+  const ctrl = new AbortController();
+  const tid = setTimeout(() => ctrl.abort(new Error('completeOnboarding timed out')), PROFILE_FETCH_TIMEOUT_MS);
+  try {
+    const { data: auth } = await supabase.auth.getUser();
+    const uid = auth.user?.id;
+    if (!uid) throw new Error('Not signed in');
 
-  const { data, error } = await supabase
-    .from('profiles')
-    .update({ onboarded: true })
-    .eq('id', uid)
-    .select('id, username, display_name, avatar_url, timezone, onboarded, terms_version')
-    .single();
-  if (error) throw error;
-  return toUser(data as ProfileRow);
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({ onboarded: true })
+      .eq('id', uid)
+      .select('id, username, display_name, avatar_url, timezone, onboarded, terms_version')
+      .abortSignal(ctrl.signal)
+      .single();
+    if (error) throw error;
+    return toUser(data as ProfileRow);
+  } catch (e) {
+    console.error('[basta] completeOnboarding failed:', e);
+    throw e;
+  } finally {
+    clearTimeout(tid);
+  }
 }
 
 /** Pure check exposed for the navigation gate. */

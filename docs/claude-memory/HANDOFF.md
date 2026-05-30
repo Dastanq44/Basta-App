@@ -21,6 +21,48 @@
 
 ---
 
+## 2026-05-28 — Claude 1 / Phase 1 runtime bug fixes (B-006, B-007 + diagnostics)
+
+**Did:** Fixed two user-reported runtime bugs surfacing during sign-up → group flow on device.
+- **B-006 (RESOLVED) — `createGroup` silently fails with RLS error.** Root cause: the
+  `add_owner_member` trigger was SECURITY INVOKER, so the trigger's INSERT into `group_members`
+  was rejected by `gm_insert_admin` RLS (the user isn't admin until this trigger makes them
+  one — chicken-and-egg). Fixed by marking the trigger function `SECURITY DEFINER`
+  (`set search_path = public`). Migration file updated. **If migration was already applied,
+  user must run the `CREATE OR REPLACE FUNCTION` snippet in BUGS_AND_WARNINGS B-006.**
+- **B-007 (RESOLVED) — No way to verify email after closing the app mid-signup.** User got
+  trapped behind "Email rate limit exceeded" on sign-up retries. Fix: sign-in screen now has
+  a "Have a verification code? Verify your email" link; `verify-email` shows an email Input
+  when no query param.
+- **Diagnostic hardening:** `createGroup`, `joinGroupByInvite`, `upsertProfile`,
+  `completeOnboarding` now log failures via `console.error('[basta] ...', e)` and use a 10s
+  `AbortSignal` timeout. Mirrors what `fetchProfile` already does. Future silent failures
+  will be visible in the Expo terminal.
+
+**Did NOT change:** decisions, scope, Phase 2 anything, auth feature behavior on happy path.
+
+**In progress:** Nothing half-done.
+
+**Next up (USER):** Run the CREATE OR REPLACE FUNCTION snippet (see BUGS_AND_WARNINGS B-006)
+in Supabase SQL editor IF the migration was already applied — otherwise just (re-)apply the
+full migration. Then reload the app and the create-group flow should redirect to tabs.
+
+**Blockers / decisions needed:** none.
+
+**Branch / commit:** `mvp` + `fix: rls trigger and verify-email recovery path`. Pushed.
+
+**Notes for next session:** When designing future triggers that write into RLS-protected tables,
+default to `SECURITY DEFINER` + a narrow function body (only copies trusted columns from `NEW`).
+The pattern matches `is_group_member`/`is_group_admin` already in this migration.
+
+**Tests run:** `npm run typecheck` → 0 ✅ · `npm run lint` → 0 ✅.
+**Tests NOT run:** unit/E2E (W-007). Runtime sign-up→group flow (USER will retest after applying
+the trigger fix).
+
+**Decisions changed this session:** none.
+
+---
+
 ## 2026-05-28 — Claude 1 / Phase 1 debugging pass (no scope change)
 
 **Did:** Focused debugging/optimization pass. Four small, targeted fixes — no refactoring, no

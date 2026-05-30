@@ -54,9 +54,20 @@ create table group_members (
 -- ============================================================
 -- Trigger: when a group is created, auto-insert the owner as a member.
 -- Keeps "owner is always a member" invariant without trusting the client.
+--
+-- MUST be SECURITY DEFINER: the trigger runs as the user who inserted into `groups`, but the
+-- RLS policy on `group_members` (`gm_insert_admin`) requires being an admin of that group —
+-- which the user only becomes via THIS trigger. Without DEFINER, the trigger's INSERT into
+-- `group_members` is rejected by RLS and `createGroup` fails with a confusing RLS error
+-- (this was bug B-006). The function only ever copies NEW.id and NEW.owner_id, so the
+-- elevated privileges are not abusable.
 -- ============================================================
 create or replace function add_owner_member()
-returns trigger language plpgsql as $$
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
 begin
   insert into group_members (group_id, user_id, role)
     values (new.id, new.owner_id, 'owner');
