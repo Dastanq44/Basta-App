@@ -27,14 +27,36 @@ function toUser(row: ProfileRow): User {
   };
 }
 
-/** Read the current user's profile. Returns null when no profile row exists yet. */
+/** Hard ceiling on a single profile fetch (network or RLS hang). */
+const PROFILE_FETCH_TIMEOUT_MS = 10_000;
+
+/**
+ * Read the current user's profile. Returns null when no profile row exists yet.
+ * Bounded by an AbortSignal timeout so the gate never hangs on a slow/dead request.
+ * Errors are logged to the JS console so they appear in the Expo terminal during dev.
+ */
 export async function fetchProfile(): Promise<User | null> {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('id, username, display_name, avatar_url, timezone, onboarded, terms_version')
-    .maybeSingle();
-  if (error) throw error;
-  return data ? toUser(data as ProfileRow) : null;
+  const ctrl = new AbortController();
+  const timeoutId = setTimeout(
+    () => ctrl.abort(new Error(`fetchProfile timed out after ${PROFILE_FETCH_TIMEOUT_MS}ms`)),
+    PROFILE_FETCH_TIMEOUT_MS,
+  );
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, username, display_name, avatar_url, timezone, onboarded, terms_version')
+      .abortSignal(ctrl.signal)
+      .maybeSingle();
+    if (error) throw error;
+    return data ? toUser(data as ProfileRow) : null;
+  } catch (e) {
+    // Surface the real reason in the dev console — the gate alone shows only a loader,
+    // and silent failures here are why "infinite loading" looks mysterious.
+    console.error('[basta] fetchProfile failed:', e);
+    throw e;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 export type UpsertProfilePayload = {
