@@ -129,6 +129,43 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
 - **Status:** Open / accept-the-risk. Revisit during T-061 (CI/release) or the next planned SDK
   upgrade.
 
+## [RESOLVED] B-008 — `createGroup` still rejected by RLS on the outer INSERT after B-006
+- **Date:** 2026-05-28 · **Area:** Supabase / RLS
+- **What:** After fixing B-006 (trigger → SECURITY DEFINER), the user hit a different
+  42501 error: `new row violates row-level security policy for table "groups"`. The
+  `groups_insert_self_owned` policy requires `owner_id = auth.uid()`. On at least one Supabase
+  setup, `auth.uid()` was evaluating to NULL even though the client had a valid session and
+  was sending the correct `owner_id` — the comparison `<uuid> = NULL` is NULL, RLS rejects.
+  This class of issue is fiddly (JWT propagation under PKCE on first sign-up) and not worth
+  whack-a-mole.
+- **Fix:** Added a `create_group(p_name text)` `SECURITY DEFINER` RPC that does the insert
+  server-side. It still enforces `auth.uid()` (raises 42501 explicitly if NULL), but does the
+  INSERT with elevated privileges so RLS doesn't apply to the writer. Same pattern as
+  `join_group_by_invite`. The client now calls `supabase.rpc('create_group', ...)` then SELECTs
+  the row back (trigger has already added membership, so `groups_select_member` passes).
+- **If your project has the original migration applied**, run this in Supabase SQL editor:
+  ```sql
+  create or replace function create_group(p_name text)
+  returns uuid
+  language plpgsql security definer
+  set search_path = public
+  as $$
+  declare
+    v_uid uuid := auth.uid();
+    v_group_id uuid;
+  begin
+    if v_uid is null then
+      raise exception 'not authenticated' using errcode = '42501';
+    end if;
+    insert into public.groups (name, owner_id)
+      values (p_name, v_uid)
+      returning id into v_group_id;
+    return v_group_id;
+  end $$;
+
+  grant execute on function create_group(text) to authenticated;
+  ```
+
 ## [RESOLVED] B-006 — `createGroup` rejected by RLS: trigger was SECURITY INVOKER
 - **Date:** 2026-05-28 · **Area:** Supabase / RLS
 - **What:** The `add_owner_member()` trigger fires AFTER INSERT on `groups` and inserts the

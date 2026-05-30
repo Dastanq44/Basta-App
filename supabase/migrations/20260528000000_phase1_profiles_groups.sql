@@ -137,6 +137,34 @@ end $$;
 grant execute on function join_group_by_invite(text) to authenticated;
 
 -- ============================================================
+-- RPC: create_group — used by clients during onboarding (T-023).
+-- SECURITY DEFINER bypasses the `groups` INSERT RLS, which on some Supabase setups can fail
+-- with 42501 even when the client sent a valid session (the WITH-CHECK on `owner_id = auth.uid()`
+-- can evaluate to NULL if JWT claims aren't reaching policy context — chicken-and-egg with PKCE
+-- flows on first sign-up). The function still enforces auth.uid() server-side, so it's safe.
+-- The AFTER INSERT trigger then handles the owner-member row.
+-- ============================================================
+create or replace function create_group(p_name text)
+returns uuid
+language plpgsql security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_group_id uuid;
+begin
+  if v_uid is null then
+    raise exception 'not authenticated' using errcode = '42501';
+  end if;
+  insert into public.groups (name, owner_id)
+    values (p_name, v_uid)
+    returning id into v_group_id;
+  return v_group_id;
+end $$;
+
+grant execute on function create_group(text) to authenticated;
+
+-- ============================================================
 -- RLS
 -- ============================================================
 alter table profiles      enable row level security;

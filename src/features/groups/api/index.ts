@@ -30,17 +30,23 @@ function toGroup(row: GroupRow): Group {
 export async function createGroup(name: string): Promise<Group> {
   const ctrl = withTimeout();
   try {
-    const { data: auth } = await supabase.auth.getUser();
-    const uid = auth.user?.id;
-    if (!uid) throw new Error('Not signed in');
+    // Use the SECURITY DEFINER RPC instead of a direct INSERT — see migration notes for
+    // `create_group`. Avoids the RLS edge case where `owner_id = auth.uid()` evaluates to
+    // NULL on the server even when the client has a valid session (PKCE/JWT propagation).
+    const { data: groupId, error: rpcErr } = await supabase
+      .rpc('create_group', { p_name: name })
+      .abortSignal(ctrl.signal);
+    if (rpcErr) throw new Error(rpcErr.message || 'Could not create group');
 
-    const { data, error } = await supabase
+    // Read the created row back. The AFTER INSERT trigger has added us as a member, so the
+    // groups_select_member RLS passes.
+    const { data, error: selErr } = await supabase
       .from('groups')
-      .insert({ name, owner_id: uid })
       .select('id, name, owner_id, invite_code')
+      .eq('id', groupId as string)
       .abortSignal(ctrl.signal)
       .single();
-    if (error) throw error;
+    if (selErr) throw selErr;
     return toGroup(data as GroupRow);
   } catch (e) {
     console.error('[basta] createGroup failed:', e);

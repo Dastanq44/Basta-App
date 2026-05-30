@@ -21,6 +21,28 @@
 
 ---
 
+## 2026-05-28 — Claude 1 / Phase 1 runtime bug fixes (B-008: createGroup via RPC)
+
+**Did:** Followed B-006 with **B-008**. After the trigger fix shipped, `createGroup` still hit
+42501 on the OUTER `INSERT INTO groups` (RLS `owner_id = auth.uid()` failing — likely JWT
+propagation edge case under PKCE). Replaced the direct insert with a SECURITY DEFINER
+`create_group(p_name)` RPC, same pattern as `join_group_by_invite`. Client now calls
+`supabase.rpc('create_group', ...)` then SELECTs the row back (trigger has already added the
+membership, so `groups_select_member` passes). USER must apply the new function — SQL is in
+BUGS_AND_WARNINGS B-008.
+
+**In progress:** Nothing half-done.
+
+**Next up (USER):** Run the `create_group` CREATE OR REPLACE FUNCTION snippet from B-008 in
+Supabase SQL editor. Then reload the app and retest the create-group flow.
+
+**Branch / commit:** `mvp` + `fix(groups): create via SECURITY DEFINER RPC`. Pushed.
+
+**Decisions changed:** none. (Pattern is now: write operations that touch RLS chicken-and-egg
+states go through DEFINER RPCs, not direct INSERTs from the client.)
+
+---
+
 ## 2026-05-28 — Claude 1 / Phase 1 runtime bug fixes (B-006, B-007 + diagnostics)
 
 **Did:** Fixed two user-reported runtime bugs surfacing during sign-up → group flow on device.
