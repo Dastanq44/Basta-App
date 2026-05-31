@@ -38,7 +38,15 @@ export function Button({
     ghost: t.colors.foreground,
     destructive: t.colors.destructiveForeground,
   };
-  const paddingVertical: Record<Size, number> = { sm: 8, md: 12, lg: 16 };
+  // Retro look: secondary is an OUTLINED pill (foreground-colored border), the rest are flat fills.
+  const borderColor: Record<Variant, string> = {
+    primary: 'transparent',
+    secondary: t.colors.foreground,
+    ghost: 'transparent',
+    destructive: 'transparent',
+  };
+  const borderWidth: Record<Variant, number> = { primary: 0, secondary: 1.5, ghost: 0, destructive: 0 };
+  const paddingVertical: Record<Size, number> = { sm: 10, md: 13, lg: 16 };
   const isDisabled = disabled || loading;
 
   return (
@@ -51,10 +59,14 @@ export function Button({
         styles.base,
         {
           backgroundColor: bg[variant],
+          borderColor: borderColor[variant],
+          borderWidth: borderWidth[variant],
           paddingVertical: paddingVertical[size],
-          borderRadius: t.radius.md,
+          // Fully-rounded pill — the Retro button shape.
+          borderRadius: t.radius.full,
           minHeight: t.minTapTarget,
-          opacity: isDisabled ? 0.5 : state.pressed ? 0.85 : 1,
+          opacity: isDisabled ? 0.5 : state.pressed ? 0.9 : 1,
+          transform: [{ scale: state.pressed && !isDisabled ? 0.98 : 1 }],
         },
         typeof style === 'function' ? style(state) : style,
       ]}

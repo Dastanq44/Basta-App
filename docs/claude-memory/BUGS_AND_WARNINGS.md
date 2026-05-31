@@ -83,7 +83,30 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
 - **Status:** Open / known operational item. Re-evaluate after any future Expo SDK upgrade
   (the react-dom peer specifier may align with our react version then).
 
-## [OPEN] W-011 — Phase 2 needs: apply migration + create Storage bucket + (re)install deps
+## [OPEN] W-014 — Phase 3 needs: apply the verification migration before verify works at runtime
+- **Date:** 2026-05-31 · **Area:** backend / Supabase
+- **What:** Phase 3 (T-040) is code-complete and passes tsc/lint/expo-doctor, but the verify flow
+  fails at runtime until the new migration is applied:
+  `supabase/migrations/20260531000000_phase3_verification.sql`. Paste the whole file into
+  Supabase Dashboard → SQL editor → Run. It is idempotent (`create ... if not exists`,
+  `create or replace`, `drop policy if exists`) and safe to re-run.
+- **What it changes:** adds the `verifications` table + `verify_submission` RPC, **replaces**
+  `submit_proof` so **solo proofs auto-verify** (D-009), and **widens the `proof-media` storage
+  SELECT policy** so a verifier can view a co-participant's photo (Phase 2 deferred this).
+- **Order note:** the storage policy depends on the `proof-media` bucket already existing
+  (W-011, done). No new bucket needed.
+- **Verify:** `select count(*) from verifications;` (→ 0) and
+  `select pg_get_functiondef('public.verify_submission'::regproc);` returns SQL.
+- **Smoke-test after applying:**
+  - [ ] solo challenge: submit a proof → status reads **Verified** immediately (auto-verify).
+  - [ ] group challenge with a 2nd member: member A submits → member B opens the challenge,
+        sees A's pending proof with a **Verify proof** button → taps → sees the photo →
+        **Approve** → A's proof flips to **Verified**.
+  - [ ] **Reject** path flips to **Rejected**.
+  - [ ] you do NOT see a Verify button on your own pending proof; the RPC also rejects self-verify.
+- **Status:** Open until applied.
+
+## [RESOLVED] W-011 — Phase 2 needs: apply migration + create Storage bucket + (re)install deps
 - **Date:** 2026-05-31 · **Area:** backend / Supabase / setup
 - **What:** Phase 2 (T-030..T-035) is code-complete and passes tsc/lint/expo-doctor. It will
   fail at runtime until three USER actions are done:
@@ -100,7 +123,8 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
      Run `npm install` after `git pull`.
 - **Verify:** in Supabase SQL editor: `select count(*) from challenges;` (→ 0) and
   `select id from storage.buckets where name='proof-media';` (→ 1 row).
-- **Status:** Open until applied.
+- **Status:** RESOLVED 2026-05-31 — USER confirmed migration applied, `proof-media` bucket
+  created, and the Phase 2 create-challenge / submit-proof loop smoke-tested on-device.
 
 ## [OPEN] W-012 — Queue processor only runs while the app is foregrounded (Expo Go limit)
 - **Date:** 2026-05-31 · **Area:** offline / queue

@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Basta — theme preview (Retro.app-inspired)</title>
+<style>
+  :root{ --serif: Georgia, "Times New Roman", serif; --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  body{ margin:0; background:#1b1c20; color:#e7e8ea; padding:28px; font-family:var(--sans); }
+  h1{ font-size:20px; margin:0 0 4px; }
+  p.sub{ color:#9aa1ad; margin:0 0 24px; font-size:14px; max-width:680px; }
+  .row{ display:flex; gap:28px; flex-wrap:wrap; }
+  .col h2{ font-size:13px; text-transform:uppercase; letter-spacing:1px; color:#9aa1ad; margin:0 0 10px; }
+
+  .phone{ width:320px; border-radius:36px; padding:14px; background:#000; box-shadow:0 20px 60px rgba(0,0,0,.5); }
+  .screen{ border-radius:26px; overflow:hidden; padding:22px 18px 26px; }
+
+  .title{ font-family:var(--serif); font-size:32px; font-weight:700; letter-spacing:-.5px; line-height:1.1; margin:0; }
+  .heading{ font-family:var(--serif); font-size:20px; font-weight:700; letter-spacing:-.2px; margin:0; }
+  .muted{ font-size:15px; line-height:1.45; margin:6px 0 0; }
+  .card{ border-radius:24px; padding:18px; margin-top:16px; }
+  .badge{ display:inline-block; padding:5px 14px; border-radius:999px; font-size:13px; font-weight:600; }
+  .btn{ display:inline-block; text-align:center; padding:12px 22px; border-radius:999px; font-weight:600; font-size:15px; }
+  .btn.block{ display:block; margin-top:14px; }
+  .btn.sm{ padding:9px 16px; font-size:14px; }
+  .rowflex{ display:flex; justify-content:space-between; align-items:center; }
+  .pills{ display:flex; gap:10px; margin-top:14px; flex-wrap:wrap; }
+  .tiles{ display:flex; gap:8px; margin-top:14px; }
+  .tile{ flex:1; border-radius:14px; padding:12px 8px; text-align:center; }
+  .tile .m{ font-size:12px; } .tile .d{ font-size:24px; font-weight:700; }
+  .avatar{ width:46px; height:46px; border-radius:999px; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; }
+
+  /* LIGHT (primary Retro look) */
+  .light .screen{ background:#FFFFFF; color:#0A0A0A; }
+  .light .muted{ color:#9A9A9F; }
+  .light .card{ background:#FFFFFF; box-shadow:0 2px 8px rgba(0,0,0,.05); }
+  .light .tile{ background:#F1F1F2; color:#9A9A9F; }
+  .light .badge.success{ background:#15A148; color:#fff; }
+  .light .badge.pending{ background:#0A99F2; color:#fff; }
+  .light .badge.danger{ background:#FF3B30; color:#fff; }
+  .light .btn.primary{ background:#0A0A0A; color:#fff; }
+  .light .btn.outline{ background:#fff; color:#0A0A0A; border:1.5px solid #0A0A0A; }
+  .light .avatar{ background:#0A99F2; }
+
+  /* DARK */
+  .dark .screen{ background:#0B0B0B; color:#FAFAFA; }
+  .dark .muted{ color:#8E8E93; }
+  .dark .card{ background:#161616; box-shadow:none; }
+  .dark .tile{ background:#1C1C1E; color:#8E8E93; }
+  .dark .badge.success{ background:#3FB95B; color:#06230F; }
+  .dark .badge.pending{ background:#0A99F2; color:#fff; }
+  .dark .badge.danger{ background:#FF453A; color:#fff; }
+  .dark .btn.primary{ background:#FAFAFA; color:#0B0B0B; }
+  .dark .btn.outline{ background:transparent; color:#FAFAFA; border:1.5px solid #FAFAFA; }
+  .dark .avatar{ background:#0A99F2; }
+</style>
+</head>
+<body>
+  <h1>Basta — Retro.app-inspired theme</h1>
+  <p class="sub">Faithful mock of the new tokens in <code>src/shared/ui/theme/tokens.ts</code>:
+  white canvas, <b>serif</b> display titles, outlined pill buttons, soft gray tiles, one bright
+  blue accent, red for reject/notifications. Serif here is Georgia (the in-app default, zero-dep) —
+  I can swap to an exact display face (Instrument Serif / Playfair) if you want a closer match.</p>
+
+  <div class="row">
+    <div class="col light">
+      <h2>Light</h2>
+      <div class="phone"><div class="screen">
+        <div class="rowflex"><p class="title">isatay</p><div class="avatar">KI</div></div>
+        <p class="muted">fitness · group · 30 days</p>
+
+        <div class="pills">
+          <span class="btn outline">Recaps</span>
+          <span class="btn outline">Share</span>
+        </div>
+
+        <div class="tiles">
+          <div class="tile"><div class="m">May</div><div class="d">25</div><div class="m">Mon</div></div>
+          <div class="tile"><div class="m">May</div><div class="d">26</div><div class="m">Tue</div></div>
+          <div class="tile"><div class="m">May</div><div class="d">27</div><div class="m">Wed</div></div>
+        </div>
+
+        <div class="card">
+          <div class="rowflex"><p class="heading">Today</p><span class="badge success">Verified</span></div>
+          <span class="btn primary block">Submit today’s proof</span>
+        </div>
+
+        <div class="card">
+          <div class="rowflex"><p class="heading">Day 4</p><span class="badge pending">Pending verification</span></div>
+          <p class="muted">Morning run, 5k done</p>
+          <span class="btn outline sm" style="margin-top:12px">Verify proof</span>
+        </div>
+
+        <div class="card">
+          <div class="rowflex"><p class="heading">Day 3</p><span class="badge danger">Rejected</span></div>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="col dark">
+      <h2>Dark</h2>
+      <div class="phone"><div class="screen">
+        <div class="rowflex"><p class="title">isatay</p><div class="avatar">KI</div></div>
+        <p class="muted">fitness · group · 30 days</p>
+
+        <div class="pills">
+          <span class="btn outline">Recaps</span>
+          <span class="btn outline">Share</span>
+        </div>
+
+        <div class="tiles">
+          <div class="tile"><div class="m">May</div><div class="d">25</div><div class="m">Mon</div></div>
+          <div class="tile"><div class="m">May</div><div class="d">26</div><div class="m">Tue</div></div>
+          <div class="tile"><div class="m">May</div><div class="d">27</div><div class="m">Wed</div></div>
+        </div>
+
+        <div class="card">
+          <div class="rowflex"><p class="heading">Today</p><span class="badge success">Verified</span></div>
+          <span class="btn primary block">Submit today’s proof</span>
+        </div>
+
+        <div class="card">
+          <div class="rowflex"><p class="heading">Day 4</p><span class="badge pending">Pending verification</span></div>
+          <p class="muted">Morning run, 5k done</p>
+          <span class="btn outline sm" style="margin-top:12px">Verify proof</span>
+        </div>
+      </div></div>
+    </div>
+  </div>
+</body>
+</html>

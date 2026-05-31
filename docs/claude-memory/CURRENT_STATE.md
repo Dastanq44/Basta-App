@@ -3,17 +3,23 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-05-31 — by: Claude 1 / Phase 2 challenges + proof queue_
+_Last updated: 2026-05-31 — by: Claude Instance / Phase 3 friend verification (T-040)_
 
-## Status: PHASE 2 CHALLENGES + PROOF QUEUE IMPLEMENTED · migration + Storage bucket awaiting USER (W-011)
+## Status: PHASE 3 T-040 FRIEND VERIFICATION IMPLEMENTED (code-complete) · apply migration W-014 to use it
 
-Phase 2 (T-030..T-035) is code-complete: challenges feature + screens, proofs feature with
-photo-first capture + draft-on-capture, durable SQLite-backed mutation/upload queue, standard
-Supabase Storage upload, SyncBadge bound to the SyncStatus state machine, queue processor wired
-into root layout via `initOffline()`. All checks green; `expo start --clear` boots cleanly.
+Phase 1 + Phase 2 are applied and smoke-tested on-device (USER confirmed W-011 done: Phase 2
+migration applied, `proof-media` bucket created, create-challenge / submit-proof loop works).
 
-**Runtime smoke-test is BLOCKED on W-011** (apply Phase 2 migration + create `proof-media`
-bucket in Supabase Dashboard).
+**This session (T-040 friend verification):** new Phase 3 migration (`verifications` table +
+`verify_submission` SECURITY DEFINER RPC + `submit_proof` replaced to **auto-verify solo proofs**
++ widened `proof-media` storage SELECT so verifiers can view co-participants' photos), a
+`src/features/verification` feature, an `app/verify/[submissionId].tsx` screen (shows the signed
+photo + comment + Approve/Reject), and a **Verify proof** affordance on the challenge detail screen
+for pending proofs that aren't yours. Group rule: threshold-approve / single-reject (D-009).
+
+All checks green: `npm run typecheck` ✅ · `npm run lint` ✅ · `npx expo-doctor` 18/18 ✅.
+**Runtime not yet exercised** — needs the W-014 migration applied (idempotent; safe to re-run),
+then the W-014 smoke-test (solo auto-verify + a 2-member group approve/reject).
 
 **Stack now:** Expo SDK 54 · React 19.1.0 · RN 0.81.5 · expo-router 6.0.23 · TS 5.9.2 ·
 @types/react 19.1.10 · eslint-config-expo 10. **Native-only** (`platforms: ["ios","android"]` in
@@ -109,6 +115,7 @@ SecureStore-backed Supabase client, a root-layout redirect gate, and field-valid
 - No CI/CD, no EAS config, no analytics/crash SDK wired (T-012, T-061).
 
 ## Next concrete step
-See `HANDOFF.md` → Next Up. Short version: user toggles the Supabase email template + smoke-tests
-the auth flow; then T-021 (terms gate) or T-022 (profile setup + onboarded flag), gated on T-003
-(apply Supabase schema + RLS).
+See `HANDOFF.md` → Next Up. Short version: USER applies the Phase 3 migration (W-014) and runs the
+verification smoke-test. Then the next code task is **T-041 (reactions + short comments)** or
+**T-042 (streak Postgres function + pg_cron)** — T-042 can now rely on `status='verified'` for both
+solo (auto) and group (friend-verified) proofs per D-009.

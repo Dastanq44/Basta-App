@@ -57,6 +57,47 @@ export async function listSubmissionsForChallenge(challengeId: string, limit = 2
   }
 }
 
+/** A single submission by id (used by the verify screen). RLS limits this to participants. */
+export async function getSubmission(submissionId: string): Promise<Submission | null> {
+  const c = ctrl();
+  try {
+    const { data, error } = await supabase
+      .from('submissions')
+      .select(COLS)
+      .eq('id', submissionId)
+      .abortSignal(c.signal)
+      .maybeSingle();
+    if (error) throw error;
+    return data ? toSubmission(data as SubmissionRow) : null;
+  } catch (e) {
+    console.error('[basta] getSubmission failed:', e);
+    throw e;
+  }
+}
+
+// Canonical bucket name lives in src/offline/upload/storage.ts (PROOF_MEDIA_BUCKET); kept inline
+// here so the read-side API doesn't depend on the upload module.
+const PROOF_MEDIA_BUCKET = 'proof-media';
+
+/**
+ * Short-lived signed URL for a private proof-media object. Storage RLS (Phase 3) lets challenge
+ * co-participants read each other's proofs, so a verifier can fetch this for the captured photo.
+ * Returns null when there is no media path.
+ */
+export async function getProofSignedUrl(mediaPath: string | undefined, expiresInSec = 3600): Promise<string | null> {
+  if (!mediaPath) return null;
+  try {
+    const { data, error } = await supabase.storage
+      .from(PROOF_MEDIA_BUCKET)
+      .createSignedUrl(mediaPath, expiresInSec);
+    if (error) throw error;
+    return data?.signedUrl ?? null;
+  } catch (e) {
+    console.error('[basta] getProofSignedUrl failed:', e);
+    throw e;
+  }
+}
+
 /** The current user's submission for today on this challenge (if any). */
 export async function getMyTodaySubmission(challengeId: string): Promise<Submission | null> {
   const c = ctrl();

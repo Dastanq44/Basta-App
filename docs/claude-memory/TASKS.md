@@ -52,7 +52,7 @@
 ### Social & scoring (server-authoritative)
 | ID | Status | Task |
 |----|--------|------|
-| T-040 | TODO | Friend verification flow (push deep-link; server enforces who may verify) |
+| T-040 | DONE | Friend verification flow. `verify_submission` RPC + `verifications` table + `src/features/verification` + `app/verify/[submissionId].tsx` + Verify affordance on challenge detail. Group: threshold-approve/single-reject; solo auto-verifies on submit (D-009). **Push deep-link to the verify screen is deferred to T-050** (no push yet). Apply migration W-014. |
 | T-041 | TODO | Reactions + short comments |
 | T-042 | TODO | Streak Postgres function + pg_cron rollover (user timezone) |
 | T-043 | TODO | Leaderboard Postgres function; group leaderboard screen (FlashList) |

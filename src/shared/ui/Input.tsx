@@ -1,5 +1,5 @@
 import { forwardRef, useState } from 'react';
-import { StyleSheet, TextInput as RNTextInput, type TextInputProps, View } from 'react-native';
+import { TextInput as RNTextInput, type TextInputProps, View } from 'react-native';
 import { Text } from './Text';
 import { useTheme } from './theme';
 
@@ -41,15 +41,17 @@ export const Input = forwardRef<RNTextInput, InputProps>(function Input(
           rest.onBlur?.(e);
         }}
         style={[
-          styles.input,
           {
+            // Thicker border on focus gives a clear, accessible focus ring without a glow layer.
+            borderWidth: focused ? 2 : 1,
             borderColor,
-            borderRadius: t.radius.md,
+            borderRadius: t.radius.lg,
             color: t.colors.foreground,
-            backgroundColor: t.colors.background,
+            backgroundColor: t.colors.card,
             paddingHorizontal: t.spacing.md,
+            paddingVertical: t.spacing.sm,
             fontSize: t.fontSize.md,
-            minHeight: t.minTapTarget,
+            minHeight: 50,
           },
         ]}
         {...rest}
@@ -63,8 +65,4 @@ export const Input = forwardRef<RNTextInput, InputProps>(function Input(
       ) : null}
     </View>
   );
-});
-
-const styles = StyleSheet.create({
-  input: { borderWidth: StyleSheet.hairlineWidth },
 });

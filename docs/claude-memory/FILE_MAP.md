@@ -20,7 +20,8 @@ Basta_App/
 ├── supabase/
 │   └── migrations/
 │       ├── 20260528000000_phase1_profiles_groups.sql   # T-003 (applied)
-│       └── 20260528100000_phase2_challenges_proofs.sql # T-030/T-034 (apply via SQL editor — W-011)
+│       ├── 20260528100000_phase2_challenges_proofs.sql # T-030/T-034 (applied — W-011 done)
+│       └── 20260531000000_phase3_verification.sql      # T-040: verifications + verify_submission + solo auto-verify + storage SELECT widen (apply — W-014)
 ├── src/features/
 │   ├── auth/                     # T-020: PKCE email auth, useSession, secure-store tokens
 │   ├── onboarding/               # T-021/T-022: terms, profile setup, completeOnboarding
@@ -35,11 +36,15 @@ Basta_App/
 │   │   ├── api/index.ts          #   listMyChallenges · getChallenge · createChallenge (rpc)
 │   │   ├── hooks/                #   useChallenges · useChallenge · useCreateChallenge
 │   │   └── model/                #   CHALLENGE_CATEGORIES · createChallengeInput zod
-│   └── proofs/                   # T-032/T-035: photo capture + queue orchestration + SyncBadge
-│       ├── api/index.ts          #   listSubmissionsForChallenge · getMyTodaySubmission
-│       ├── hooks/                #   useSubmissions · useTodaySubmission · useQueueForChallenge · useSubmitProof
-│       ├── model/                #   proofInput zod
-│       └── ui/                   #   SyncBadge · ProofComposer
+│   ├── proofs/                   # T-032/T-035: photo capture + queue orchestration + SyncBadge
+│   │   ├── api/index.ts          #   listSubmissionsForChallenge · getMyTodaySubmission · getSubmission · getProofSignedUrl
+│   │   ├── hooks/                #   useSubmissions · useTodaySubmission · useSubmission · useProofSignedUrl · useQueueForChallenge · useSubmitProof
+│   │   ├── model/                #   proofInput zod
+│   │   └── ui/                   #   SyncBadge · ProofComposer
+│   └── verification/             # T-040: friend verification (group-only; solo auto-verifies)
+│       ├── api/index.ts          #   verifySubmission (rpc verify_submission)
+│       ├── hooks/                #   useVerifySubmission (invalidates submissions + single submission)
+│       └── model/                #   verificationResultSchema zod
 ├── src/offline/                  # Critical path (D-004). Engine: Expo SQLite (D-007).
 │   ├── index.ts                  # initOffline() barrel — used by app/_layout
 │   ├── db/                       # SQLite singleton + schema (queue_items table)
@@ -73,7 +78,7 @@ Basta_App/
 app/                              # routes = THIN screens (expo-router)
 │   _layout.tsx                   # providers + session gate / redirect              (live)
 │   (auth)/ (onboarding)/ (tabs)/                                                    (live; onboarding screens are stubs)
-│   challenge/[id]/  group/[id]/  verify/[submissionId].tsx                          (challenge stub; rest planned)
+│   challenge/[id]/  verify/[submissionId].tsx                                       (live)   group/[id]/ (planned)
 src/
 ├── features/<domain>/            # auth (live), proof, challenges, verification,    (most planned)
 │   ├── api/                      #   groups, leaderboard, feed, moderation
@@ -122,6 +127,9 @@ app.config.ts  eas.json  package.json                                           
 | Input primitive | `src/shared/ui/Input.tsx` | live |
 | Generated DB types | `src/shared/lib/supabase.types.ts` | planned (after T-003) |
 | Offline queue processor | `src/offline/queue/processor.ts` | planned (Phase 2) |
+| Verify proof screen | `app/verify/[submissionId].tsx` | live (T-040) |
+| Verification RPC wrapper | `src/features/verification/api/index.ts` | live (T-040) |
+| verify_submission RPC + verifications table | `supabase/migrations/20260531000000_phase3_verification.sql` | written — apply (W-014) |
 | Sync state machine type | `src/entities/submission.ts` | live (skeleton) |
 | Streak function | `supabase/migrations/*_streaks.sql` | planned |
 | Leaderboard function | `supabase/migrations/*_leaderboard.sql` | planned |

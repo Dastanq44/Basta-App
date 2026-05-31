@@ -21,6 +21,98 @@
 
 ---
 
+## 2026-05-31 — Claude Instance / Phase 3 friend verification (T-040)
+
+**Did:** Implemented T-040 (friend verification), code-complete. tsc + lint + expo-doctor (18/18)
+all green. Runtime not yet exercised — needs the W-014 migration applied first.
+
+**Context confirmed by USER at session start:** W-011 is **done** (Phase 2 migration applied,
+`proof-media` bucket created, create-challenge / submit-proof loop smoke-tested on-device). Also
+re-ran the W-013 clean reinstall (`rm -rf node_modules package-lock.json && npm install` → 929
+pkgs) because the pull added the 4 Phase 2 deps and plain `npm install` hit the documented
+react-dom ERESOLVE.
+
+**Two user-confirmed design forks (now D-009):**
+- **Group challenges:** approve count ≥ `verification_threshold` (default 1) → `verified`; any
+  single `reject` → `rejected`.
+- **Solo challenges:** auto-verify on submit (no friend exists). `submit_proof` was replaced to set
+  solo submissions straight to `verified`.
+
+**Files added:**
+- `supabase/migrations/20260531000000_phase3_verification.sql` — `verification_result` enum +
+  `verifications` table (unique `(submission_id, verifier_id)`, re-votable), `verify_submission`
+  SECURITY DEFINER RPC (participant-only, not-author, recomputes status), **CREATE OR REPLACE
+  `submit_proof`** (solo auto-verify), `verifications` RLS (participant read), and a **widened
+  `proof-media` storage SELECT** policy so verifiers can read co-participants' photos
+  (Phase 2 had deferred this). Idempotent — safe to re-run.
+- `src/features/verification/{api,hooks,model,index}.ts` — `verifySubmission` rpc wrapper,
+  `useVerifySubmission` (invalidates `['submissions', challengeId]` + `['submission', submissionId]`),
+  `verificationResultSchema`.
+- `app/verify/[submissionId].tsx` — thin verify screen (signed photo + comment + Approve/Reject).
+
+**Files modified:**
+- `app/(tabs)/profile.tsx` — **wired the long-missing Sign out button** (`useSignOut`) + shows the
+  signed-in email. Fixes a user report that "login/register pages are gone": they were signed in
+  with a persisted session and, with no sign-out UI anywhere, couldn't get back to `/(auth)`. The
+  gate auto-redirects to sign-in once signed out. (Closes the standing "Sign-out UI: none" gap.)
+- `src/features/proofs/api/index.ts` — added `getSubmission(id)` + `getProofSignedUrl(path)`.
+- `src/features/proofs/hooks/useSubmission.ts` (new) — `useSubmission` + `useProofSignedUrl`;
+  re-exported from proofs `hooks/index.ts` and the feature `index.ts`.
+- `app/_layout.tsx` — registered the `verify/[submissionId]` Stack screen.
+- `app/challenge/[id].tsx` — `SubmissionRow` now shows a **Verify proof** button on a
+  `pending_verification` proof that isn't yours (routes to `/verify/<id>`); pulls `myUid` from
+  `useSession`.
+
+**Also this session — UI restyle to match Retro.app (USER reference; chose "polish current
+tokens", no new deps, D-005 stands):**
+- Look = **editorial minimal**: white canvas, near-black ink, **serif display** face for
+  titles/headings (platform serif Georgia/serif — zero-dep), sans body, **outlined pill** buttons
+  (`secondary` variant), soft gray rounded tiles, ONE bright **blue** accent (`#0A99F2` — avatars /
+  links / selected chips / "pending" badge), **red** (`#FF3B30`) for reject/notifications.
+- `src/shared/ui/theme/tokens.ts` — Retro palette (light/dark), added `fonts {display,body}`,
+  `shadow` (subtle), `success/warning` colors, `xs`/`xxl` type sizes, `radius.full`. Rebrand or
+  swap the exact serif (e.g. Instrument Serif / Playfair via expo-google-fonts) = edit here only.
+- Primitives retuned: `Text` (serif title/heading via `fonts.display`), `Card` (flat, faint
+  shadow, no border, rounder), `Button` (fully-rounded pill; `secondary` = foreground-outlined
+  pill; flat — no shadow), `Input` (taller, blue focus ring), `SyncBadge` (pill; success=green,
+  pending=blue, danger=red). Category chips + pending badge now read blue via `accent`.
+- `docs/design/theme-preview.html` — browser-openable light+dark mock of the Retro look (faithful
+  hex/serif). Reviewed before device run.
+- **Serif is the platform default (Georgia).** If USER wants Retro's exact display face, load
+  Instrument Serif / Playfair via `@expo-google-fonts/*` + `expo-font` and gate render in
+  `app/_layout.tsx` (SplashScreen hold). Small follow-up, not done (kept to no-new-deps steer).
+
+**Tests run:** `npm run typecheck` → 0 ✅ · `npm run lint` → 0 ✅ · `npx expo-doctor` → 18/18 ✅.
+**Tests NOT run:** unit/E2E (W-007); runtime verify flow (needs W-014 + a 2nd test account).
+
+**Next up:**
+1. **USER — W-014:** apply `supabase/migrations/20260531000000_phase3_verification.sql` in the SQL
+   editor, then run the W-014 smoke-test (solo proof auto-verifies; 2-member group approve→verified,
+   reject→rejected; no Verify button / RPC rejection on your own proof).
+2. Then the next code task: **T-041 (reactions + short comments)** or **T-042 (streak fn + pg_cron)**.
+   T-042 is now unblocked design-wise — it can key off `status='verified'` for solo (auto) and group.
+
+**Warnings for the next instance:**
+- **Push deep-link to the verify screen is NOT built** (T-040's "push deep-link" half). It's blocked
+  on push registration (T-050). The screen + in-app discovery (challenge detail) are the Phase-3
+  surface; wire the notification → `/verify/<id>` deep link when T-050 lands.
+- **All writes still go through SECURITY DEFINER RPCs** — `verify_submission` follows that pattern.
+  Don't add direct INSERT/UPDATE policies on `verifications` or `submissions`.
+- **`submit_proof` was REPLACED, not just extended** — if you touch it again, keep the solo
+  auto-verify branch (D-009) or solo streaks break.
+- **Storage SELECT policy now keys off the path's 2nd segment** (`foldername(name)[2]` = challenge
+  id) via `is_challenge_participant`. Don't change the `<uid>/<challengeId>/<file>` upload path in
+  `src/offline/upload/storage.ts` without updating that policy.
+- **The verify screen reads media via a short-TTL signed URL** (`getProofSignedUrl`, 1h). Fine for
+  the verify session; not a durable link.
+
+**Branch / commit:** `mvp` — work is **uncommitted** (user hasn't asked to commit/push this session).
+
+**Decisions changed this session:** added **D-009** (verification model + solo auto-verify).
+D-001..D-008 unchanged.
+
+---
+
 ## 2026-05-31 — Claude 1 / Phase 2 operational follow-up (npm peer conflict)
 
 **Did:** No code changes. After the Phase 2 commit (`d05fb67`), USER ran `npm install` and hit

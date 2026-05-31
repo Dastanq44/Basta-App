@@ -23,7 +23,7 @@ export function SyncBadge({ status }: { status: SyncStatus }) {
   const palette: Record<Tone, { bg: string; fg: string }> = {
     neutral: { bg: t.colors.muted, fg: t.colors.mutedForeground },
     pending: { bg: t.colors.accent, fg: t.colors.accentForeground },
-    success: { bg: t.colors.primary, fg: t.colors.primaryForeground },
+    success: { bg: t.colors.success, fg: t.colors.successForeground },
     danger: { bg: t.colors.destructive, fg: t.colors.destructiveForeground },
   };
   const c = palette[conf.tone];
@@ -31,9 +31,9 @@ export function SyncBadge({ status }: { status: SyncStatus }) {
     <View
       style={{
         alignSelf: 'flex-start',
-        paddingHorizontal: t.spacing.sm,
-        paddingVertical: 4,
-        borderRadius: t.radius.sm,
+        paddingHorizontal: t.spacing.md,
+        paddingVertical: 5,
+        borderRadius: t.radius.full,
         backgroundColor: c.bg,
       }}
     >

@@ -2,6 +2,7 @@ import { FlatList, RefreshControl, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Button, Card, Screen, Text, useTheme } from '@/shared/ui';
 import { useChallenge } from '@/features/challenges';
+import { useSession } from '@/features/auth';
 import {
   SyncBadge,
   useQueueForChallenge,
@@ -15,6 +16,8 @@ export default function ChallengeDetailScreen() {
   const t = useTheme();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const session = useSession();
+  const myUid = session.session?.user.id;
   const challenge = useChallenge(id);
   const today = useTodaySubmission(id);
   const queueItems = useQueueForChallenge(id);
@@ -98,22 +101,45 @@ export default function ChallengeDetailScreen() {
             }}
           />
         }
-        renderItem={({ item }) => <SubmissionRow submission={item} />}
+        renderItem={({ item }) => <SubmissionRow submission={item} currentUserId={myUid} />}
       />
     </Screen>
   );
 }
 
-function SubmissionRow({ submission }: { submission: Submission }) {
+function SubmissionRow({
+  submission,
+  currentUserId,
+}: {
+  submission: Submission;
+  currentUserId: string | undefined;
+}) {
   const t = useTheme();
+  const router = useRouter();
+  // A co-participant may verify another member's still-pending proof (server enforces this too).
+  const canVerify =
+    submission.status === 'pending_verification' &&
+    !!currentUserId &&
+    submission.authorId !== currentUserId;
+
   return (
     <Card>
-      <View style={{ gap: t.spacing.xs }}>
+      <View style={{ gap: t.spacing.sm }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <Text variant="heading">Day {submission.challengeDay + 1}</Text>
           <SyncBadge status={submission.status} />
         </View>
         {submission.comment ? <Text variant="muted">{submission.comment}</Text> : null}
+        {canVerify ? (
+          <Button
+            label="Verify proof"
+            variant="secondary"
+            size="sm"
+            // typedRoutes hasn't generated verify/[submissionId] in the route union yet;
+            // the resolved string href is accepted by expo-router.
+            onPress={() => router.push(`/verify/${submission.id}`)}
+          />
+        ) : null}
       </View>
     </Card>
   );

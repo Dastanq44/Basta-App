@@ -96,6 +96,26 @@ Date · Status · Decision · Why · Consequences
   cva-style variant helper. Accessibility (≥44pt targets, labels, focus rings) is built into the
   primitives, not added later.
 
+## D-009 — Verification model: threshold-approve / single-reject; solo auto-verifies   [Accepted]
+- **Date:** 2026-05-31 (Phase 3, T-040; user-confirmed both forks)
+- **Decision:**
+  - **Group challenges:** a proof becomes `verified` once its **approve** votes reach the
+    challenge's `verification_threshold` (default 1); **any single `reject`** flips it to
+    `rejected`. Votes are recorded in a `verifications` table, one (re-votable) row per verifier,
+    and the `verify_submission` SECURITY DEFINER RPC recomputes status after every vote.
+  - **Verifier eligibility:** must be a **challenge participant** and **not the author**
+    (no self-verify). Enforced server-side in the RPC.
+  - **Solo challenges:** have no friend to verify, so `submit_proof` **auto-verifies** solo
+    submissions on submit (`status='verified'` immediately). The verification feature is therefore
+    a group-only concern.
+- **Why:** Matches the existing `verification_threshold` column and the "a friend verifies" MVP
+  model; single-reject gives any participant a veto, which is the simplest honest MVP rule. Solo
+  auto-verify keeps solo streaks (T-042) from being permanently blocked by a verifier who can't
+  exist.
+- **Consequences:** T-042 (streak fn) can treat `status='verified'` uniformly for solo and group.
+  If later we want multi-reject tolerance or solo self-attestation UX, revisit here. Storage SELECT
+  RLS was widened so co-participants (verifiers) can view each other's proof media.
+
 ## D-006 — MVP scope guardrails   [Accepted]
 - **Date:** 2026-05-27
 - **Decision:** Build only the MVP scope in `PROJECT_BRIEF.md`. Do NOT build AI verification,
