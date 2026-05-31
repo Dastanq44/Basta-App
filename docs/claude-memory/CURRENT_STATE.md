@@ -3,9 +3,13 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-05-31 — by: Claude Instance / Phase 3 (T-040/T-041/T-042/T-043) + Retro UI_
+_Last updated: 2026-05-31 — by: Claude 1 / handoff snapshot (after B-009 gate fix + W-018 invite codes)_
 
-## Status: PHASE 3 SOCIAL LOOP COMPLETE — verification (T-040) + streaks (T-042) + leaderboard (T-043) + reactions/comments (T-041), code-complete · apply migrations W-014/W-015/W-016/W-017
+## Status: PHASE 3 SOCIAL LOOP COMPLETE · apply 5 migrations (W-014/W-015/W-016/W-017/W-018)
+
+Latest session was operational only: **B-009** gate fix (onboarded users were being bounced
+off Phase 2/3 sub-routes) and **W-018** UX polish (4-digit numeric group invite codes).
+**No new features.** All checks green; working tree clean; in sync with `origin/mvp`.
 
 The full MVP loop now exists in code: register → group → challenge → submit proof (offline) →
 friend verifies → streak → group leaderboard, plus reactions + comments on each proof. Remaining

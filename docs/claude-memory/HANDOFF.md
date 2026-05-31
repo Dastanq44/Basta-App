@@ -21,6 +21,110 @@
 
 ---
 
+## 2026-05-31 — HANDOFF SNAPSHOT (ready for next Claude)
+
+> Clean checkpoint. No new implementation this session — gate hotfix + invite-code UX polish
+> only. tsc + lint green; working tree in sync with `origin/mvp`.
+
+**Completed work (project to date):**
+- Foundations + Phase 1 auth & onboarding + Phase 2 challenges/proof/queue + Phase 3 social
+  loop (verification, streaks, leaderboard, reactions/comments) + Retro UI restyle. The full
+  MVP loop exists in code: register → group → challenge → submit proof (offline) → friend
+  verifies → streak → group leaderboard, plus reactions + comments on each proof.
+- **This pair of commits:** `d61a7b3` fixed the gate over-redirect (B-009) that was bouncing
+  onboarded users off Phase 2/3 sub-routes (e.g. tapping "+ New" on Challenges sent the user
+  back to Today); `a47a252` switched group invite codes from 12-char hex to a friendly
+  **4-digit numeric** format (e.g. `0490`, `1023`) with a number-pad keyboard on the join
+  input.
+
+**Changed files (last two commits):**
+- `src/navigation/guards.ts` — widened `isAtTarget('/(tabs)')` to accept any non-`(auth)`/
+  non-`(onboarding)` route, with updated doc-comment. (B-009)
+- `supabase/migrations/20260601000000_short_invite_codes.sql` — new; defines
+  `generate_short_invite_code()` (bounded retry on collision), changes column default,
+  regenerates existing groups' codes row-by-row.
+- `src/features/groups/model/schemas.ts` — `inviteCodeSchema` → `/^\d{4}$/`, exports
+  `INVITE_CODE_LENGTH`.
+- `src/features/groups/{index,model/index}.ts` — re-export the constant.
+- `app/(onboarding)/join-or-create-group.tsx` — number-pad keyboard, `maxLength=4`,
+  non-digit strip on change, placeholder `0000`.
+- `docs/claude-memory/HANDOFF.md`, `CURRENT_STATE.md`, `BUGS_AND_WARNINGS.md`.
+
+**Unfinished work:**
+- No code is half-written. The unfinished items are all USER actions and product backlog,
+  not in-flight work.
+
+**Next recommended task:** **T-051 + T-052 (report/block + account deletion)** as a single
+Phase 4 slice. Both are App Store / Play Store mandates, fully testable in Expo Go (unlike
+T-050 push, which needs a dev build), build on existing Phase 1–3 schema, and unlock T-061
+(CI/EAS). Suggested approach: one migration with `reports` + `blocks` tables and
+`report_target`/`block_user`/`unblock_user`/`request_account_deletion` SECURITY DEFINER RPCs
+(mirroring B-006/B-008/D-009/D-010 patterns); `src/features/moderation/*`; report modal +
+Account section on Profile. Hard account deletion likely needs a Supabase Edge Function with
+service-role for `auth.admin.deleteUser` + Storage object purge — propose the choice before
+writing it.
+
+**Known issues / open warnings:**
+- **W-014/W-015/W-016/W-017** — apply the four Phase 3 migrations
+  (`20260531000000_phase3_verification.sql`, `…_streaks.sql`, `…_leaderboard.sql`,
+  `…_social.sql`). Idempotent; paste each into Supabase SQL editor. Phase 3 features render
+  but RPC calls silently fail until these run.
+- **W-018** — apply `20260601000000_short_invite_codes.sql` so the 4-digit invite codes
+  this session shipped take effect server-side. Existing shared hex codes will stop working.
+- **OTP length (no code, dashboard only):** Supabase Dashboard → Authentication → Settings
+  → "Email OTP length" → set to **6** → Save. Client already accepts 4–10 digits.
+- W-012 — queue drains only while app foregrounded (Expo Go limitation; real fix is a dev
+  build + expo-background-fetch — defer to Phase 5).
+- W-013 — recurring `npm install` ERESOLVE; fix is clean reinstall
+  (`rm -rf node_modules package-lock.json && npm install`). USER explicitly declined a
+  committed `.npmrc` workaround.
+- W-007 — no test harness; only tsc + lint + manual smoke-checklist.
+- B-002 — cold-start route flash (cosmetic).
+- B-001 — transitive audit vulns in build-time deps; accept-the-risk for now.
+
+**Tests run:** `npm run typecheck` → exit 0 ✅ · `npm run lint` → exit 0 ✅.
+**Tests NOT run:**
+- Unit/component/E2E — none exist (W-007).
+- `npx expo-doctor` not re-run this session (was 18/18 last time; no dep/config changes).
+- Runtime device smoke-test of B-009 fix or the 4-digit invite codes (pending USER reload).
+- Runtime smoke of any Phase 3 feature (pending W-014/W-015/W-016/W-017 migrations).
+
+**Warnings for the next Claude:**
+- **Apply the five pending migrations before trusting any Phase 3 feature OR new invite codes**
+  (W-014/W-015/W-016/W-017/W-018). Order doesn't matter; all idempotent. Without them,
+  Phase 3 screens render but RPC calls error and the create-group flow still hands out
+  long hex codes.
+- **All client writes go through SECURITY DEFINER RPCs.** Don't introduce direct INSERT/
+  UPDATE RLS policies on Phase 3 tables — that's the pattern that dodges the B-006/B-008
+  RLS chicken-and-egg class. Same convention will apply to Phase 4 (report/block).
+- **Don't tighten the gate again.** `isAtTarget('/(tabs)')` is intentionally permissive
+  (anything not `(auth)` or `(onboarding)` counts). If you add a new top-level route group
+  at app root (e.g. `(adminstuff)`), audit that branch to decide whether it belongs.
+- **`submit_proof` was REPLACED in T-040** to auto-verify solo proofs (D-009). Keep that
+  branch or solo streaks break.
+- **Don't change the storage path `<uid>/<challengeId>/<file>`** — the widened
+  proof-media SELECT policy keys off `foldername[2]` = challenge id.
+- **T-050 push is blocked in Expo Go** (remote push tokens need a dev build / EAS). Bundle
+  it with T-061; don't build it blind.
+- **New dynamic routes** may not be in expo-router's generated typed-routes union yet —
+  cast new dynamic hrefs `as Href` (see groups/challenge screens for examples).
+- **Today tab is empty by design** for now. Phase 0 placeholder content; an in-group
+  activity feed was deferred (originally under T-031 / T-041 vicinity). If the user asks for
+  Today content, that's a real new slice — propose it before starting.
+- **Invite codes are now 4-digit numeric.** If scale ever grows past comfortable collision
+  density (~50 groups is fine; >1000 starts to get tight against 10,000-code space), bump
+  to 5–6 digits via a follow-up migration that re-runs the same `do $$` regeneration block.
+- **Sign-out UI is on Profile.** Don't re-introduce a duplicate.
+- **`.claude/settings.json` is intentionally NOT committed** (per the prior handoff —
+  harness auto-adds a machine-specific Start-Process allow; revert before staging).
+
+**Branch / commit:** `mvp` @ `a47a252` + this handoff commit. In sync with `origin/mvp`
+after push.
+
+**Decisions changed this session:** none. D-001..D-010 stand.
+
+---
+
 ## 2026-05-31 — Claude 1 / UX polish: 4-digit numeric invite codes (W-018)
 
 **Did:** Per user request, swapped group invite codes from a 12-char hex string to a friendlier
