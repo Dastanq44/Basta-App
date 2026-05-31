@@ -1,7 +1,7 @@
 import { FlatList, RefreshControl, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Button, Card, Screen, Text, useTheme } from '@/shared/ui';
-import { useChallenge } from '@/features/challenges';
+import { useChallenge, useChallengeStreak } from '@/features/challenges';
 import { useSession } from '@/features/auth';
 import {
   SyncBadge,
@@ -19,6 +19,7 @@ export default function ChallengeDetailScreen() {
   const session = useSession();
   const myUid = session.session?.user.id;
   const challenge = useChallenge(id);
+  const streak = useChallengeStreak(id);
   const today = useTodaySubmission(id);
   const queueItems = useQueueForChallenge(id);
   const submissions = useSubmissions(id);
@@ -67,6 +68,19 @@ export default function ChallengeDetailScreen() {
               {c.proofRequirement ? <Text variant="body">{c.proofRequirement}</Text> : null}
             </View>
 
+            {streak.data ? (
+              <View style={{ flexDirection: 'row', gap: t.spacing.md }}>
+                <Card style={{ flex: 1 }}>
+                  <Text variant="muted">Current streak</Text>
+                  <Text variant="title">🔥 {streak.data.current}</Text>
+                </Card>
+                <Card style={{ flex: 1 }}>
+                  <Text variant="muted">Best</Text>
+                  <Text variant="title">{streak.data.longest}</Text>
+                </Card>
+              </View>
+            ) : null}
+
             <Card>
               <View style={{ gap: t.spacing.sm }}>
                 <Text variant="heading">Today</Text>
@@ -98,6 +112,7 @@ export default function ChallengeDetailScreen() {
             onRefresh={() => {
               void submissions.refetch();
               void today.refetch();
+              void streak.refetch();
             }}
           />
         }

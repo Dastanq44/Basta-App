@@ -3,9 +3,9 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-05-31 — by: Claude Instance / Phase 3 friend verification (T-040)_
+_Last updated: 2026-05-31 — by: Claude Instance / Phase 3 verification (T-040) + streaks (T-042) + Retro UI_
 
-## Status: PHASE 3 T-040 FRIEND VERIFICATION IMPLEMENTED (code-complete) · apply migration W-014 to use it
+## Status: PHASE 3 — T-040 VERIFICATION + T-042 STREAKS implemented (code-complete) · apply migrations W-014 + W-015 to use them
 
 Phase 1 + Phase 2 are applied and smoke-tested on-device (USER confirmed W-011 done: Phase 2
 migration applied, `proof-media` bucket created, create-challenge / submit-proof loop works).
@@ -115,7 +115,7 @@ SecureStore-backed Supabase client, a root-layout redirect gate, and field-valid
 - No CI/CD, no EAS config, no analytics/crash SDK wired (T-012, T-061).
 
 ## Next concrete step
-See `HANDOFF.md` → Next Up. Short version: USER applies the Phase 3 migration (W-014) and runs the
-verification smoke-test. Then the next code task is **T-041 (reactions + short comments)** or
-**T-042 (streak Postgres function + pg_cron)** — T-042 can now rely on `status='verified'` for both
-solo (auto) and group (friend-verified) proofs per D-009.
+See `HANDOFF.md` → Next Up. Short version: USER applies the Phase 3 migrations (W-014 verification,
+W-015 streaks) and smoke-tests verify + streaks. Then the next code task is **T-043 (group
+leaderboard)** or **T-041 (reactions + short comments)**. The Retro UI is applied at the
+design-system level; optional follow-ups are screen-level polish and the exact Retro serif font.

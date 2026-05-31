@@ -96,6 +96,21 @@ Date · Status · Decision · Why · Consequences
   cva-style variant helper. Accessibility (≥44pt targets, labels, focus rings) is built into the
   primitives, not added later.
 
+## D-010 — Streaks are computed-on-read; no pg_cron rollover for MVP   [Accepted]
+- **Date:** 2026-05-31 (Phase 3, T-042)
+- **Decision:** The streak is **computed on demand** by the `challenge_streak` SQL function from
+  `submissions` (only `status='verified'` days count), never stored on or trusted from the client
+  (W-003 / D-003). Timezone correctness comes for free: `submissions.challenge_day` was already
+  computed in the user's timezone at submit time, so a streak is just the longest run of
+  consecutive verified `challenge_day` values. "Current" allows a one-day grace (anchors on today,
+  or yesterday if today isn't done). **No pg_cron job** is created — a computed streak needs no
+  nightly rollover to stay correct.
+- **Why:** Simplest correct design; zero drift; no dependency on enabling `pg_cron`. MVP list sizes
+  are bounded (≤365 days), so on-read computation is cheap.
+- **Consequences:** The pg_cron half of T-042 is **deferred to T-050 (push)** — cron is only needed
+  to *proactively* notify "your streak is at risk" before midnight, not for read correctness. If
+  leaderboard reads (T-043) need denormalized streak columns for performance, revisit then.
+
 ## D-009 — Verification model: threshold-approve / single-reject; solo auto-verifies   [Accepted]
 - **Date:** 2026-05-31 (Phase 3, T-040; user-confirmed both forks)
 - **Decision:**

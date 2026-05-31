@@ -21,6 +21,52 @@
 
 ---
 
+## 2026-05-31 — Claude Instance / Phase 3 streaks (T-042)
+
+**Did:** Implemented T-042 server-authoritative streaks, code-complete. tsc + lint green. Committed
+separately after the T-040 + UI commit (`1b04dae`).
+
+**Design (D-010):** streak is **computed-on-read** by the `challenge_streak` RPC from
+`submissions` (only `status='verified'`). Timezone-correct for free — `challenge_day` was already
+stored in the user's tz at submit time, so the streak is the longest run of consecutive verified
+`challenge_day` values. "current" has a one-day grace (anchors on today, else yesterday). **No
+pg_cron** — a computed streak needs no rollover; the cron half of T-042 is deferred to T-050
+(proactive "streak at risk" push only).
+
+**Files added:**
+- `supabase/migrations/20260531100000_phase3_streaks.sql` — `challenge_streak(p_challenge_id)`
+  SECURITY DEFINER RPC returning `{current, longest, today_done}`. Idempotent.
+- `src/entities/streak.ts` — `ChallengeStreak` type (exported from `entities`).
+- `src/features/challenges/hooks/useChallengeStreak.ts` — `useChallengeStreak` +
+  `challengeStreakQueryKey`.
+
+**Files modified:**
+- `src/features/challenges/api/index.ts` — `getChallengeStreak` (rpc → ChallengeStreak).
+- `src/features/challenges/{hooks/index,index}.ts` — export the streak hook + key.
+- `app/challenge/[id].tsx` — two **streak stat cards** (Current 🔥 / Best) in the list header;
+  `streak.refetch()` added to pull-to-refresh.
+- `src/features/verification/hooks/useVerifySubmission.ts` — also invalidates
+  `challengeStreakQueryKey(challengeId)` on a vote (a friend's approval changes the author's run).
+
+**Tests run:** `npm run typecheck` → 0 ✅ · `npm run lint` → 0 ✅.
+**Tests NOT run:** unit/E2E (W-007); runtime (needs W-015 migration + a verified day or two).
+
+**Next up:**
+1. **USER — W-015:** apply `supabase/migrations/20260531100000_phase3_streaks.sql`, then smoke-test
+   (solo submit → 🔥 1; consecutive days increment; skip a day resets; group counts approved days).
+2. Next code task: **T-043 (group leaderboard)** or **T-041 (reactions + comments)**.
+
+**Notes for next instance:**
+- Streak refresh follows the submissions model: pull-to-refresh + `staleTime` + invalidate on
+  verify. Solo submits land via the offline queue (outside React), so a freshly-submitted solo
+  streak shows after a refetch/refocus, not instantly — consistent with how submissions refresh.
+- If T-043 leaderboard needs fast streak reads across many members, consider denormalizing then
+  (revisit D-010); don't add pg_cron just for that without measuring.
+
+**Branch / commit:** `mvp` — streaks committed (see git log). D-010 added.
+
+---
+
 ## 2026-05-31 — Claude Instance / Phase 3 friend verification (T-040)
 
 **Did:** Implemented T-040 (friend verification), code-complete. tsc + lint + expo-doctor (18/18)

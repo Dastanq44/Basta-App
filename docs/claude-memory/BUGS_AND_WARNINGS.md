@@ -83,6 +83,21 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
 - **Status:** Open / known operational item. Re-evaluate after any future Expo SDK upgrade
   (the react-dom peer specifier may align with our react version then).
 
+## [OPEN] W-015 — Phase 3 needs: apply the streaks migration before streaks show at runtime
+- **Date:** 2026-05-31 · **Area:** backend / Supabase
+- **What:** T-042 adds `supabase/migrations/20260531100000_phase3_streaks.sql` (the
+  `challenge_streak` RPC). Until applied, the streak stat cards on the challenge-detail screen
+  won't load (the RPC won't exist → `getChallengeStreak` errors, cards hidden). Apply via Dashboard
+  → SQL editor → Run. Idempotent (`create or replace`).
+- **Depends on:** the Phase 2 + Phase 3-verification migrations already applied (it reads
+  `submissions.status='verified'`). Apply W-014 first if not done.
+- **Verify:** `select challenge_streak('<a challenge id you participate in>'::uuid);` returns
+  `{"current":N,"longest":M,"today_done":bool}`.
+- **Smoke-test:** on a solo challenge submit a proof (auto-verifies) → streak shows 🔥 1; submit on
+  consecutive days → increments; skip a day → resets. On a group challenge the streak only counts
+  days a friend approved.
+- **Status:** Open until applied.
+
 ## [OPEN] W-014 — Phase 3 needs: apply the verification migration before verify works at runtime
 - **Date:** 2026-05-31 · **Area:** backend / Supabase
 - **What:** Phase 3 (T-040) is code-complete and passes tsc/lint/expo-doctor, but the verify flow

@@ -1,6 +1,6 @@
 // Challenges API — RPC-first for write ops (same pattern as Phase 1: avoids RLS edge cases).
 import { supabase } from '@/shared/lib/supabase';
-import type { Challenge } from '@/entities';
+import type { Challenge, ChallengeStreak } from '@/entities';
 import type { CreateChallengeInput } from '../model';
 
 const TIMEOUT_MS = 10_000;
@@ -71,6 +71,22 @@ export async function getChallenge(id: string): Promise<Challenge> {
     return toChallenge(data as ChallengeRow);
   } catch (e) {
     console.error('[basta] getChallenge failed:', e);
+    throw e;
+  }
+}
+
+/** The current user's server-authoritative streak on a challenge (computed from verified days). */
+export async function getChallengeStreak(challengeId: string): Promise<ChallengeStreak> {
+  const c = ctrl();
+  try {
+    const { data, error } = await supabase
+      .rpc('challenge_streak', { p_challenge_id: challengeId })
+      .abortSignal(c.signal);
+    if (error) throw error;
+    const d = (data ?? {}) as { current: number; longest: number; today_done: boolean };
+    return { current: d.current ?? 0, longest: d.longest ?? 0, todayDone: d.today_done ?? false };
+  } catch (e) {
+    console.error('[basta] getChallengeStreak failed:', e);
     throw e;
   }
 }

@@ -21,7 +21,8 @@ Basta_App/
 │   └── migrations/
 │       ├── 20260528000000_phase1_profiles_groups.sql   # T-003 (applied)
 │       ├── 20260528100000_phase2_challenges_proofs.sql # T-030/T-034 (applied — W-011 done)
-│       └── 20260531000000_phase3_verification.sql      # T-040: verifications + verify_submission + solo auto-verify + storage SELECT widen (apply — W-014)
+│       ├── 20260531000000_phase3_verification.sql      # T-040: verifications + verify_submission + solo auto-verify + storage SELECT widen (apply — W-014)
+│       └── 20260531100000_phase3_streaks.sql           # T-042: challenge_streak() computed-on-read RPC (apply — W-015)
 ├── src/features/
 │   ├── auth/                     # T-020: PKCE email auth, useSession, secure-store tokens
 │   ├── onboarding/               # T-021/T-022: terms, profile setup, completeOnboarding
@@ -32,9 +33,9 @@ Basta_App/
 │   │   ├── api/index.ts          #   createGroup · joinGroupByInvite (rpc) · listMyGroups
 │   │   ├── hooks/                #   useCreateGroup · useJoinGroup · useMyGroups
 │   │   └── model/                #   createGroupInput · joinGroupInput zod
-│   ├── challenges/               # T-030: list/detail/create challenges (RPC-first)
-│   │   ├── api/index.ts          #   listMyChallenges · getChallenge · createChallenge (rpc)
-│   │   ├── hooks/                #   useChallenges · useChallenge · useCreateChallenge
+│   ├── challenges/               # T-030/T-042: list/detail/create challenges + streak (RPC-first)
+│   │   ├── api/index.ts          #   listMyChallenges · getChallenge · createChallenge · getChallengeStreak
+│   │   ├── hooks/                #   useChallenges · useChallenge · useCreateChallenge · useChallengeStreak
 │   │   └── model/                #   CHALLENGE_CATEGORIES · createChallengeInput zod
 │   ├── proofs/                   # T-032/T-035: photo capture + queue orchestration + SyncBadge
 │   │   ├── api/index.ts          #   listSubmissionsForChallenge · getMyTodaySubmission · getSubmission · getProofSignedUrl

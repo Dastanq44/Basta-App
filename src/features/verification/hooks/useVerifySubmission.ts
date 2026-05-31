@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { submissionQueryKey, submissionsQueryKey } from '@/features/proofs';
+import { challengeStreakQueryKey } from '@/features/challenges';
 import type { VerificationResult } from '@/entities';
 import { verifySubmission } from '../api';
 
@@ -21,6 +22,8 @@ export function useVerifySubmission() {
     onSuccess: (_status, vars) => {
       void qc.invalidateQueries({ queryKey: submissionsQueryKey(vars.challengeId) });
       void qc.invalidateQueries({ queryKey: submissionQueryKey(vars.submissionId) });
+      // A verify/reject changes the author's verified-day run → recompute their streak.
+      void qc.invalidateQueries({ queryKey: challengeStreakQueryKey(vars.challengeId) });
     },
   });
 }
