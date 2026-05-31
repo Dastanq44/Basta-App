@@ -243,6 +243,20 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
 - **Status:** Open / accept-the-risk. Revisit during T-061 (CI/release) or the next planned SDK
   upgrade.
 
+## [OPEN] W-018 — Apply migration to switch invite codes to 4-digit numeric
+- **Date:** 2026-05-31 · **Area:** backend / Supabase
+- **What:** New migration `supabase/migrations/20260601000000_short_invite_codes.sql` swaps
+  group invite codes from 12-char hex to **4-digit numeric** (e.g. `1023`, `0490`). Defines
+  `generate_short_invite_code()` (retries up to 30 times on collision), changes the column
+  default, and regenerates existing groups' codes. Idempotent / safe to re-run.
+- **Apply via:** Supabase Dashboard → SQL editor → paste the file's contents → Run. Order
+  doesn't matter relative to Phase 3 migrations.
+- **Side effect:** existing invite codes change. Friends with the old hex code can no longer
+  join — share the new (now displayed) 4-digit code instead.
+- **Client side:** `inviteCodeSchema` already tightened to `/^\d{4}$/`; the join-or-create
+  form now uses a number-pad keyboard with `maxLength=4` and strips non-digits.
+- **Status:** Open until applied.
+
 ## [RESOLVED] B-009 — Gate over-redirected onboarded users out of Phase 2/3 sub-routes
 - **Date:** 2026-05-31 · **Area:** navigation / onboarding gate
 - **What:** `isAtTarget(segments, '/(tabs)')` returned `true` only when the user was literally

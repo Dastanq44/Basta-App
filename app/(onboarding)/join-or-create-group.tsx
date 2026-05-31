@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { Button, Input, Screen, Text, useTheme } from '@/shared/ui';
 import {
   createGroupInput,
+  INVITE_CODE_LENGTH,
   joinGroupInput,
   useCreateGroup,
   useJoinGroup,
@@ -97,10 +98,14 @@ export default function JoinOrCreateGroupScreen() {
             <Input
               label="Invite code"
               value={code}
-              onChangeText={setCode}
+              // Strip non-digits and cap at the schema length so the input only ever holds a
+              // value the validator will accept.
+              onChangeText={(v) => setCode(v.replace(/\D/g, '').slice(0, INVITE_CODE_LENGTH))}
               autoCapitalize="none"
               autoCorrect={false}
-              placeholder="paste your invite code"
+              keyboardType="number-pad"
+              maxLength={INVITE_CODE_LENGTH}
+              placeholder={'0'.repeat(INVITE_CODE_LENGTH)}
               error={fieldError ?? undefined}
             />
           )}

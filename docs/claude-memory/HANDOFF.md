@@ -21,6 +21,51 @@
 
 ---
 
+## 2026-05-31 — Claude 1 / UX polish: 4-digit numeric invite codes (W-018)
+
+**Did:** Per user request, swapped group invite codes from a 12-char hex string to a friendlier
+**4-digit numeric** format (e.g. `1023`, `0490`).
+- New migration: `supabase/migrations/20260601000000_short_invite_codes.sql`. Defines
+  `generate_short_invite_code()` (retries up to 30 times on collision), changes the
+  `groups.invite_code` default, and regenerates existing groups' codes one row at a time
+  (so each iteration sees prior updates — avoids in-statement collisions). Idempotent.
+- Client tightened: `inviteCodeSchema` now `/^\d{4}$/`. Constant `INVITE_CODE_LENGTH = 4`
+  exported from the groups feature; join-or-create form uses it for `maxLength`, placeholder,
+  and a `number-pad` keyboard. Non-digit input is stripped on change.
+- Logged as **W-018** in BUGS_AND_WARNINGS (USER must apply the migration; existing invite
+  codes will change, so any old shared codes stop working).
+
+**Files changed:**
+- `supabase/migrations/20260601000000_short_invite_codes.sql` (new)
+- `src/features/groups/model/schemas.ts` — schema swap + `INVITE_CODE_LENGTH` const
+- `src/features/groups/model/index.ts`, `src/features/groups/index.ts` — re-export the const
+- `app/(onboarding)/join-or-create-group.tsx` — number-pad keyboard, length cap, placeholder
+- `docs/claude-memory/BUGS_AND_WARNINGS.md` + this file
+
+**On the user's other request — OTP length:** This is a Supabase project setting, not code.
+Dashboard → **Authentication → Settings → "Email OTP length"** → set to **6** → Save. Our
+client already validates 4–10 digits (`OTP_MIN_LENGTH` / `OTP_MAX_LENGTH` exposed from
+`@/features/auth`), so the change takes effect on the next sign-up; no code change needed.
+
+**Tests run:** `npm run typecheck` → 0 ✅ · `npm run lint` → 0 ✅.
+
+**In progress:** Nothing half-done.
+
+**Next up:** USER applies W-018 + the four still-pending Phase 3 migrations
+(W-014/W-015/W-016/W-017) + flips the OTP length to 6 in Auth settings. Then runtime-tests
+the full app. Phase 4 (T-051/T-052) is the next recommended slice after that.
+
+**Branch / commit:** `mvp` + `feat(groups): 4-digit numeric invite codes`. Pushed.
+
+**Decisions changed:** none.
+
+**Notes for next Claude:** When generating short numeric codes server-side, always include
+a retry-with-bound (we use 30). Without the bound, a near-saturated namespace would loop
+forever. 4 digits → 10,000 codes is comfortable for the MVP's group count (≤50); if scale
+grows, bump to 5–6 digits via a follow-up migration that re-runs the same `do $$` block.
+
+---
+
 ## 2026-05-31 — Claude 1 / Hotfix B-009: gate was bouncing onboarded users out of sub-routes
 
 **Did:** Confirmed a user-reported runtime bug. Onboarded users tapping any non-`(tabs)` route
