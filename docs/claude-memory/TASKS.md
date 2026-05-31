@@ -42,12 +42,12 @@
 ### Challenges & proof (core)
 | ID | Status | Task |
 |----|--------|------|
-| T-030 | TODO | Create challenge (solo/group, category, duration) |
-| T-031 | TODO | Challenge detail screen (thin) + feed |
-| T-032 | TODO | Camera-first proof capture; draft saved to sandbox at capture |
-| T-033 | TODO | Durable mutation/upload queue (backoff + idempotency) |
-| T-034 | TODO | tus resumable media upload to Supabase Storage |
-| T-035 | TODO | Sync badge UI bound to the sync state machine |
+| T-030 | DONE | Create challenge (solo/group, category, duration). `create_challenge` RPC + challenges feature + `app/challenge/new.tsx`. |
+| T-031 | DONE | Challenge detail screen (thin) + recent submissions list. `app/challenge/[id].tsx`. Verification/streak UI deferred to Phase 3. |
+| T-032 | DONE | Camera-first proof capture; draft media copied to `documentDirectory/proofs/<id>.jpg` BEFORE network. `ProofComposer` + `useSubmitProof`. |
+| T-033 | DONE | Durable mutation/upload queue (SQLite-backed, retry/backoff + jitter + client-UUID idempotency). `src/offline/queue/{store,processor}.ts`. |
+| T-034 | DONE | **Standard** Supabase Storage upload per D-008 (tus deferred). `src/offline/upload/storage.ts`. Bucket creation = USER action W-011. |
+| T-035 | DONE | Sync badge UI bound to the SyncStatus state machine. `src/features/proofs/ui/SyncBadge.tsx`. |
 
 ### Social & scoring (server-authoritative)
 | ID | Status | Task |

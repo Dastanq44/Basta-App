@@ -4,19 +4,26 @@ import type { UserId } from './user';
 export type SubmissionId = string;
 
 /**
- * Lifecycle of a submission. Local-only states (`draft`, `uploading`) precede the
- * server-owned ones; transport states (`failed`, `offline_retry`) are orthogonal.
- * Lives in the domain layer; the offline queue (infra) imports it from here, never
- * the other way around. See docs/architecture/OFFLINE_SYNC.md.
+ * Lifecycle of a submission. Client-only states (`draft`, `queued`, `uploading`, `failed`,
+ * `offline_retry`, `synced`) precede / surround the server-owned ones (`pending_verification`,
+ * `verified`, `rejected`). See docs/architecture/OFFLINE_SYNC.md and the SyncBadge UI.
+ *
+ * `synced` is a transient bridge: the client has had its upload acknowledged but the cache
+ * hasn't yet reconciled to the server-side `pending_verification`.
  */
 export type SyncStatus =
   | 'draft'
+  | 'queued'
   | 'uploading'
+  | 'synced'
   | 'pending_verification'
   | 'verified'
   | 'rejected'
   | 'failed'
   | 'offline_retry';
+
+/** Server-owned status as stored in `submissions.status`. */
+export type ServerSubmissionStatus = 'pending_verification' | 'verified' | 'rejected';
 
 export type Submission = {
   /** Client-generated UUID (idempotency key) — see DECISIONS.md D-004. */

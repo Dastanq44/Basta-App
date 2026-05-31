@@ -64,6 +64,33 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
   planned (T-060, Phase 5) but could land earlier. The offline-submit→reconnect E2E is the one that
   protects the product's core promise — prioritize it once the queue exists (Phase 2).
 
+## [OPEN] W-011 — Phase 2 needs: apply migration + create Storage bucket + (re)install deps
+- **Date:** 2026-05-31 · **Area:** backend / Supabase / setup
+- **What:** Phase 2 (T-030..T-035) is code-complete and passes tsc/lint/expo-doctor. It will
+  fail at runtime until three USER actions are done:
+  1. **Apply Phase 2 migration** —
+     `supabase/migrations/20260528100000_phase2_challenges_proofs.sql`. Paste the whole file
+     into Supabase Dashboard → SQL editor → Run.
+  2. **Create the private storage bucket `proof-media`** —
+     Dashboard → Storage → New bucket → name: `proof-media` → Public: OFF → Save.
+     (Bucket creation isn't reliably representable in migration SQL on hosted Supabase.)
+     The Storage RLS policies for that bucket ARE in the migration and rely only on the
+     bucket existing first.
+  3. **Reinstall deps** after pulling — Phase 2 added 4 packages
+     (`expo-image-picker`, `expo-file-system`, `expo-sqlite`, `@react-native-community/netinfo`).
+     Run `npm install` after `git pull`.
+- **Verify:** in Supabase SQL editor: `select count(*) from challenges;` (→ 0) and
+  `select id from storage.buckets where name='proof-media';` (→ 1 row).
+- **Status:** Open until applied.
+
+## [OPEN] W-012 — Queue processor only runs while the app is foregrounded (Expo Go limit)
+- **Date:** 2026-05-31 · **Area:** offline / queue
+- **What:** Expo Go does not run JS while the app is backgrounded, so the queue processor only
+  drains when the user opens the app. Drafts stay safe (they're in SQLite + filesystem), but
+  uploads scheduled "for later" only fire on next foreground.
+- **Mitigation:** None possible in Expo Go. The right fix is a custom dev build with
+  `expo-background-fetch` + `expo-task-manager` — defer to Phase 5 / before beta.
+
 ## [OPEN] W-010 — Phase 1 Supabase migration must be applied before onboarding works at runtime
 > **2026-05-28 UPDATE:** The migration file was updated to fix B-006 (trigger now
 > `SECURITY DEFINER`). If you've **already applied** the original version of W-010, also run

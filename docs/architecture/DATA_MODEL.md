@@ -52,6 +52,16 @@ erDiagram
 local-only `draft` and `uploading` states before a row exists server-side. See
 [`OFFLINE_SYNC.md`](OFFLINE_SYNC.md).
 
+## Phase 2 implementation notes (landed)
+
+- `challenges.proof_requirement` (≤280 chars) — short guideline shown on detail.
+- `submissions.id` is **client-generated** (UUID v4) — PK + idempotency key for `submit_proof`.
+  Server-generated IDs would break offline reconciliation.
+- `submissions.challenge_day` is **server-computed** in the RPC from `profiles.timezone +
+  challenges.start_date` (D-003).
+- Unique `(challenge_id, author_id, challenge_day)` → one proof per day. RPC catches the
+  would-be violation and returns `{ already_submitted: true }`; queue maps to "drop the job".
+
 ## Post-MVP placeholders (do not build now)
 
 - AI verification → a future `submissions.verification_source` column (`friend` | `ai`).

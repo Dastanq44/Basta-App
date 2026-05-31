@@ -1,3 +1,4 @@
-export type { SyncStatus, MutationType, QueuedMutation, QueueStore } from './types';
+export type { SyncStatus, MutationType, QueuedMutation, QueueStore, SubmitProofPayload } from './types';
 export { backoffDelay } from './types';
-// Processor implementation lands in Phase 2 (critical path), once D-007 chooses the store.
+export { enqueue, listAll, getById, setStatus, reschedule, remove } from './store';
+export { kick, startProcessor, backoffDelayMs } from './processor';

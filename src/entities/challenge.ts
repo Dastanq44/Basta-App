@@ -14,5 +14,6 @@ export type Challenge = {
   mode: ChallengeMode;
   startDate: string; // ISO date
   durationDays: number;
+  proofRequirement?: string;
   verificationThreshold: number;
 };

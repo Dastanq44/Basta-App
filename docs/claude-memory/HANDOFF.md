@@ -21,6 +21,115 @@
 
 ---
 
+## 2026-05-31 — Claude 1 / Phase 2 challenges + proof upload queue (T-030..T-035)
+
+**Did:** Phase 2 core product loop, code-complete. Runtime smoke-test BLOCKED on W-011 (USER
+must apply migration + create Storage bucket).
+
+**Files added:**
+- `supabase/migrations/20260528100000_phase2_challenges_proofs.sql` — challenges,
+  challenge_participants, submissions; RLS read-only (writes via RPCs); `create_challenge`,
+  `join_challenge`, `submit_proof` SECURITY DEFINER RPCs; `is_challenge_participant` helper;
+  Storage RLS for `proof-media` (bucket creation is manual).
+- `src/offline/index.ts` — `initOffline()` barrel (called by `app/_layout`).
+- `src/offline/db/{schema,init}.ts` + `src/offline/db/index.ts` — Expo SQLite singleton with
+  `queue_items` table.
+- `src/offline/queue/{store,processor}.ts` — durable queue, exponential backoff + jitter,
+  client-UUID idempotency, NetInfo + AppState driven, one-at-a-time.
+- `src/offline/upload/storage.ts` — standard Supabase Storage upload (path:
+  `<userId>/<challengeId>/<submissionId>.jpg`).
+- `src/features/challenges/{api,hooks,model,index}.ts` — listMyChallenges/getChallenge/
+  createChallenge + hooks + zod schema (CHALLENGE_CATEGORIES).
+- `src/features/groups/api/index.ts` + `useMyGroups` hook — adds `listMyGroups`.
+- `src/features/proofs/{api,hooks,model,ui,index}.ts` — `SyncBadge`, `ProofComposer`,
+  `useSubmitProof` (copies media → enqueue → kick), `useSubmissions`,
+  `useTodaySubmission`, `useQueueForChallenge`.
+- `app/(tabs)/challenges.tsx` — real list + RefreshControl + empty state + "+ New".
+- `app/challenge/new.tsx` — create-challenge form with chip selectors.
+- `app/challenge/[id].tsx` — detail screen (today's status, submit CTA, recent submissions).
+- `app/challenge/[id]/submit-proof.tsx` — modal route hosting `ProofComposer`.
+- `app/_layout.tsx` — `initOffline()` on mount; new Stack screens registered.
+
+**Files modified:**
+- `src/entities/{submission,challenge,index}.ts` — added `proofRequirement`, expanded
+  `SyncStatus` to cover `queued / synced`, added `ServerSubmissionStatus`.
+- `src/offline/queue/types.ts` — added `SubmitProofPayload`.
+- `package.json` + `package-lock.json` — `expo-image-picker`, `expo-file-system`, `expo-sqlite`,
+  `@react-native-community/netinfo`.
+- Architecture docs (SCHEMA_DRAFT, OFFLINE_SYNC, NAVIGATION, DATA_MODEL) — Phase 2 sections.
+
+**Dependencies added (all Expo Go SDK 54 compatible):**
+- `expo-image-picker ~17.0.11`, `expo-file-system ~19.0.23`, `expo-sqlite ~16.0.10`,
+  `@react-native-community/netinfo 11.4.1`.
+- **MMKV deferred** — not Expo Go compatible. Queue uses SQLite-only for now. Documented in
+  the OFFLINE_SYNC doc and W-009/W-012.
+- `expo-file-system` v19 split its API — we use the legacy entry (`expo-file-system/legacy`)
+  for `documentDirectory`/`copyAsync`/`makeDirectoryAsync`. Migrating to the new File/Directory
+  API is a follow-up, not blocking.
+
+**Exact migration to apply** — paste the whole file
+`supabase/migrations/20260528100000_phase2_challenges_proofs.sql` into Supabase Dashboard →
+SQL editor → Run.
+
+**Storage bucket — USER MUST CREATE MANUALLY:**
+Supabase Dashboard → Storage → New bucket → name `proof-media` → Public: OFF → Save. The RLS
+policies for the bucket are at the bottom of the migration file (require the bucket to exist).
+
+**Tests run:**
+- `npm install` (after `rm -rf node_modules package-lock.json` — clean reinstall fixed a stale
+  lockfile / react-dom transitive peer conflict, same shape as the SDK 54 upgrade).
+- `npm run typecheck` → 0 ✅
+- `npm run lint` → 0 ✅
+- `npx expo-doctor` → 18/18 ✅
+- `CI=1 npx expo start --clear` → boots Metro cleanly.
+
+**Tests NOT run:**
+- Unit/E2E (W-007 — no harness).
+- Runtime smoke-test on Expo Go SDK 54 — blocked on W-011.
+
+**Manual smoke-test checklist (for the user, after W-011 actions):**
+- [ ] create a solo challenge (Today, fitness, 30 days)
+- [ ] create a group challenge (pick a group from chips)
+- [ ] open challenge detail
+- [ ] submit a photo proof online → expect "Pending verification" SyncBadge
+- [ ] turn on airplane mode, submit again → expect "Will retry when online"
+- [ ] reload the app while offline → confirm the queued item is still listed
+- [ ] disable airplane mode → confirm upload retries automatically (or foreground the app)
+- [ ] try to submit twice on the same day → expect a clean "already submitted" state
+  (no error toast, no duplicate row)
+- [ ] after success, server status reads `pending_verification`
+
+**Known bugs / open issues:**
+- W-011 (this session): migration + bucket = USER actions.
+- W-012 (this session): queue only drains while app is foregrounded — Expo Go limitation.
+- W-007: still no test harness.
+- B-002 (still open): cold-start route flash.
+
+**Next recommended action:**
+1. **USER**: apply W-011 (migration + Storage bucket).
+2. Run the smoke-test checklist above.
+3. If anything misbehaves, the `[basta]` console log lines (in Expo terminal) will name it.
+
+**Warnings for Claude 2:**
+- **All client writes go through RPCs.** Don't add direct INSERT/UPDATE policies on the new
+  tables. That's the pattern that works around the B-006/B-008 chicken-and-egg RLS class.
+- **`challenge_day` is server-computed.** Don't pass it from the client. Don't compute
+  streaks/leaderboards on the client (D-003).
+- **Drafts are NEVER auto-discarded.** After MAX_ATTEMPTS the queue item goes `failed` and
+  surfaces with a "tap to retry" badge — manual retry only.
+- **SDK 54 stays.** No downgrade. `expo install` for any new Expo-related dep.
+- **No MMKV** until a custom dev build. Don't try to add it in Expo Go.
+- **`expo-file-system/legacy` import is intentional.** Don't change it back to the default
+  entry without porting to the new File/Directory API.
+
+**Branch / commit:** `mvp` + `feat(proofs): implement challenges and proof upload queue`,
+pushed to `origin/mvp`.
+
+**Decisions changed this session:** none. D-001..D-008 stand. MMKV deferral within D-007
+was already documented; this session confirms it for Expo Go scope.
+
+---
+
 ## 2026-05-28 — Claude 1 / Phase 1 runtime bug fixes (B-008: createGroup via RPC)
 
 **Did:** Followed B-006 with **B-008**. After the trigger fix shipped, `createGroup` still hit

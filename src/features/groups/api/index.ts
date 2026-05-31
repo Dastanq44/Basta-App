@@ -3,6 +3,8 @@
 import { supabase } from '@/shared/lib/supabase';
 import type { Group, GroupId } from '@/entities';
 
+const COLUMNS = 'id, name, owner_id, invite_code';
+
 const REQUEST_TIMEOUT_MS = 10_000;
 
 function withTimeout(): AbortController {
@@ -50,6 +52,23 @@ export async function createGroup(name: string): Promise<Group> {
     return toGroup(data as GroupRow);
   } catch (e) {
     console.error('[basta] createGroup failed:', e);
+    throw e;
+  }
+}
+
+/** List groups the current user is a member of. */
+export async function listMyGroups(): Promise<Group[]> {
+  const ctrl = withTimeout();
+  try {
+    const { data, error } = await supabase
+      .from('groups')
+      .select(COLUMNS)
+      .order('created_at', { ascending: false })
+      .abortSignal(ctrl.signal);
+    if (error) throw error;
+    return (data ?? []).map((r) => toGroup(r as GroupRow));
+  } catch (e) {
+    console.error('[basta] listMyGroups failed:', e);
     throw e;
   }
 }

@@ -48,6 +48,19 @@ proofs/verifications from the user's groups). It is intentionally named **"Today
 > the bounded, in-group activity shown on Today. A public/global Explore feed is excluded by
 > DECISIONS D-006.
 
+## Phase 2 routes (added)
+
+- `app/challenge/new.tsx` — create challenge form (title/category/mode/start-date/duration/proof).
+- `app/challenge/[id].tsx` — detail: today's status, submit CTA, recent submissions list. Reads
+  `useChallenge`, `useTodaySubmission`, `useQueueForChallenge`, `useSubmissions`.
+- `app/challenge/[id]/submit-proof.tsx` — modal-presented proof composer (camera/library
+  + comment + draft-on-capture + enqueue + kick processor).
+
+> Note: expo-router's experimental `typedRoutes` hasn't yet generated a typed entry for the
+> nested `/challenge/[id]/submit-proof` path, so navigation to it currently uses the resolved
+> string-href form (`/challenge/${id}/submit-proof`). Functional; refresh on next
+> dev-server restart should regenerate the union.
+
 ## Navigation rules
 
 - Configuration (linking, guards) lives in `src/navigation/`, separate from feature

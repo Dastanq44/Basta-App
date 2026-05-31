@@ -1,18 +1,26 @@
 # Basta — Supabase Schema Draft
 
-> 📝 **Status (2026-05-28):** The **Phase 1 subset** (`profiles`, `groups`, `group_members`, RLS,
-> `join_group_by_invite` RPC, `is_group_member`/`is_group_admin` helpers) has been **promoted to a
-> real migration**:
-> [`supabase/migrations/20260528000000_phase1_profiles_groups.sql`](../../supabase/migrations/20260528000000_phase1_profiles_groups.sql).
-> It still needs the USER to apply it in the Supabase Dashboard SQL editor (W-010).
-> The Phase 1 file differs from this draft in a few places — most notably **`profiles.username`
-> and `display_name` are nullable** so a row can be inserted at first profile-setup without a
-> race on the unique username (no `on auth.users insert` trigger; client inserts via upsert).
+> 📝 **Status (2026-05-31):**
+> - **Phase 1 subset** (`profiles`, `groups`, `group_members`, RLS, `join_group_by_invite` RPC,
+>   `create_group` RPC, helpers) is in
+>   [`supabase/migrations/20260528000000_phase1_profiles_groups.sql`](../../supabase/migrations/20260528000000_phase1_profiles_groups.sql)
+>   — **applied** by the user.
+> - **Phase 2 subset** (`challenges`, `challenge_participants`, `submissions`,
+>   `create_challenge` / `join_challenge` / `submit_proof` RPCs, `is_challenge_participant`
+>   helper, Storage RLS for `proof-media`) is in
+>   [`supabase/migrations/20260528100000_phase2_challenges_proofs.sql`](../../supabase/migrations/20260528100000_phase2_challenges_proofs.sql)
+>   — **awaiting USER apply (W-011)** + manual bucket creation (Dashboard → Storage).
 >
-> The sections below remain the long-term **full-MVP** sketch for Phase 2+ (challenges,
-> submissions, verifications, streaks, reports, blocks, push). Those tables are NOT in the
-> applied migration yet. RLS here is sketched and must be hardened + pgTAP-tested before
-> being trusted.
+> Differences from the draft below worth noting:
+> - **All client writes go through SECURITY DEFINER RPCs** (no INSERT RLS policies). This is
+>   the pattern that worked around B-006/B-008 chicken-and-egg RLS during Phase 1.
+> - **`challenge_day` is server-computed** from `profiles.timezone` + `start_date` (D-003).
+> - **`submit_proof` is idempotent**: a duplicate `(challenge_id, author_id, challenge_day)`
+>   returns the existing row with `already_submitted: true` instead of throwing.
+>
+> The sections below remain the long-term **full-MVP** sketch (verifications, streaks, reports,
+> blocks, push). Those tables are NOT applied yet. RLS here is sketched and must be hardened +
+> pgTAP-tested before being trusted.
 >
 > Domain model: [`DATA_MODEL.md`](DATA_MODEL.md). Server-authoritative scoring is locked (D-003).
 

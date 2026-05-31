@@ -9,6 +9,16 @@ export type { SyncStatus };
 
 export type MutationType = 'SUBMIT_PROOF' | 'CREATE_CHALLENGE' | 'POST_COMMENT' | 'ADD_REACTION';
 
+/** Payload shapes per MutationType. Discriminated by `type` on the queue row. */
+export type SubmitProofPayload = {
+  /** Same value as the queue row `id` — also the submissions.id used for idempotency. */
+  submissionId: string;
+  challengeId: string;
+  /** Path to a file in the app sandbox; the queue processor uploads it. */
+  mediaLocalUri: string;
+  comment?: string;
+};
+
 export type QueuedMutation<TPayload = unknown> = {
   /** Client-generated UUID. Also the idempotency key — retries must not double-submit (D-004). */
   id: string;

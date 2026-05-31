@@ -19,17 +19,36 @@ Basta_App/
 │   └── bootstrap-claude.md       # one-time setup for a new Claude account ("Claude 2")
 ├── supabase/
 │   └── migrations/
-│       └── 20260528000000_phase1_profiles_groups.sql   # T-003 (apply via Dashboard SQL — W-010)
+│       ├── 20260528000000_phase1_profiles_groups.sql   # T-003 (applied)
+│       └── 20260528100000_phase2_challenges_proofs.sql # T-030/T-034 (apply via SQL editor — W-011)
 ├── src/features/
 │   ├── auth/                     # T-020: PKCE email auth, useSession, secure-store tokens
 │   ├── onboarding/               # T-021/T-022: terms, profile setup, completeOnboarding
 │   │   ├── api/index.ts          #   fetchProfile/upsertProfile/completeOnboarding + row→User map
 │   │   ├── hooks/                #   useProfile · useUpsertProfile · useCompleteOnboarding
 │   │   └── model/                #   CURRENT_TERMS_VERSION · profileSetupInput zod
-│   └── groups/                   # T-023: createGroup, join via invite RPC
-│       ├── api/index.ts          #   createGroup · joinGroupByInvite (rpc)
-│       ├── hooks/                #   useCreateGroup · useJoinGroup
-│       └── model/                #   createGroupInput · joinGroupInput zod
+│   ├── groups/                   # T-023: createGroup, join via invite RPC, listMyGroups
+│   │   ├── api/index.ts          #   createGroup · joinGroupByInvite (rpc) · listMyGroups
+│   │   ├── hooks/                #   useCreateGroup · useJoinGroup · useMyGroups
+│   │   └── model/                #   createGroupInput · joinGroupInput zod
+│   ├── challenges/               # T-030: list/detail/create challenges (RPC-first)
+│   │   ├── api/index.ts          #   listMyChallenges · getChallenge · createChallenge (rpc)
+│   │   ├── hooks/                #   useChallenges · useChallenge · useCreateChallenge
+│   │   └── model/                #   CHALLENGE_CATEGORIES · createChallengeInput zod
+│   └── proofs/                   # T-032/T-035: photo capture + queue orchestration + SyncBadge
+│       ├── api/index.ts          #   listSubmissionsForChallenge · getMyTodaySubmission
+│       ├── hooks/                #   useSubmissions · useTodaySubmission · useQueueForChallenge · useSubmitProof
+│       ├── model/                #   proofInput zod
+│       └── ui/                   #   SyncBadge · ProofComposer
+├── src/offline/                  # Critical path (D-004). Engine: Expo SQLite (D-007).
+│   ├── index.ts                  # initOffline() barrel — used by app/_layout
+│   ├── db/                       # SQLite singleton + schema (queue_items table)
+│   ├── queue/                    # T-033: durable mutation queue with retry/backoff/idempotency
+│   │   ├── store.ts              #   CRUD over queue_items
+│   │   ├── processor.ts          #   NetInfo+AppState driven; one-at-a-time; max 8 attempts
+│   │   └── types.ts              #   QueuedMutation, SubmitProofPayload, SyncStatus re-export
+│   └── upload/                   # T-034: standard Supabase Storage upload (tus deferred, D-008)
+│       └── storage.ts            #   uploadProofMedia(userId,challengeId,submissionId,localUri)
 ├── src/navigation/
 │   └── guards.ts                 # useOnboardingGate(): GateState — full redirect matrix
 └── docs/

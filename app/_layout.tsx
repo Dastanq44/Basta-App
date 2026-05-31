@@ -7,11 +7,26 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { queryClient } from '@/shared/lib/queryClient';
 import { ThemeProvider, useTheme } from '@/shared/ui';
 import { isAtTarget, useOnboardingGate } from '@/navigation/guards';
+import { initOffline } from '@/offline';
 
 // Root layout = providers + root stack. Thin: composition + provider wiring only (D-002).
 // The session+onboarding gate lives in <RootNav> so it can read the theme + run inside
 // QueryClientProvider. All routing decisions are in `src/navigation/guards.ts`.
 export default function RootLayout() {
+  // Open the SQLite DB once on app start, then wire the queue processor to NetInfo + AppState.
+  // The processor handles its own auth checks per job, so starting it before sign-in is safe.
+  useEffect(() => {
+    let stop: (() => void) | undefined;
+    initOffline()
+      .then((teardown) => {
+        stop = teardown;
+      })
+      .catch((e) => console.error('[basta] offline init failed:', e));
+    return () => {
+      stop?.();
+    };
+  }, []);
+
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
@@ -58,6 +73,11 @@ function RootNav() {
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="(onboarding)" />
       <Stack.Screen name="challenge/[id]" options={{ headerShown: true, title: 'Challenge' }} />
+      <Stack.Screen name="challenge/new" options={{ headerShown: true, title: 'New challenge' }} />
+      <Stack.Screen
+        name="challenge/[id]/submit-proof"
+        options={{ headerShown: true, presentation: 'modal', title: 'Submit proof' }}
+      />
     </Stack>
   );
 }

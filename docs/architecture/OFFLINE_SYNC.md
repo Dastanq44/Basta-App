@@ -70,6 +70,26 @@ success and dropped; (if/when resumable) partial upload resumes; and an end-to-e
 
 ---
 
+## Implementation (Phase 2 landed)
+
+- **Local DB:** `expo-sqlite` singleton via `src/offline/db/init.ts` → `getDb()` (D-007).
+  Single table for now (`queue_items`); schema in `src/offline/db/schema.ts`.
+- **MMKV:** **DEFERRED** — not Expo Go compatible (needs a dev build). Documented as W-009 /
+  W-012; revisit when we move to a dev build.
+- **Queue store:** `src/offline/queue/store.ts` — `enqueue / due / setStatus / reschedule /
+  remove / listAll`. Idempotency: queue `id` == submission `id` (client UUID), passed to the
+  server `submit_proof` RPC.
+- **Processor:** `src/offline/queue/processor.ts` — one-at-a-time per app instance, woken by
+  NetInfo `isConnected` and `AppState` foregrounding, plus an explicit `kick()` after enqueue.
+  Backoff: `min(maxDelay, base · 2^attempts) + jitter`; max 8 attempts then `failed`.
+- **Upload:** `src/offline/upload/storage.ts` — standard Supabase Storage upload (D-008).
+  Path convention: `<userId>/<challengeId>/<submissionId>.jpg`. Storage RLS enforces it.
+- **Initialization:** `src/offline/index.ts` exposes `initOffline()`. `app/_layout.tsx` calls
+  it once on mount — opens the DB, starts the processor, returns a teardown.
+- **Server reconciliation:** the processor calls `submit_proof` which is idempotent. On a retry
+  whose ack was lost, the RPC returns `{ already_submitted: true }` and the queue removes the
+  job cleanly — no double-submit, no infinite retry.
+
 ## Decision note — local persistence engine (D-007, ACCEPTED)
 
 **Chosen: `expo-sqlite` (relational/structured) + MMKV (key/value).** Settled before Phase 1.
