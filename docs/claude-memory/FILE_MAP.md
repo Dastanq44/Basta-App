@@ -23,7 +23,8 @@ Basta_App/
 │       ├── 20260528100000_phase2_challenges_proofs.sql # T-030/T-034 (applied — W-011 done)
 │       ├── 20260531000000_phase3_verification.sql      # T-040: verifications + verify_submission + solo auto-verify + storage SELECT widen (apply — W-014)
 │       ├── 20260531100000_phase3_streaks.sql           # T-042: challenge_streak() computed-on-read RPC (apply — W-015)
-│       └── 20260531200000_phase3_leaderboard.sql       # T-043: group_leaderboard() RPC (apply — W-016)
+│       ├── 20260531200000_phase3_leaderboard.sql       # T-043: group_leaderboard() RPC (apply — W-016)
+│       └── 20260531300000_phase3_social.sql            # T-041: reactions + comments tables/RPCs (apply — W-017)
 ├── src/features/
 │   ├── auth/                     # T-020: PKCE email auth, useSession, secure-store tokens
 │   ├── onboarding/               # T-021/T-022: terms, profile setup, completeOnboarding
@@ -47,9 +48,14 @@ Basta_App/
 │   │   ├── api/index.ts          #   verifySubmission (rpc verify_submission)
 │   │   ├── hooks/                #   useVerifySubmission (invalidates submissions + single + streak)
 │   │   └── model/                #   verificationResultSchema zod
-│   └── leaderboard/              # T-043: group leaderboard (server-ranked by verified proofs)
-│       ├── api/index.ts          #   getGroupLeaderboard (rpc group_leaderboard)
-│       └── hooks/                #   useGroupLeaderboard · groupLeaderboardQueryKey
+│   ├── leaderboard/              # T-043: group leaderboard (server-ranked by verified proofs)
+│   │   ├── api/index.ts          #   getGroupLeaderboard (rpc group_leaderboard)
+│   │   └── hooks/                #   useGroupLeaderboard · groupLeaderboardQueryKey
+│   └── social/                   # T-041: reactions + short comments on submissions
+│       ├── api/index.ts          #   getReactions · reactToSubmission · getComments · addComment
+│       ├── hooks/                #   useReactions · useReactToSubmission · useComments · useAddComment
+│       ├── model/                #   REACTION_EMOJIS · ReactionSummary
+│       └── ui/                   #   ReactionBar · CommentsSection
 ├── src/offline/                  # Critical path (D-004). Engine: Expo SQLite (D-007).
 │   ├── index.ts                  # initOffline() barrel — used by app/_layout
 │   ├── db/                       # SQLite singleton + schema (queue_items table)

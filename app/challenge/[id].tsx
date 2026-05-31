@@ -1,5 +1,5 @@
-import { FlatList, RefreshControl, View } from 'react-native';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { FlatList, Pressable, RefreshControl, View } from 'react-native';
+import { type Href, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Button, Card, Screen, Text, useTheme } from '@/shared/ui';
 import { useChallenge, useChallengeStreak } from '@/features/challenges';
 import { useSession } from '@/features/auth';
@@ -138,24 +138,31 @@ function SubmissionRow({
     submission.authorId !== currentUserId;
 
   return (
-    <Card>
-      <View style={{ gap: t.spacing.sm }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text variant="heading">Day {submission.challengeDay + 1}</Text>
-          <SyncBadge status={submission.status} />
+    // Tap the row → submission detail (photo + reactions + comments). The Verify button below is a
+    // nested Pressable, so it handles its own press without triggering navigation.
+    <Pressable
+      accessibilityRole="button"
+      onPress={() => router.push(`/submission/${submission.id}` as Href)}
+    >
+      <Card>
+        <View style={{ gap: t.spacing.sm }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text variant="heading">Day {submission.challengeDay + 1}</Text>
+            <SyncBadge status={submission.status} />
+          </View>
+          {submission.comment ? <Text variant="muted">{submission.comment}</Text> : null}
+          {canVerify ? (
+            <Button
+              label="Verify proof"
+              variant="secondary"
+              size="sm"
+              // typedRoutes hasn't generated verify/[submissionId] in the route union yet;
+              // the resolved string href is accepted by expo-router.
+              onPress={() => router.push(`/verify/${submission.id}` as Href)}
+            />
+          ) : null}
         </View>
-        {submission.comment ? <Text variant="muted">{submission.comment}</Text> : null}
-        {canVerify ? (
-          <Button
-            label="Verify proof"
-            variant="secondary"
-            size="sm"
-            // typedRoutes hasn't generated verify/[submissionId] in the route union yet;
-            // the resolved string href is accepted by expo-router.
-            onPress={() => router.push(`/verify/${submission.id}`)}
-          />
-        ) : null}
-      </View>
-    </Card>
+      </Card>
+    </Pressable>
   );
 }

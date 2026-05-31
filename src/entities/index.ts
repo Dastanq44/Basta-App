@@ -5,3 +5,4 @@ export type { Submission, SubmissionId, SyncStatus, ServerSubmissionStatus } fro
 export type { Verification, VerificationResult } from './verification';
 export type { ChallengeStreak } from './streak';
 export type { LeaderboardEntry } from './leaderboard';
+export type { SubmissionComment } from './comment';

@@ -21,6 +21,50 @@
 
 ---
 
+## 2026-05-31 — Claude Instance / Phase 3 reactions + comments (T-041)
+
+**Did:** Implemented T-041 (reactions + short comments on submissions), code-complete. tsc + lint
+green. **Chose T-041 over T-050 (push)** because remote push needs a development build / EAS —
+it can't be smoke-tested in Expo Go, so building it blind was the wrong move; it should land with
+the EAS/dev-build work.
+
+**Design:** writes via participant-gated SECURITY DEFINER RPCs, RLS read-only (same pattern).
+One reaction per user per submission (re-selectable / removable); comments ≤280.
+
+**Files added:**
+- `supabase/migrations/20260531300000_phase3_social.sql` — `submission_reactions`,
+  `submission_comments` + `react_to_submission` / `add_comment` RPCs + participant-read RLS.
+- `src/entities/comment.ts` — `SubmissionComment`.
+- `src/features/social/{api,hooks,model,ui,index}` — `getReactions`/`reactToSubmission`/
+  `getComments`/`addComment`; `useReactions`/`useReactToSubmission`/`useComments`/`useAddComment`;
+  `REACTION_EMOJIS` + `ReactionSummary`; `ReactionBar` + `CommentsSection`.
+- `app/submission/[id].tsx` — submission detail (photo via signed URL + comment + ReactionBar +
+  CommentsSection). Registered in `app/_layout.tsx`.
+
+**Files modified:**
+- `app/challenge/[id].tsx` — submission rows are now tappable → `/submission/[id]` (Verify button
+  is a nested Pressable, handles its own press). New dynamic route href cast `as Href`.
+
+**Tests run:** `npm run typecheck` → 0 ✅ · `npm run lint` → 0 ✅.
+**Tests NOT run:** unit/E2E (W-007); runtime (needs W-017 migration).
+
+**Notes for next instance:**
+- Comments embed `profiles(username, display_name)` via the author_id FK (single FK → unambiguous).
+  If you add another FK to profiles on that table, name the embed explicitly.
+- Reactions are a fixed emoji set (`REACTION_EMOJIS`). Counts/own-choice computed in `getReactions`.
+- The submission-detail screen and the verify screen are separate on purpose (verify is gated;
+  detail is for everyone). Both show the photo via `useProofSignedUrl`.
+
+**Next up:**
+1. **USER — W-017:** apply `supabase/migrations/20260531300000_phase3_social.sql`, smoke-test
+   react + comment on a submission.
+2. Next code task: **T-051/T-052 (report/block + account deletion — store requirements, testable
+   in Expo Go)**, or **T-050 (push) bundled with EAS/dev-build (T-061)**.
+
+**Branch / commit:** `mvp` — social committed (see git log). No new decisions.
+
+---
+
 ## 2026-05-31 — Claude Instance / Phase 3 group leaderboard (T-043)
 
 **Did:** Implemented T-043 group leaderboard, code-complete. tsc + lint green. **This completes the

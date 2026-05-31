@@ -80,6 +80,7 @@ function RootNav() {
       />
       <Stack.Screen name="verify/[submissionId]" options={{ headerShown: true, title: 'Verify proof' }} />
       <Stack.Screen name="group/[id]" options={{ headerShown: true, title: 'Group' }} />
+      <Stack.Screen name="submission/[id]" options={{ headerShown: true, title: 'Proof' }} />
     </Stack>
   );
 }

@@ -83,6 +83,23 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
 - **Status:** Open / known operational item. Re-evaluate after any future Expo SDK upgrade
   (the react-dom peer specifier may align with our react version then).
 
+## [OPEN] W-017 — Phase 3 needs: apply the social migration before reactions/comments work
+- **Date:** 2026-05-31 · **Area:** backend / Supabase
+- **What:** T-041 adds `supabase/migrations/20260531300000_phase3_social.sql`
+  (`submission_reactions`, `submission_comments` + `react_to_submission` / `add_comment` RPCs +
+  participant-read RLS). Until applied, the submission-detail screen's reaction bar and comments
+  error. Apply via Dashboard → SQL editor → Run. Idempotent (`create ... if not exists`,
+  `create or replace`, `drop policy if exists`).
+- **Depends on:** Phase 2 (submissions) applied.
+- **Verify:** `select react_to_submission('<a submission id>'::uuid, '🔥');` then
+  `select * from submission_reactions;` shows your row; `select add_comment('<id>'::uuid, 'hi');`
+  returns a json id.
+- **Smoke-test:** open a challenge → tap a submission row → react (chip highlights, count updates) →
+  post a comment → it appears. Reads are limited to challenge participants.
+- **Note:** comments query embeds `profiles(username, display_name)` via the author_id FK — works
+  because there's a single FK from submission_comments to profiles.
+- **Status:** Open until applied.
+
 ## [OPEN] W-016 — Phase 3 needs: apply the leaderboard migration before the group board loads
 - **Date:** 2026-05-31 · **Area:** backend / Supabase
 - **What:** T-043 adds `supabase/migrations/20260531200000_phase3_leaderboard.sql` (the

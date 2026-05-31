@@ -3,12 +3,13 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-05-31 — by: Claude Instance / Phase 3 complete (T-040/T-042/T-043) + Retro UI_
+_Last updated: 2026-05-31 — by: Claude Instance / Phase 3 (T-040/T-041/T-042/T-043) + Retro UI_
 
-## Status: PHASE 3 CORE LOOP COMPLETE — verification (T-040) + streaks (T-042) + group leaderboard (T-043), code-complete · apply migrations W-014/W-015/W-016 to use them
+## Status: PHASE 3 SOCIAL LOOP COMPLETE — verification (T-040) + streaks (T-042) + leaderboard (T-043) + reactions/comments (T-041), code-complete · apply migrations W-014/W-015/W-016/W-017
 
 The full MVP loop now exists in code: register → group → challenge → submit proof (offline) →
-friend verifies → streak → group leaderboard. Remaining MVP: notifications (T-050), trust/safety
+friend verifies → streak → group leaderboard, plus reactions + comments on each proof. Remaining
+MVP: notifications (T-050 — note: remote push needs a dev build/EAS, not Expo Go), trust/safety
 (T-051/T-052), tests (T-060), CI/EAS (T-061/T-062). Optional UI follow-ups: screen-level Retro
 polish, exact Retro serif font.
 
