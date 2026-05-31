@@ -21,6 +21,38 @@
 
 ---
 
+## 2026-05-31 — Claude 1 / Phase 2 operational follow-up (npm peer conflict)
+
+**Did:** No code changes. After the Phase 2 commit (`d05fb67`), USER ran `npm install` and hit
+the recurring `ERESOLVE` between `react@19.1.0` and a transitively-pulled `react-dom@19.2.x`
+(peerOptional from `expo-router`'s web support). Same shape we've seen during SDK upgrades.
+
+- **Resolved** with `rm -rf node_modules package-lock.json && npm install` — 929 packages, all
+  four Phase 2 deps verified present.
+- **USER explicitly declined** a committed `.npmrc legacy-peer-deps=true` workaround. The
+  agreed workflow is the clean-reinstall sequence whenever this conflict surfaces. Logged as
+  **W-013** in BUGS_AND_WARNINGS.
+- The targeted alternative (a `package.json` `overrides` pin for `react-dom`) is documented
+  in W-013 as an option to revisit only if the friction becomes unacceptable. Don't add it
+  without asking.
+
+**In progress:** Nothing half-done in code.
+
+**Next up (USER):** unchanged from the prior entry — W-011 (apply Phase 2 migration + create
+the `proof-media` Storage bucket), then smoke-test the create-challenge / submit-proof flow
+on Expo Go.
+
+**Branch / commit:** `mvp` + `docs: log W-013 (npm peer conflict workflow)`. Pushed.
+
+**Decisions changed:** none.
+
+**Notes for next session:**
+- **Don't auto-propose `.npmrc legacy-peer-deps=true` for this project.** The user prefers
+  the clean-reinstall workflow. Stored as a project-local feedback memory.
+- If a fresh clone or CI hits this, the recovery is exactly the W-013 snippet.
+
+---
+
 ## 2026-05-31 — Claude 1 / Phase 2 challenges + proof upload queue (T-030..T-035)
 
 **Did:** Phase 2 core product loop, code-complete. Runtime smoke-test BLOCKED on W-011 (USER

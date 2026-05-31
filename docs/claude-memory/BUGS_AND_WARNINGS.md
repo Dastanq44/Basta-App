@@ -64,6 +64,25 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
   planned (T-060, Phase 5) but could land earlier. The offline-submit→reconnect E2E is the one that
   protects the product's core promise — prioritize it once the queue exists (Phase 2).
 
+## [OPEN] W-013 — Recurring `npm install` ERESOLVE (react-dom peer); fix is clean reinstall
+- **Date:** 2026-05-31 · **Area:** deps / npm
+- **What:** Each time the lockfile drifts (after sessions that add/bump deps), `npm install`
+  errors with `ERESOLVE could not resolve` between `react@19.1.0` (Expo SDK 54's pin) and
+  `react-dom@19.2.x` (a `peerOptional` pulled in by `expo-router` for web support).
+  We're native-only via D-006 (`platforms: ["ios","android"]` in `app.json`), so `react-dom`
+  is never actually imported — but npm's strict peer resolution doesn't know that.
+- **Fix (the agreed workflow):**
+  ```bash
+  rm -rf node_modules package-lock.json
+  npm install
+  ```
+  Takes ~1 minute. Don't add `.npmrc legacy-peer-deps=true` to the repo — the user
+  explicitly declined a committed permanent workaround.
+- **Targeted alternative if this gets annoying:** add a `package.json` `overrides` block
+  pinning `react-dom` to a compatible version. More surgical than `.npmrc`. Ask first.
+- **Status:** Open / known operational item. Re-evaluate after any future Expo SDK upgrade
+  (the react-dom peer specifier may align with our react version then).
+
 ## [OPEN] W-011 — Phase 2 needs: apply migration + create Storage bucket + (re)install deps
 - **Date:** 2026-05-31 · **Area:** backend / Supabase / setup
 - **What:** Phase 2 (T-030..T-035) is code-complete and passes tsc/lint/expo-doctor. It will
