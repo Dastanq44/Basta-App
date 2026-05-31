@@ -16,42 +16,30 @@ polish, exact Retro serif font.
 Phase 1 + Phase 2 are applied and smoke-tested on-device (USER confirmed W-011 done: Phase 2
 migration applied, `proof-media` bucket created, create-challenge / submit-proof loop works).
 
-**This session (T-040 friend verification):** new Phase 3 migration (`verifications` table +
-`verify_submission` SECURITY DEFINER RPC + `submit_proof` replaced to **auto-verify solo proofs**
-+ widened `proof-media` storage SELECT so verifiers can view co-participants' photos), a
-`src/features/verification` feature, an `app/verify/[submissionId].tsx` screen (shows the signed
-photo + comment + Approve/Reject), and a **Verify proof** affordance on the challenge detail screen
-for pending proofs that aren't yours. Group rule: threshold-approve / single-reject (D-009).
+**This session (Phase 3 social loop + Retro UI), all committed to `mvp` + pushed:**
+- **T-040 verification** — `verifications` table + `verify_submission` RPC (threshold-approve /
+  single-reject, D-009); `submit_proof` replaced to auto-verify solo proofs; widened proof-media
+  storage SELECT; `src/features/verification`; `app/verify/[submissionId].tsx`; verify affordance.
+- **T-042 streaks** — `challenge_streak` computed-on-read RPC (tz-correct via stored
+  `challenge_day`, D-010); `useChallengeStreak`; streak stat cards on challenge detail.
+- **T-043 leaderboard** — `group_leaderboard` RPC; `src/features/leaderboard`; real Groups tab
+  list → `app/group/[id].tsx` (invite code + ranked board).
+- **T-041 reactions + comments** — `submission_reactions`/`submission_comments` + RPCs;
+  `src/features/social` (ReactionBar + CommentsSection); `app/submission/[id].tsx`.
+- **UI** — Retro.app-inspired theme (serif display, outlined pill buttons, white canvas, blue
+  accent) at the design-system level; Profile **Sign out** button wired.
 
-All checks green: `npm run typecheck` ✅ · `npm run lint` ✅ · `npx expo-doctor` 18/18 ✅.
-**Runtime not yet exercised** — needs the W-014 migration applied (idempotent; safe to re-run),
-then the W-014 smoke-test (solo auto-verify + a 2-member group approve/reject).
+**Migrations PENDING (USER) before Phase 3 works at runtime:** W-014 verification · W-015 streaks ·
+W-016 leaderboard · W-017 social — all idempotent; paste each into Supabase SQL editor. Phase 1+2
+already applied (W-011 done).
 
-**Stack now:** Expo SDK 54 · React 19.1.0 · RN 0.81.5 · expo-router 6.0.23 · TS 5.9.2 ·
-@types/react 19.1.10 · eslint-config-expo 10. **Native-only** (`platforms: ["ios","android"]` in
-app.json; `react-native-web` removed — consistent with D-006).
+**Stack:** Expo SDK 54 · React 19.1.0 · RN 0.81.5 · expo-router 6.0.23 · TS 5.9.2 ·
+@types/react 19.1.10 · eslint-config-expo 10. **Native-only** (`platforms: ["ios","android"]`;
+`react-native-web` removed — D-006).
 
-**Latest checks:** `npm run typecheck` → green ✅ · `npm run lint` → green ✅ ·
-`npx expo-doctor` → 18/18 ✅ · tests → none configured (W-007). Runtime onboarding flow has NOT
-been exercised end-to-end — **blocked on W-010 (apply the migration in Supabase)** and W-008
-(email template).
-
-**This session added:**
-- `supabase/migrations/20260528000000_phase1_profiles_groups.sql` — profiles/groups/group_members
-  + RLS + `is_group_member`/`is_group_admin` helpers + `join_group_by_invite` RPC.
-- `src/features/onboarding/*` — terms constant, zod schemas, `useProfile`/`useUpsertProfile`/
-  `useCompleteOnboarding` hooks, DB row → User mapper.
-- `src/features/groups/{api,hooks,model}/*` — `createGroup`, `joinGroupByInvite`,
-  `useCreateGroup`/`useJoinGroup`, group/invite schemas.
-- Real `app/(onboarding)/profile-setup.tsx` (form: username/displayName/terms; auto-detect tz).
-- Real `app/(onboarding)/join-or-create-group.tsx` (create OR join-with-invite-code).
-- `src/navigation/guards.ts` — `useOnboardingGate()` with the full redirect matrix; `app/_layout`
-  is now a thin caller (≈45 LOC) that only routes when current segment ≠ target.
-- `src/entities/user.ts` — added `termsVersion?: string`.
-
-Email-auth (sign-up / sign-in / verify-OTP / sign-out / session) is wired, including a
-SecureStore-backed Supabase client, a root-layout redirect gate, and field-validated forms.
-**Still no groups, challenges, proof upload, or Supabase migrations.**
+**Latest checks (this handoff):** `npm run typecheck` → green ✅ · `npm run lint` → green ✅ ·
+tests → none configured (W-007). `npx expo-doctor` was 18/18 ✅ earlier this session. The Phase 3
+features have NOT been exercised at runtime — pending the four migrations above.
 
 ## How to run
 - `npm install` (1131 pkgs; node_modules gitignored). Then `npm start` (Expo dev server).
@@ -63,8 +51,9 @@ SecureStore-backed Supabase client, a root-layout redirect gate, and field-valid
 - **Git:** ✅ Initialized (branch `main`); local identity set (repo-local).
 - **Current branch:** `mvp` (feature branch; pushed to `origin/mvp`).
 - **Remote:** `origin` → https://github.com/Dastanq44/Basta-App (`mvp` pushed; `main` local only).
-- **Recent commits (mvp):** `fa77c05` initial setup → `66b813f` secrets hardening → + this
-  session's `docs: add MVP architecture proposal` (see `git log`).
+- **Recent commits (mvp), this session (pushed):** `1b04dae` T-040 verification + Retro UI +
+  sign-out → `d49b624` T-042 streaks → `05ed44a` T-043 leaderboard → `1111469` T-041
+  reactions/comments → + this handoff doc commit (see `git log`).
 - **Working dir:** repo root (machine-relative — each Claude clones to their own path).
 
 ## What exists

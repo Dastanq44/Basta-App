@@ -21,6 +21,95 @@
 
 ---
 
+## 2026-05-31 — Claude Instance / SESSION HANDOFF (Phase 3 social loop complete)
+
+> Consolidated handoff. Per-task detail is in the four entries below (T-040, T-043, T-042, T-041).
+> Read this first.
+
+**Completed work this session (all committed to `mvp`, pushed to `origin/mvp`):**
+- **T-040** friend verification — `verifications` table + `verify_submission` RPC (threshold-approve
+  / single-reject, D-009); `submit_proof` replaced to auto-verify solo proofs; widened proof-media
+  storage SELECT; verification feature; `app/verify/[submissionId].tsx`; verify affordance on
+  challenge detail.
+- **T-042** streaks — `challenge_streak` computed-on-read RPC (timezone-correct via stored
+  `challenge_day`, D-010); `useChallengeStreak`; streak stat cards on challenge detail.
+- **T-043** group leaderboard — `group_leaderboard` RPC; `src/features/leaderboard`; real Groups
+  tab list → `app/group/[id].tsx` (invite code + ranked board).
+- **T-041** reactions + short comments — `submission_reactions`/`submission_comments` + RPCs;
+  `src/features/social` (ReactionBar + CommentsSection); `app/submission/[id].tsx`.
+- **UI** — Retro.app-inspired theme (serif display, outlined pill buttons, white canvas, blue
+  accent, red destructive) applied at the design-system level (`tokens.ts` + primitives).
+- **Fix** — wired the Profile **Sign out** button (was missing → "login/register gone" report).
+- The MVP loop is now code-complete end-to-end: register → group → challenge → submit (offline) →
+  friend verifies → streak → group leaderboard, plus reactions + comments.
+
+**Changed/added files (by area):**
+- Migrations (all NEW, idempotent, NOT yet applied): `supabase/migrations/`
+  `20260531000000_phase3_verification.sql`, `20260531100000_phase3_streaks.sql`,
+  `20260531200000_phase3_leaderboard.sql`, `20260531300000_phase3_social.sql`.
+- Features: `src/features/verification/*` (new), `src/features/leaderboard/*` (new),
+  `src/features/social/*` (new); `src/features/challenges/*` (+streak api/hook),
+  `src/features/proofs/*` (+getSubmission/getProofSignedUrl/useSubmission); verification hook
+  invalidates streak.
+- Entities: `streak.ts`, `leaderboard.ts`, `comment.ts` (+ `entities/index.ts`).
+- Screens/routes: `app/verify/[submissionId].tsx`, `app/group/[id].tsx`, `app/submission/[id].tsx`
+  (all NEW + registered in `app/_layout.tsx`); `app/(tabs)/groups.tsx` (real list),
+  `app/(tabs)/profile.tsx` (sign out), `app/challenge/[id].tsx` (streak cards + tappable rows +
+  verify affordance).
+- Design system: `src/shared/ui/theme/tokens.ts`, `Text/Card/Button/Input.tsx`, `SyncBadge.tsx`;
+  `docs/design/theme-preview.html` (browser mock).
+- Docs: this file, `CURRENT_STATE`, `TASKS`, `BUGS_AND_WARNINGS`, `DECISIONS` (D-009, D-010),
+  `FILE_MAP`.
+
+**Unfinished work:**
+- **Four migrations are NOT applied** (W-014/W-015/W-016/W-017). Phase 3 is inert at runtime until
+  the USER pastes each into the Supabase SQL editor. Phase 1+2 already applied (W-011 done).
+- **No Phase 3 runtime smoke-test yet** (depends on the migrations + a 2nd test account for the
+  group/verify/leaderboard paths).
+- T-050 push, T-051/T-052 trust&safety, T-060 tests, T-061/T-062 CI+EAS — not started.
+
+**Next recommended task:** **T-051 + T-052 (report/block + account deletion)** — store-required and
+fully testable in Expo Go — OR **T-050 push bundled with EAS/dev-build (T-061)** since remote push
+can't run in Expo Go. (Picking T-050 alone would be untestable now — see warning below.)
+
+**Known issues / open warnings:** W-014/W-015/W-016/W-017 (apply migrations — top priority),
+W-012 (queue drains only foregrounded — Expo Go), W-013 (npm ERESOLVE → clean reinstall),
+W-007 (no test harness), B-002 (cold-start route flash), B-001 (transitive audit vulns, accepted).
+
+**Tests run:** `npm run typecheck` → 0 ✅ · `npm run lint` → 0 ✅ (both at handoff).
+**Tests NOT run:** unit/component/E2E (W-007 — none exist); `npx expo-doctor` not re-run at handoff
+(was 18/18 earlier; no dep/config changes since); runtime/device smoke-test of any Phase 3 feature
+(pending the four migrations).
+
+**Warnings for the next Claude:**
+- **Apply the four Phase 3 migrations before trusting any Phase 3 screen** — they fail silently-ish
+  (RPC missing → caught error, feature hidden) until applied. Order doesn't matter except social
+  reads `submissions` (Phase 2, already applied).
+- **All writes go through SECURITY DEFINER RPCs** (verify/streak/leaderboard/react/comment). Don't
+  add direct INSERT/UPDATE RLS policies — that's the pattern that dodges the B-006/B-008 RLS class.
+- **`submit_proof` was REPLACED** to auto-verify solo proofs (D-009). Keep that branch or solo
+  streaks break.
+- **Don't change the storage path `<uid>/<challengeId>/<file>`** — the widened storage SELECT
+  policy keys off `foldername[2]` = challenge id.
+- **T-050 push is blocked in Expo Go** (remote push tokens need a dev build/EAS). Bundle it with
+  T-061, don't build it blind.
+- **New dynamic routes** aren't in expo-router's generated typed-routes union until Metro
+  regenerates `.expo/types`; cast new dynamic hrefs `as Href` (see groups/challenge screens).
+- **`.claude/settings.json` is intentionally NOT committed** — the harness auto-added a
+  machine-specific absolute path (a Start-Process allow for the local preview HTML) and reordered
+  keys; that's local noise, not shared config. It was reverted at handoff so the tree is clean.
+- **UI is at token level only.** The Retro serif is the platform serif (Georgia); the exact display
+  face (Instrument Serif/Playfair via expo-google-fonts) is an optional follow-up. Brand color/font
+  swaps = edit `tokens.ts`.
+
+**Branch / commit:** `mvp` — 4 feature commits (`1b04dae`, `d49b624`, `05ed44a`, `1111469`) + this
+handoff doc commit, pushed to `origin/mvp`.
+
+**Decisions changed this session:** D-009 (verification model + solo auto-verify), D-010
+(computed-on-read streaks; pg_cron deferred). D-001..D-008 unchanged.
+
+---
+
 ## 2026-05-31 — Claude Instance / Phase 3 reactions + comments (T-041)
 
 **Did:** Implemented T-041 (reactions + short comments on submissions), code-complete. tsc + lint
