@@ -59,8 +59,13 @@ export function useOnboardingGate(): GateState {
 }
 
 /**
- * Helper for layouts: returns true when the user is currently inside the target group.
- * Used to avoid redirecting to a route the user is already on.
+ * Helper for layouts: returns true when the user is currently in a location compatible with
+ * the gate's target — i.e. a redirect would be redundant or wrong. Used to avoid bouncing the
+ * user out of "in-app" routes (e.g. `/challenge/new`, `/group/[id]`, `/submission/[id]`,
+ * `/verify/[submissionId]`) just because they're not literally inside the `(tabs)` group.
+ *
+ * The `(tabs)` target accepts anything that isn't an auth or onboarding route — meaning the
+ * user is "in the app proper" and free to navigate around.
  */
 export function isAtTarget(segments: string[], target: GateTarget): boolean {
   const group = segments[0]; // expo-router group segment, e.g. "(auth)" | "(onboarding)" | "(tabs)"
@@ -71,7 +76,10 @@ export function isAtTarget(segments: string[], target: GateTarget): boolean {
   if (target === '/(onboarding)/join-or-create-group') {
     return group === '(onboarding)' && segments[1] === 'join-or-create-group';
   }
-  if (target === '/(tabs)') return group === '(tabs)';
+  // For the signed-in / onboarded user, any non-auth / non-onboarding route is "in the app
+  // proper". Without this widening, navigating to /challenge/new, /group/[id], etc. trips
+  // `router.replace('/(tabs)')` from the layout and the user gets bounced back to Today (B-009).
+  if (target === '/(tabs)') return group !== '(auth)' && group !== '(onboarding)';
   return false;
 }
 

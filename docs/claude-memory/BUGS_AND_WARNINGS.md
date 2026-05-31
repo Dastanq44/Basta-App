@@ -243,6 +243,25 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
 - **Status:** Open / accept-the-risk. Revisit during T-061 (CI/release) or the next planned SDK
   upgrade.
 
+## [RESOLVED] B-009 — Gate over-redirected onboarded users out of Phase 2/3 sub-routes
+- **Date:** 2026-05-31 · **Area:** navigation / onboarding gate
+- **What:** `isAtTarget(segments, '/(tabs)')` returned `true` only when the user was literally
+  inside the `(tabs)` group. So when an onboarded user tapped "+ New" on Challenges (which
+  pushes `/challenge/new`) or any other route added in Phase 2/3 (`/group/[id]`,
+  `/submission/[id]`, `/verify/[submissionId]`, `/challenge/[id]/submit-proof`), the segments
+  became `['challenge','new']` etc., `isAtTarget` returned `false`, and the layout's
+  redirect-effect fired `router.replace('/(tabs)')` — bouncing the user back to Today.
+  User-visible symptom: "Aside from 4 tabs and Sign out, nothing works — everything redirects
+  back to Today."
+- **Fix:** `isAtTarget(segments, '/(tabs)')` now returns true for any segment group that isn't
+  `(auth)` or `(onboarding)` — i.e. "you're in the app proper". The (auth) and (onboarding)
+  branches are unchanged. Layered redirect-loop guard intact.
+- **Why the original was wrong:** The redirect matrix in the doc comment is correct (a
+  fully-onboarded user "lives in /(tabs)"), but the comparison was too strict — it conflated
+  "your home group" with "the only place you're allowed to be." Sub-routes that exist OUTSIDE
+  the (tabs) group (push/modal screens, detail screens) are still legitimate signed-in routes.
+- **Commit:** `fix(gate): allow signed-in users to navigate to non-tabs sub-routes`.
+
 ## [RESOLVED] B-008 — `createGroup` still rejected by RLS on the outer INSERT after B-006
 - **Date:** 2026-05-28 · **Area:** Supabase / RLS
 - **What:** After fixing B-006 (trigger → SECURITY DEFINER), the user hit a different

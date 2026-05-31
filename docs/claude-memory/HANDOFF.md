@@ -21,6 +21,50 @@
 
 ---
 
+## 2026-05-31 — Claude 1 / Hotfix B-009: gate was bouncing onboarded users out of sub-routes
+
+**Did:** Confirmed a user-reported runtime bug. Onboarded users tapping any non-`(tabs)` route
+(`/challenge/new`, `/group/[id]`, `/submission/[id]`, `/verify/[submissionId]`,
+`/challenge/[id]/submit-proof`) were instantly bounced back to Today by the gate.
+
+Root cause: `isAtTarget(segments, '/(tabs)')` returned true only when the user was literally
+inside the `(tabs)` group. So segments like `['challenge','new']` were treated as "not at
+target" and the layout's redirect-effect fired `router.replace('/(tabs)')`. The redirect matrix
+was right; the comparison was too strict.
+
+**Fix:** `isAtTarget(... , '/(tabs)')` now returns true for any segment group that isn't
+`(auth)` or `(onboarding)`. The signed-out and onboarding branches are untouched.
+
+**Files changed:**
+- `src/navigation/guards.ts` — widen `isAtTarget` for the `/(tabs)` target + updated
+  doc-comment to explain why.
+- `docs/claude-memory/BUGS_AND_WARNINGS.md` — logged as **B-009 [RESOLVED]**.
+
+**Tests run:** `npm run typecheck` → 0 ✅ · `npm run lint` → 0 ✅. No runtime smoke on device
+yet (USER will retest).
+
+**In progress:** Nothing half-done.
+
+**Next up:** Unchanged from prior entry — USER applies the four Phase 3 migrations
+(W-014/W-015/W-016/W-017), then runtime-tests verify/streak/leaderboard/social. After that,
+Phase 4 (T-051/T-052 report/block + account deletion) is the next slice.
+
+**Notes for next Claude:**
+- The gate's intent is "the user belongs in /(tabs) when fully onboarded" — but that should
+  not mean "the user is forbidden to leave /(tabs)." Sub-routes (modal, detail, deep-link
+  targets) outside the `(tabs)` group are legitimate destinations for a signed-in user.
+- If you ever add a new top-level route group at app root (e.g. `(adminstuff)`), audit
+  `isAtTarget` to be sure it's classified correctly — anything that's NOT `(auth)` or
+  `(onboarding)` is treated as "in the app proper" by the current widening.
+- Redirect-loop avoidance is still intact — the layout only calls `router.replace(target)`
+  when `isAtTarget` returns false.
+
+**Branch / commit:** `mvp` + `fix(gate): allow signed-in users to navigate to non-tabs sub-routes`.
+
+**Decisions changed:** none.
+
+---
+
 ## 2026-05-31 — Claude Instance / SESSION HANDOFF (Phase 3 social loop complete)
 
 > Consolidated handoff. Per-task detail is in the four entries below (T-040, T-043, T-042, T-041).
