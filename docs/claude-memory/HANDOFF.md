@@ -21,6 +21,49 @@
 
 ---
 
+## 2026-05-31 — Claude Instance / Phase 3 group leaderboard (T-043)
+
+**Did:** Implemented T-043 group leaderboard, code-complete. tsc + lint green. **This completes the
+MVP core loop** (register → group → challenge → submit → verify → streak → leaderboard).
+
+**Design (D-003):** `group_leaderboard(p_group_id)` SECURITY DEFINER RPC ranks every group member by
+their count of **verified** proofs across that group's challenges (solo/other-group proofs excluded
+via `challenges.group_id = p_group_id`). Member-gated (raises if caller isn't `is_group_member`).
+Members with 0 still listed (LEFT JOINs). Rank assigned client-side from the server ordering.
+
+**Files added:**
+- `supabase/migrations/20260531200000_phase3_leaderboard.sql` — the RPC. Idempotent.
+- `src/entities/leaderboard.ts` — `LeaderboardEntry`.
+- `src/features/leaderboard/{api,hooks,index}` — `getGroupLeaderboard`, `useGroupLeaderboard`
+  (+ `groupLeaderboardQueryKey`).
+- `app/group/[id].tsx` — group screen: invite code card + ranked board (highlights the current
+  user). Registered in `app/_layout.tsx`.
+
+**Files modified:**
+- `app/(tabs)/groups.tsx` — was a placeholder; now a real `useMyGroups` list → taps into
+  `/group/[id]`.
+
+**Decisions:** used **FlatList** not FlashList (bounded ≤50-member lists, no-new-deps lean).
+FlashList is a later perf swap if member lists grow.
+
+**Gotcha for next instance:** new dynamic routes (`group/[id]`) aren't in expo-router's generated
+typed-routes union until Metro regenerates `.expo/types`. The Groups-tab push casts the href
+`as Href` to stay green regardless of regeneration state (see the comment there). Same trick is
+available for any new dynamic route that trips `tsc`.
+
+**Tests run:** `npm run typecheck` → 0 ✅ · `npm run lint` → 0 ✅.
+**Tests NOT run:** unit/E2E (W-007); runtime (needs W-016 migration + a group with verified proofs).
+
+**Next up:**
+1. **USER — W-016:** apply `supabase/migrations/20260531200000_phase3_leaderboard.sql`, smoke-test
+   the Groups tab → group → leaderboard.
+2. Next code task: **T-050 (push)** — also unblocks the T-040 verify deep-link and the D-010
+   "streak at risk" cron — or **T-041 (reactions + comments)**.
+
+**Branch / commit:** `mvp` — leaderboard committed (see git log). No new decisions (D-003 applied).
+
+---
+
 ## 2026-05-31 — Claude Instance / Phase 3 streaks (T-042)
 
 **Did:** Implemented T-042 server-authoritative streaks, code-complete. tsc + lint green. Committed

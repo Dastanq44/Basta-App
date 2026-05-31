@@ -79,6 +79,7 @@ function RootNav() {
         options={{ headerShown: true, presentation: 'modal', title: 'Submit proof' }}
       />
       <Stack.Screen name="verify/[submissionId]" options={{ headerShown: true, title: 'Verify proof' }} />
+      <Stack.Screen name="group/[id]" options={{ headerShown: true, title: 'Group' }} />
     </Stack>
   );
 }

@@ -3,9 +3,14 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-05-31 — by: Claude Instance / Phase 3 verification (T-040) + streaks (T-042) + Retro UI_
+_Last updated: 2026-05-31 — by: Claude Instance / Phase 3 complete (T-040/T-042/T-043) + Retro UI_
 
-## Status: PHASE 3 — T-040 VERIFICATION + T-042 STREAKS implemented (code-complete) · apply migrations W-014 + W-015 to use them
+## Status: PHASE 3 CORE LOOP COMPLETE — verification (T-040) + streaks (T-042) + group leaderboard (T-043), code-complete · apply migrations W-014/W-015/W-016 to use them
+
+The full MVP loop now exists in code: register → group → challenge → submit proof (offline) →
+friend verifies → streak → group leaderboard. Remaining MVP: notifications (T-050), trust/safety
+(T-051/T-052), tests (T-060), CI/EAS (T-061/T-062). Optional UI follow-ups: screen-level Retro
+polish, exact Retro serif font.
 
 Phase 1 + Phase 2 are applied and smoke-tested on-device (USER confirmed W-011 done: Phase 2
 migration applied, `proof-media` bucket created, create-challenge / submit-proof loop works).
@@ -115,7 +120,8 @@ SecureStore-backed Supabase client, a root-layout redirect gate, and field-valid
 - No CI/CD, no EAS config, no analytics/crash SDK wired (T-012, T-061).
 
 ## Next concrete step
-See `HANDOFF.md` → Next Up. Short version: USER applies the Phase 3 migrations (W-014 verification,
-W-015 streaks) and smoke-tests verify + streaks. Then the next code task is **T-043 (group
-leaderboard)** or **T-041 (reactions + short comments)**. The Retro UI is applied at the
-design-system level; optional follow-ups are screen-level polish and the exact Retro serif font.
+See `HANDOFF.md` → Next Up. Short version: USER applies the three Phase 3 migrations (W-014
+verification, W-015 streaks, W-016 leaderboard) and smoke-tests the full loop. Then the next code
+task is **T-050 (push notifications)** — also unlocks the deferred bits (verify deep-link from
+T-040, "streak at risk" cron from D-010) — or **T-041 (reactions + comments)**. Optional UI
+follow-ups: screen-level Retro polish, exact Retro serif font.

@@ -83,6 +83,18 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
 - **Status:** Open / known operational item. Re-evaluate after any future Expo SDK upgrade
   (the react-dom peer specifier may align with our react version then).
 
+## [OPEN] W-016 — Phase 3 needs: apply the leaderboard migration before the group board loads
+- **Date:** 2026-05-31 · **Area:** backend / Supabase
+- **What:** T-043 adds `supabase/migrations/20260531200000_phase3_leaderboard.sql` (the
+  `group_leaderboard` RPC). Until applied, the Group screen's leaderboard errors (RPC missing).
+  Apply via Dashboard → SQL editor → Run. Idempotent (`create or replace`).
+- **Depends on:** Phase 1 (groups/profiles) + Phase 2 (challenges/submissions) already applied.
+- **Verify:** `select * from group_leaderboard('<a group id you belong to>'::uuid);` returns one
+  row per member with `verified_count`.
+- **Smoke-test:** open Groups tab → tap a group → see the ranked board (your row highlighted);
+  verified proofs on the group's challenges raise your count. Non-members get an error (member-gated).
+- **Status:** Open until applied.
+
 ## [OPEN] W-015 — Phase 3 needs: apply the streaks migration before streaks show at runtime
 - **Date:** 2026-05-31 · **Area:** backend / Supabase
 - **What:** T-042 adds `supabase/migrations/20260531100000_phase3_streaks.sql` (the

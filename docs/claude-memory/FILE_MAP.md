@@ -22,7 +22,8 @@ Basta_App/
 │       ├── 20260528000000_phase1_profiles_groups.sql   # T-003 (applied)
 │       ├── 20260528100000_phase2_challenges_proofs.sql # T-030/T-034 (applied — W-011 done)
 │       ├── 20260531000000_phase3_verification.sql      # T-040: verifications + verify_submission + solo auto-verify + storage SELECT widen (apply — W-014)
-│       └── 20260531100000_phase3_streaks.sql           # T-042: challenge_streak() computed-on-read RPC (apply — W-015)
+│       ├── 20260531100000_phase3_streaks.sql           # T-042: challenge_streak() computed-on-read RPC (apply — W-015)
+│       └── 20260531200000_phase3_leaderboard.sql       # T-043: group_leaderboard() RPC (apply — W-016)
 ├── src/features/
 │   ├── auth/                     # T-020: PKCE email auth, useSession, secure-store tokens
 │   ├── onboarding/               # T-021/T-022: terms, profile setup, completeOnboarding
@@ -42,10 +43,13 @@ Basta_App/
 │   │   ├── hooks/                #   useSubmissions · useTodaySubmission · useSubmission · useProofSignedUrl · useQueueForChallenge · useSubmitProof
 │   │   ├── model/                #   proofInput zod
 │   │   └── ui/                   #   SyncBadge · ProofComposer
-│   └── verification/             # T-040: friend verification (group-only; solo auto-verifies)
-│       ├── api/index.ts          #   verifySubmission (rpc verify_submission)
-│       ├── hooks/                #   useVerifySubmission (invalidates submissions + single submission)
-│       └── model/                #   verificationResultSchema zod
+│   ├── verification/             # T-040: friend verification (group-only; solo auto-verifies)
+│   │   ├── api/index.ts          #   verifySubmission (rpc verify_submission)
+│   │   ├── hooks/                #   useVerifySubmission (invalidates submissions + single + streak)
+│   │   └── model/                #   verificationResultSchema zod
+│   └── leaderboard/              # T-043: group leaderboard (server-ranked by verified proofs)
+│       ├── api/index.ts          #   getGroupLeaderboard (rpc group_leaderboard)
+│       └── hooks/                #   useGroupLeaderboard · groupLeaderboardQueryKey
 ├── src/offline/                  # Critical path (D-004). Engine: Expo SQLite (D-007).
 │   ├── index.ts                  # initOffline() barrel — used by app/_layout
 │   ├── db/                       # SQLite singleton + schema (queue_items table)

@@ -55,7 +55,7 @@
 | T-040 | DONE | Friend verification flow. `verify_submission` RPC + `verifications` table + `src/features/verification` + `app/verify/[submissionId].tsx` + Verify affordance on challenge detail. Group: threshold-approve/single-reject; solo auto-verifies on submit (D-009). **Push deep-link to the verify screen is deferred to T-050** (no push yet). Apply migration W-014. |
 | T-041 | TODO | Reactions + short comments |
 | T-042 | DONE | Streak: server-authoritative `challenge_streak` RPC (computed from verified `challenge_day` runs — tz-correct for free) + `useChallengeStreak` + streak stat cards on challenge detail. **pg_cron rollover DEFERRED to T-050** (a computed streak needs no nightly job; cron is only for proactive "streak at risk" push) — see D-010. Apply migration W-015. |
-| T-043 | TODO | Leaderboard Postgres function; group leaderboard screen (FlashList) |
+| T-043 | DONE | `group_leaderboard` RPC (members ranked by verified-proof count across the group's challenges, member-gated) + `src/features/leaderboard` + real Groups tab list → `app/group/[id].tsx` (invite code + ranked board, highlights "you"). Used **FlatList** not FlashList (bounded ≤50 members, no-new-deps); FlashList is a later perf swap. Apply migration W-016. |
 
 ### Notifications & trust/safety
 | ID | Status | Task |
