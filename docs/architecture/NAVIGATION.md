@@ -61,6 +61,15 @@ proofs/verifications from the user's groups). It is intentionally named **"Today
 > string-href form (`/challenge/${id}/submit-proof`). Functional; refresh on next
 > dev-server restart should regenerate the union.
 
+## Phase 4A-2 routes (added)
+
+- `app/blocked-users.tsx` — list + Unblock (managed via `useMyBlocks` / `useUnblockUser`).
+  Registered in `app/_layout.tsx` Stack (`headerShown: true`, title `Blocked users`).
+- Profile gains an **Account** section linking to `/blocked-users` (cast `as Href` until
+  typedRoutes regenerates) and a **Danger zone** with Request account deletion.
+- `ReportSheet` is a **Modal** primitive (not a route) used from
+  `app/submission/[id].tsx`, `app/challenge/[id].tsx`, `app/group/[id].tsx`.
+
 ## Phase 4A-1 routes (added)
 
 - `app/(auth)/forgot-password.tsx` — email input, calls

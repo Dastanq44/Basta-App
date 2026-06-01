@@ -1,7 +1,8 @@
 -- Phase 4A migration: user-control + trust/safety basics.
 -- Apply via Supabase Dashboard → SQL editor or `supabase db push`. See W-019 in
 -- BUGS_AND_WARNINGS. Idempotent (uses `add column if not exists`, `create table if not exists`,
--- `create or replace function`, conditional enum block, `create policy if not exists`).
+-- `create or replace function`, conditional enum block, and `drop policy if exists` + `create
+-- policy` for the RLS policies since PostgreSQL doesn't support `create policy if not exists`).
 --
 -- SCOPE:
 --   * Archive (NOT hard-delete) for groups and challenges.
@@ -250,11 +251,15 @@ alter table public.reports                      enable row level security;
 alter table public.blocks                       enable row level security;
 alter table public.account_deletion_requests    enable row level security;
 
-create policy if not exists reports_select_own on public.reports for select
+-- PostgreSQL doesn't support `create policy if not exists`; use drop-then-create for idempotency.
+drop policy if exists reports_select_own on public.reports;
+create policy reports_select_own on public.reports for select
   using (reporter_id = auth.uid());
 
-create policy if not exists blocks_select_own on public.blocks for select
+drop policy if exists blocks_select_own on public.blocks;
+create policy blocks_select_own on public.blocks for select
   using (blocker_id = auth.uid());
 
-create policy if not exists adr_select_own on public.account_deletion_requests for select
+drop policy if exists adr_select_own on public.account_deletion_requests;
+create policy adr_select_own on public.account_deletion_requests for select
   using (user_id = auth.uid());

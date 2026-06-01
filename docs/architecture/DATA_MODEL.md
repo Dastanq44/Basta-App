@@ -62,6 +62,16 @@ local-only `draft` and `uploading` states before a row exists server-side. See
 - Unique `(challenge_id, author_id, challenge_day)` → one proof per day. RPC catches the
   would-be violation and returns `{ already_submitted: true }`; queue maps to "drop the job".
 
+## Phase 4A-2 client behavior (no schema change)
+
+- All writes still go through SECURITY DEFINER RPCs: `report_target(target_type, target_id,
+  reason, details)`, `block_user(user_id)`, `unblock_user(user_id)`,
+  `request_account_deletion()`.
+- `request_account_deletion` is idempotent: if a `pending` request exists for the caller,
+  the same id is returned (enforced by the partial unique index on `user_id`).
+- Client-side blocked-user filtering is best-effort and only on screens we touched. Full
+  filtering is the deferred W-021 (extend SELECT RLS with `AND NOT is_blocked_by_me(author_id)`).
+
 ## Phase 4A-1 additions (landed)
 
 - **Archive (soft-delete):** `groups.archived_at`/`archived_by` and

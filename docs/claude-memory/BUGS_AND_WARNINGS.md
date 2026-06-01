@@ -243,6 +243,21 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
 - **Status:** Open / accept-the-risk. Revisit during T-061 (CI/release) or the next planned SDK
   upgrade.
 
+## [RESOLVED] B-010 — `create policy if not exists` is invalid PostgreSQL syntax (W-019 migration)
+- **Date:** 2026-06-01 · **Area:** Supabase / RLS
+- **What:** The W-019 migration used `create policy if not exists ...` on three policies
+  (`reports_select_own`, `blocks_select_own`, `adr_select_own`). PostgreSQL doesn't support
+  `IF NOT EXISTS` on `CREATE POLICY`. A first apply might silently land on some Postgres
+  versions but a re-apply (idempotency goal) would fail with a syntax error.
+- **Fix:** Replaced each with the supported idempotent pattern:
+  ```sql
+  drop policy if exists <name> on <table>;
+  create policy <name> on <table> for select using (...);
+  ```
+  Also fixed the header comment that falsely claimed `create policy if not exists` was used.
+- **Detected by:** User-reported review of the SQL file before applying.
+- **Commit:** `feat(safety): add moderation and account deletion UI`.
+
 ## [OPEN] W-019 — Apply Phase 4A migration (account controls + moderation infra)
 - **Date:** 2026-06-01 · **Area:** backend / Supabase
 - **What:** Single migration `supabase/migrations/20260601100000_phase4a_user_control_safety.sql`
@@ -254,7 +269,22 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
 - **Why ship the trust/safety tables/RPCs now even though their UI is deferred?** They're
   cheap to ship server-side and the UI work (Phase 4A-2) just needs the client wrappers; this
   way the user only applies one migration. The unused RPCs sit dormant until 4A-2.
-- **Status:** Open until applied.
+- **Status:** Open until applied. (Migration syntax fix for B-010 included; safe to re-apply.)
+
+## [OPEN] W-021 — Blocked-user filter is client-side and partial
+- **Date:** 2026-06-01 · **Area:** trust/safety / RLS
+- **What:** Phase 4A-2 ships a `useBlockedUserIds()` Set-based client-side filter and applies
+  it on the submission detail screen (whole-screen hide) and the challenge detail's
+  recent-submissions list. It does NOT filter:
+  - leaderboard rows (`group_leaderboard` RPC returns all members)
+  - submission comments (`submission_comments` reads)
+  - reactions (aggregated; identity not surfaced)
+- **The right long-term fix:** widen the SELECT RLS policies on `submissions`,
+  `submission_reactions`, and `submission_comments` to add
+  `AND NOT is_blocked_by_me(author_id)`. The `is_blocked_by_me` SECURITY DEFINER helper is
+  already deployed by W-019; this is a small future migration. Doing the filtering
+  client-side everywhere would be brittle and easy to forget on new surfaces.
+- **Status:** Acceptable for MVP; tighten before public beta.
 
 ## [OPEN] W-020 — Password-reset deep link needs Supabase URL allow-listed
 - **Date:** 2026-06-01 · **Area:** auth / deep linking

@@ -21,6 +21,105 @@
 
 ---
 
+## 2026-06-01 — Claude 1 / Phase 4A-2: moderation + account-deletion UI (T-051/T-052 DONE)
+
+**Did:** Completed Phase 4A-2 — trust/safety UI + account-deletion request UI. Also fixed an
+invalid `create policy if not exists` in the W-019 migration before any apply happened.
+
+**Files changed (modified):**
+- `supabase/migrations/20260601100000_phase4a_user_control_safety.sql` — replaced three
+  `create policy if not exists ...` with `drop policy if exists ... + create policy ...`
+  (idempotent) and updated the file-header comment to reflect the supported syntax.
+- `app/(tabs)/profile.tsx` — ScrollView layout with Account section (Blocked users link) +
+  Danger zone (Request account deletion with double-confirm + optional sign-out after) +
+  Sign out card. Uses `useRequestAccountDeletion` from moderation; keeps screen thin.
+- `app/submission/[id].tsx` — Report link + Block author button (non-owner only). Whole
+  screen short-circuits to a "Hidden" state when the author is in `useBlockedUserIds()`.
+- `app/challenge/[id].tsx` — Report link (non-creator) + client-side block filter on the
+  recent-submissions list (`useMemo` placed BEFORE early returns to respect rules-of-hooks).
+- `app/group/[id].tsx` — Report link in the Settings footer.
+- `app/_layout.tsx` — registered `blocked-users` in the root Stack (`headerShown: true`,
+  title `Blocked users`).
+- `src/features/moderation/index.ts` — replaced stub with full public surface.
+
+**Files created:**
+- `src/features/moderation/api/index.ts` — `reportTarget`, `blockUser`, `unblockUser`,
+  `listMyBlocks`, `requestAccountDeletion` (RPC-first; 10s AbortSignal; console.error on
+  failure).
+- `src/features/moderation/hooks/{useReport,useBlockUser,useUnblockUser,useMyBlocks,useRequestAccountDeletion,index}.ts`
+  — TanStack-Query mutations + a `useBlockedUserIds()` helper that returns a memoized
+  `Set<string>` for O(1) client-side filtering.
+- `src/features/moderation/model/{schemas,index}.ts` — canonical `REPORT_REASONS` list with
+  human labels + `reportInput` zod schema.
+- `src/features/moderation/ui/{ReportSheet,index}.ts` — modal report form with reason picker,
+  optional details, loading / success / error states; auto-dismisses on success.
+- `app/blocked-users.tsx` — list of blocked users with Unblock button per row, empty / error
+  states, and pull-to-refresh. Renders the blocked user's UUID as fallback identifier (the
+  `blocks` table doesn't store profile info; a SECURITY DEFINER RPC could resolve names
+  later if needed).
+
+**Exact migration file that must be applied manually:**
+`supabase/migrations/20260601100000_phase4a_user_control_safety.sql` (same file as
+Phase 4A-1; covers BOTH 4A-1 + 4A-2 server side). Paste into Supabase Dashboard → SQL editor
+→ Run. Idempotent.
+
+**W-019 still needs user action:** YES (apply the migration above).
+**W-020 still needs user action:** YES (Supabase Auth → URL Configuration → Redirect URLs →
+add `basta://reset-password`). Unrelated to this slice but unchanged.
+
+**Tests/checks run:** `npm run typecheck` → 0 ✅ · `npm run lint` → 0 ✅ ·
+`npx expo-doctor` → 18/18 ✅.
+**Tests/checks NOT run:** unit/E2E (W-007 — none exist); runtime device smoke-test of any
+4A-2 surface (depends on W-019 apply).
+
+**Smoke-test checklist (after W-019 is applied):**
+- [ ] Profile → Blocked users → empty state renders.
+- [ ] Open someone else's proof → tap "Report this proof" → pick reason → Submit → "Thanks"
+      → auto-dismiss.
+- [ ] Open someone else's proof → tap "Block author" → confirm → sent back; that user's
+      later proofs in the recent-submissions list should not appear, and direct navigation
+      to one shows the "Hidden" state.
+- [ ] Profile → Blocked users → see the blocked id → tap Unblock → confirm → row removed.
+- [ ] Challenge detail (not your own) → "Report this challenge" → submit.
+- [ ] Group detail → footer "Report this group" → submit.
+- [ ] Profile → Danger zone → Request account deletion → confirm twice → success modal →
+      optionally Sign out. Tap again later → server is idempotent (returns same pending id),
+      no duplicate row.
+
+**Known bugs:**
+- Client-side block filter only covers screens I touched (submission detail, challenge
+  detail's recent submissions). Leaderboard rows, comments lists, and any other user-visible
+  content from blocked users are NOT yet filtered — see warnings for the RLS path.
+- `blocked-users` lists by raw UUID since `blocks` doesn't join profiles. Add a
+  `list_my_blocks_with_profiles` SECURITY DEFINER RPC if friendly names are needed.
+
+**Next recommended step:**
+1. **USER apply W-019** in Supabase SQL editor (and W-020 if not done).
+2. Smoke-test the checklist above.
+3. **Move to T-061 (CI + EAS) bundled with T-050 (push)** — the natural next slice. Both
+   need a dev build, so they go together. Phase 4A is now functionally complete.
+
+**Warnings for the next Claude:**
+- **Don't add direct INSERT/UPDATE RLS** on `reports`/`blocks`/`account_deletion_requests`.
+  All writes are RPC-only.
+- **Hard account deletion is intentionally a follow-up Edge Function** with the service-role
+  key. Do NOT add `auth.admin.deleteUser` calls to the mobile app. The `request_account_deletion`
+  RPC only marks a row; an admin process consumes the queue.
+- **Server-side blocked-user filtering** is the right place to broaden filtering. Helper
+  `is_blocked_by_me(uid)` is already deployed — extend SELECT policies on `submissions`,
+  `submission_reactions`, `submission_comments` to add `AND NOT is_blocked_by_me(author_id)`.
+  Deliberate next slice; doing it client-side everywhere is brittle.
+- **`blocked-users` route is registered** — don't add a duplicate Stack.Screen entry.
+- **`ReportSheet` is a Modal** — don't put it inside a parent Modal or you'll fight RN's
+  z-stacking.
+- Don't add push, EAS, CI, post-MVP features.
+
+**Branch / commit:** `mvp` + `feat(safety): add moderation and account deletion UI`. Pushed.
+
+**Decisions changed this session:** none. D-001..D-010 stand.
+
+---
+
 ## 2026-06-01 — Claude 1 / Phase 4A-1 polish (archived-state UX + forgot-password resend)
 
 **Did:** Small functionality/UX pass on the Phase 4A-1 surfaces (migrations assumed applied).

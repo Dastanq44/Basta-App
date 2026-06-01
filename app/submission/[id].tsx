@@ -1,15 +1,29 @@
-import { ActivityIndicator, Image, ScrollView, View } from 'react-native';
-import { Stack, useLocalSearchParams } from 'expo-router';
-import { Card, Screen, Text, useTheme } from '@/shared/ui';
+import { useState } from 'react';
+import { ActivityIndicator, Alert, Image, Pressable, ScrollView, View } from 'react-native';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Button, Card, Screen, Text, useTheme } from '@/shared/ui';
+import { useSession } from '@/features/auth';
 import { SyncBadge, useProofSignedUrl, useSubmission } from '@/features/proofs';
 import { CommentsSection, ReactionBar } from '@/features/social';
+import {
+  ReportSheet,
+  useBlockedUserIds,
+  useBlockUser,
+} from '@/features/moderation';
 
-// Thin route: the social view of a submission — photo + comment + reactions + comments thread.
+// Thin route: the social view of a submission — photo + comment + reactions + comments thread,
+// plus Report / Block-author for non-owner submissions. Blocked authors' proofs are hidden.
 export default function SubmissionScreen() {
   const t = useTheme();
+  const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const session = useSession();
+  const myUid = session.session?.user.id;
   const submission = useSubmission(id);
   const media = useProofSignedUrl(submission.data?.mediaRemotePath);
+  const blockedIds = useBlockedUserIds();
+  const blockUser = useBlockUser();
+  const [reportOpen, setReportOpen] = useState(false);
 
   if (submission.isPending) {
     return (
@@ -32,6 +46,47 @@ export default function SubmissionScreen() {
   }
 
   const s = submission.data;
+  const isMine = !!myUid && s.authorId === myUid;
+  const isBlocked = blockedIds.has(s.authorId);
+
+  // Hide proofs authored by users the current viewer has blocked (client-side filter).
+  // Server-side RLS still allows reads; we'd need broader RLS work to enforce this everywhere.
+  if (isBlocked) {
+    return (
+      <Screen>
+        <Stack.Screen options={{ title: 'Hidden' }} />
+        <View style={{ gap: t.spacing.md }}>
+          <Text variant="title">Hidden</Text>
+          <Text variant="muted">
+            This proof is from a user you've blocked. Unblock them from your Profile to see
+            their submissions again.
+          </Text>
+        </View>
+      </Screen>
+    );
+  }
+
+  const confirmBlock = () => {
+    if (isMine) return;
+    Alert.alert(
+      'Block this user?',
+      "You won't see their proofs, comments, or reactions. You can unblock anytime from Profile.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Block',
+          style: 'destructive',
+          onPress: () =>
+            blockUser.mutate(s.authorId, {
+              onSuccess: () => router.back(),
+              onError: (e: unknown) =>
+                Alert.alert('Could not block', e instanceof Error ? e.message : 'Unknown error'),
+            }),
+        },
+      ],
+      { cancelable: true },
+    );
+  };
 
   return (
     <Screen padded={false}>
@@ -51,7 +106,7 @@ export default function SubmissionScreen() {
           {media.data ? (
             <Image source={{ uri: media.data }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
           ) : media.isError ? (
-            <Text variant="muted">Couldn’t load the photo.</Text>
+            <Text variant="muted">Couldn't load the photo.</Text>
           ) : s.mediaRemotePath ? (
             <ActivityIndicator color={t.colors.primary} />
           ) : (
@@ -73,7 +128,30 @@ export default function SubmissionScreen() {
         <ReactionBar submissionId={s.id} />
 
         <CommentsSection submissionId={s.id} />
+
+        {!isMine ? (
+          <View style={{ gap: t.spacing.sm, marginTop: t.spacing.md }}>
+            <Pressable accessibilityRole="button" onPress={() => setReportOpen(true)} hitSlop={4}>
+              <Text variant="muted" style={{ textAlign: 'center' }}>Report this proof</Text>
+            </Pressable>
+            <Button
+              label={blockUser.isPending ? 'Blocking…' : 'Block author'}
+              variant="destructive"
+              onPress={confirmBlock}
+              loading={blockUser.isPending}
+              disabled={blockUser.isPending}
+            />
+          </View>
+        ) : null}
       </ScrollView>
+
+      <ReportSheet
+        visible={reportOpen}
+        onClose={() => setReportOpen(false)}
+        targetType="submission"
+        targetId={s.id}
+        targetLabel="this proof"
+      />
     </Screen>
   );
 }

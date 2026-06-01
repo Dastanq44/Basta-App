@@ -64,8 +64,8 @@
 | ID | Status | Task |
 |----|--------|------|
 | T-050 | TODO | Push registration + reminder scheduling (quiet hours, frequency caps, controls). Blocked in Expo Go — needs dev build + EAS (bundle with T-061). |
-| T-051 | DOING | Report / block. **Server side DONE** in W-019 (`reports`/`blocks` tables, `report_target`/`block_user`/`unblock_user` RPCs, `is_blocked_by_me` helper). UI deferred to Phase 4A-2 — `src/features/moderation` still a stub, no ReportSheet, no submission Report/Block buttons, no blocked-users screen, no client-side block filter. |
-| T-052 | DOING | Account deletion request. **Server side DONE** in W-019 (`account_deletion_requests` table + `request_account_deletion` RPC). Client UI deferred to Phase 4A-2 — no Profile "Delete account" section yet. Hard deletion (auth.users + Storage) is a follow-up Edge Function. |
+| T-051 | DONE | Report / block. `src/features/moderation/*` (api/hooks/model/ui) implemented; `ReportSheet` modal with reason picker; integrations on submission/challenge/group detail. Block button on submission; `app/blocked-users.tsx` list + Unblock; client-side filter via `useBlockedUserIds()` on submission detail + challenge recent-list. Broader RLS-side filtering documented as a follow-up tightening. |
+| T-052 | DONE | Account deletion request. `useRequestAccountDeletion` hook + Profile "Danger zone" with double-confirm + optional sign-out after. Server is idempotent (returns existing pending id, no duplicate). Hard deletion of `auth.users` + Storage purge remains a follow-up Edge Function with service-role. |
 
 ### Quality & release
 | ID | Status | Task |

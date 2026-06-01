@@ -1,9 +1,11 @@
-import { Alert, FlatList, RefreshControl, View } from 'react-native';
+import { useState } from 'react';
+import { Alert, FlatList, Pressable, RefreshControl, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Button, Card, Screen, Text, useTheme } from '@/shared/ui';
 import { useSession } from '@/features/auth';
 import { useArchiveGroup, useLeaveGroup, useMyGroups } from '@/features/groups';
 import { useGroupLeaderboard } from '@/features/leaderboard';
+import { ReportSheet } from '@/features/moderation';
 import type { LeaderboardEntry } from '@/entities';
 
 // Thin route: group name + invite code to share + the server-authoritative leaderboard.
@@ -17,6 +19,7 @@ export default function GroupScreen() {
   const board = useGroupLeaderboard(id);
   const leave = useLeaveGroup();
   const archive = useArchiveGroup();
+  const [reportOpen, setReportOpen] = useState(false);
 
   const group = groups.data?.find((g) => g.id === id);
   const isOwner = !!myUid && group?.ownerId === myUid;
@@ -136,9 +139,21 @@ export default function GroupScreen() {
                 disabled={leave.isPending || archive.isPending}
               />
             ) : null}
+            <Pressable accessibilityRole="button" onPress={() => setReportOpen(true)} hitSlop={4}>
+              <Text variant="muted" style={{ textAlign: 'center' }}>Report this group</Text>
+            </Pressable>
           </View>
         }
       />
+      {id ? (
+        <ReportSheet
+          visible={reportOpen}
+          onClose={() => setReportOpen(false)}
+          targetType="group"
+          targetId={id}
+          targetLabel="this group"
+        />
+      ) : null}
     </Screen>
   );
 }

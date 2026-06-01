@@ -1,8 +1,10 @@
+import { useMemo, useState } from 'react';
 import { Alert, FlatList, Pressable, RefreshControl, View } from 'react-native';
 import { type Href, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Button, Card, Screen, Text, useTheme } from '@/shared/ui';
 import { useArchiveChallenge, useChallenge, useChallengeStreak } from '@/features/challenges';
 import { useSession } from '@/features/auth';
+import { ReportSheet, useBlockedUserIds } from '@/features/moderation';
 import {
   SyncBadge,
   useQueueForChallenge,
@@ -24,6 +26,8 @@ export default function ChallengeDetailScreen() {
   const queueItems = useQueueForChallenge(id);
   const submissions = useSubmissions(id);
   const archive = useArchiveChallenge();
+  const blockedIds = useBlockedUserIds();
+  const [reportOpen, setReportOpen] = useState(false);
 
   // The "today's status" pill prefers the local queue if there's a pending/uploading entry;
   // otherwise falls back to the server-confirmed status (or "not submitted").
@@ -32,6 +36,12 @@ export default function ChallengeDetailScreen() {
     localToday && (localToday.status === 'queued' || localToday.status === 'uploading' || localToday.status === 'offline_retry' || localToday.status === 'failed')
       ? localToday.status
       : today.data?.status ?? null;
+
+  // Memoize BEFORE early-returns so hook order is stable across renders (rules-of-hooks).
+  const filteredSubmissions = useMemo(
+    () => (submissions.data ?? []).filter((s) => !blockedIds.has(s.authorId)),
+    [submissions.data, blockedIds],
+  );
 
   if (challenge.isPending) {
     return (
@@ -80,7 +90,7 @@ export default function ChallengeDetailScreen() {
     <Screen padded={false}>
       <Stack.Screen options={{ title: c.title }} />
       <FlatList
-        data={submissions.data ?? []}
+        data={filteredSubmissions}
         keyExtractor={(s) => s.id}
         contentContainerStyle={{ padding: t.spacing.lg, paddingBottom: t.spacing.xl, gap: t.spacing.md }}
         ListHeaderComponent={
@@ -154,19 +164,33 @@ export default function ChallengeDetailScreen() {
         }
         renderItem={({ item }) => <SubmissionRow submission={item} currentUserId={myUid} />}
         ListFooterComponent={
-          isCreator && !isArchived ? (
-            <View style={{ marginTop: t.spacing.lg, gap: t.spacing.sm }}>
-              <Text variant="heading">Settings</Text>
-              <Button
-                label={archive.isPending ? 'Archiving…' : 'Archive challenge'}
-                variant="destructive"
-                onPress={confirmArchive}
-                loading={archive.isPending}
-                disabled={archive.isPending}
-              />
-            </View>
-          ) : null
+          <View style={{ marginTop: t.spacing.lg, gap: t.spacing.sm }}>
+            {isCreator && !isArchived ? (
+              <>
+                <Text variant="heading">Settings</Text>
+                <Button
+                  label={archive.isPending ? 'Archiving…' : 'Archive challenge'}
+                  variant="destructive"
+                  onPress={confirmArchive}
+                  loading={archive.isPending}
+                  disabled={archive.isPending}
+                />
+              </>
+            ) : null}
+            {!isCreator ? (
+              <Pressable accessibilityRole="button" onPress={() => setReportOpen(true)} hitSlop={4}>
+                <Text variant="muted" style={{ textAlign: 'center' }}>Report this challenge</Text>
+              </Pressable>
+            ) : null}
+          </View>
         }
+      />
+      <ReportSheet
+        visible={reportOpen}
+        onClose={() => setReportOpen(false)}
+        targetType="challenge"
+        targetId={c.id}
+        targetLabel="this challenge"
       />
     </Screen>
   );

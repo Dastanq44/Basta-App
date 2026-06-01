@@ -3,9 +3,15 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-06-01 — by: Claude 1 / Phase 4A-1 (account controls)_
+_Last updated: 2026-06-01 — by: Claude 1 / Phase 4A-2 (moderation + account deletion UI)_
 
-## Status: PHASE 4A-1 ACCOUNT CONTROLS COMPLETE (4A-2 deferred) · apply 6 migrations + 1 dashboard toggle
+## Status: PHASE 4A COMPLETE (4A-1 + 4A-2) · apply 6 migrations + 1 dashboard toggle
+
+Phase 4A-1 (password reset + leave/archive group + archive challenge) is complete and
+Phase 4A-2 (report/block UI + account-deletion request UI) is now done too. All MVP-scope
+account controls and trust/safety surfaces exist in code. Phase 4A migration also got a
+small fix: `create policy if not exists` (unsupported in Postgres for policies) replaced
+with `drop policy if exists + create policy`.
 
 Latest session shipped a clean Phase 4A-1 slice: password reset + leave group + archive group
 + archive challenge. Phase 4A-2 (report/block UI + account deletion request UI) is deferred,

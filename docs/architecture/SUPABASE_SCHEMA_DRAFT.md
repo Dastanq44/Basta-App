@@ -1,5 +1,12 @@
 # Basta — Supabase Schema Draft
 
+> 📝 **B-010 fix (2026-06-01):** The Phase 4A migration originally used
+> `create policy if not exists ...` for three RLS policies (`reports_select_own`,
+> `blocks_select_own`, `adr_select_own`). PostgreSQL does NOT support `IF NOT EXISTS` on
+> `CREATE POLICY`. The file has been updated to the supported idempotent pattern:
+> `drop policy if exists <name> on <table>; create policy <name> on <table> ...`. The
+> file-header comment was also corrected. Safe to apply or re-apply.
+
 > 📝 **Phase 4A-1 addendum (2026-06-01):**
 > [`supabase/migrations/20260601100000_phase4a_user_control_safety.sql`](../../supabase/migrations/20260601100000_phase4a_user_control_safety.sql)
 > — pending USER apply (W-019). Adds:

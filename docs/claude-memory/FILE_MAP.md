@@ -41,6 +41,11 @@ Basta_App/
 │   │   ├── api/index.ts          #   listMyChallenges · getChallenge · createChallenge · getChallengeStreak
 │   │   ├── hooks/                #   useChallenges · useChallenge · useCreateChallenge · useChallengeStreak
 │   │   └── model/                #   CHALLENGE_CATEGORIES · createChallengeInput zod
+│   ├── moderation/               # T-051/T-052: report/block + account-deletion request
+│   │   ├── api/index.ts          #   reportTarget · blockUser · unblockUser · listMyBlocks · requestAccountDeletion (all RPC)
+│   │   ├── hooks/                #   useReport · useBlockUser · useUnblockUser · useMyBlocks · useBlockedUserIds (Set<string>) · useRequestAccountDeletion
+│   │   ├── model/                #   REPORT_REASONS · REPORT_REASON_LABELS · reportInput zod
+│   │   └── ui/                   #   ReportSheet (modal)
 │   ├── proofs/                   # T-032/T-035: photo capture + queue orchestration + SyncBadge
 │   │   ├── api/index.ts          #   listSubmissionsForChallenge · getMyTodaySubmission · getSubmission · getProofSignedUrl
 │   │   ├── hooks/                #   useSubmissions · useTodaySubmission · useSubmission · useProofSignedUrl · useQueueForChallenge · useSubmitProof
