@@ -8,6 +8,8 @@ export type Group = {
   name: string;
   ownerId: UserId;
   inviteCode: string;
+  /** Set when the owner archives the group; consumers exclude archived groups from active lists. */
+  archivedAt?: string;
 };
 
 export type GroupMember = {

@@ -61,6 +61,19 @@ proofs/verifications from the user's groups). It is intentionally named **"Today
 > string-href form (`/challenge/${id}/submit-proof`). Functional; refresh on next
 > dev-server restart should regenerate the union.
 
+## Phase 4A-1 routes (added)
+
+- `app/(auth)/forgot-password.tsx` — email input, calls
+  `supabase.auth.resetPasswordForEmail(email, { redirectTo: 'basta://reset-password' })`.
+- `app/(auth)/reset-password.tsx` — reads `?code=` deep-link param, calls
+  `exchangeCodeForSession` then `updateUser({ password })`. Shows a hint pointing to W-020
+  if `code` is missing (deep-link config incomplete).
+- Sign-in screen now exposes a "Forgot password?" link to `/(auth)/forgot-password`
+  (cast `as Href` until typedRoutes regenerates).
+
+> **Deep-link requirement (W-020):** Supabase Auth → URL Configuration → Redirect URLs must
+> include `basta://reset-password` before the email link will land in the app.
+
 ## Navigation rules
 
 - Configuration (linking, guards) lives in `src/navigation/`, separate from feature

@@ -1,21 +1,67 @@
-import { FlatList, RefreshControl, View } from 'react-native';
-import { Stack, useLocalSearchParams } from 'expo-router';
-import { Card, Screen, Text, useTheme } from '@/shared/ui';
+import { Alert, FlatList, RefreshControl, View } from 'react-native';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Button, Card, Screen, Text, useTheme } from '@/shared/ui';
 import { useSession } from '@/features/auth';
-import { useMyGroups } from '@/features/groups';
+import { useArchiveGroup, useLeaveGroup, useMyGroups } from '@/features/groups';
 import { useGroupLeaderboard } from '@/features/leaderboard';
 import type { LeaderboardEntry } from '@/entities';
 
 // Thin route: group name + invite code to share + the server-authoritative leaderboard.
 export default function GroupScreen() {
   const t = useTheme();
+  const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const session = useSession();
   const myUid = session.session?.user.id;
   const groups = useMyGroups();
   const board = useGroupLeaderboard(id);
+  const leave = useLeaveGroup();
+  const archive = useArchiveGroup();
 
   const group = groups.data?.find((g) => g.id === id);
+  const isOwner = !!myUid && group?.ownerId === myUid;
+
+  const confirmLeave = () => {
+    if (!id) return;
+    Alert.alert(
+      'Leave this group?',
+      'You will need a fresh invite code to rejoin.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Leave',
+          style: 'destructive',
+          onPress: () =>
+            leave.mutate(id, {
+              onSuccess: () => router.replace('/(tabs)/groups'),
+              onError: (e) => Alert.alert('Could not leave', e instanceof Error ? e.message : 'Unknown error'),
+            }),
+        },
+      ],
+      { cancelable: true },
+    );
+  };
+
+  const confirmArchive = () => {
+    if (!id) return;
+    Alert.alert(
+      'Archive this group?',
+      'It disappears from active lists. Existing data is preserved.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Archive',
+          style: 'destructive',
+          onPress: () =>
+            archive.mutate(id, {
+              onSuccess: () => router.replace('/(tabs)/groups'),
+              onError: (e) => Alert.alert('Could not archive', e instanceof Error ? e.message : 'Unknown error'),
+            }),
+        },
+      ],
+      { cancelable: true },
+    );
+  };
 
   return (
     <Screen padded={false}>
@@ -54,6 +100,27 @@ export default function GroupScreen() {
           />
         }
         renderItem={({ item }) => <LeaderboardRow entry={item} isMe={item.userId === myUid} />}
+        ListFooterComponent={
+          <View style={{ marginTop: t.spacing.lg, gap: t.spacing.sm }}>
+            <Text variant="heading">Settings</Text>
+            <Button
+              label={leave.isPending ? 'Leaving…' : 'Leave group'}
+              variant="secondary"
+              onPress={confirmLeave}
+              loading={leave.isPending}
+              disabled={leave.isPending || archive.isPending}
+            />
+            {isOwner ? (
+              <Button
+                label={archive.isPending ? 'Archiving…' : 'Archive group'}
+                variant="destructive"
+                onPress={confirmArchive}
+                loading={archive.isPending}
+                disabled={leave.isPending || archive.isPending}
+              />
+            ) : null}
+          </View>
+        }
       />
     </Screen>
   );

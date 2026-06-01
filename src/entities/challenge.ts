@@ -16,4 +16,6 @@ export type Challenge = {
   durationDays: number;
   proofRequirement?: string;
   verificationThreshold: number;
+  /** Set when the creator archives the challenge; consumers exclude archived from active lists. */
+  archivedAt?: string;
 };

@@ -62,6 +62,18 @@ local-only `draft` and `uploading` states before a row exists server-side. See
 - Unique `(challenge_id, author_id, challenge_day)` → one proof per day. RPC catches the
   would-be violation and returns `{ already_submitted: true }`; queue maps to "drop the job".
 
+## Phase 4A-1 additions (landed)
+
+- **Archive (soft-delete):** `groups.archived_at`/`archived_by` and
+  `challenges.archived_at`/`archived_by`. List queries filter `archived_at is null`;
+  detail queries by id still work so a direct URL to an archived item renders read-only.
+  No hard delete — submission/streak/leaderboard history is preserved.
+- **Trust/safety tables (server-ready for Phase 4A-2):** `reports` (reporter +
+  target_type/target_id + reason), `blocks` (blocker/blocked PK), `account_deletion_requests`
+  (one pending per user via partial unique index).
+- **Helper:** `is_blocked_by_me(uid)` (SECURITY DEFINER). Phase 4A-2 will use it to filter
+  blocked-user content via RLS rather than the planned client-side fallback.
+
 ## Post-MVP placeholders (do not build now)
 
 - AI verification → a future `submissions.verification_source` column (`friend` | `ai`).

@@ -24,6 +24,11 @@ export const verifyOtpInput = z.object({
     ),
 });
 
+export const forgotPasswordInput = z.object({ email: emailSchema });
+export const resetPasswordInput = z.object({ password: passwordSchema });
+
 export type SignUpInput = z.infer<typeof signUpInput>;
 export type SignInInput = z.infer<typeof signInInput>;
 export type VerifyOtpInput = z.infer<typeof verifyOtpInput>;
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordInput>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordInput>;

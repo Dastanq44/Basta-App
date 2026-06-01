@@ -6,3 +6,5 @@ export type { Verification, VerificationResult } from './verification';
 export type { ChallengeStreak } from './streak';
 export type { LeaderboardEntry } from './leaderboard';
 export type { SubmissionComment } from './comment';
+export type { Report, ReportId, ReportTargetType } from './report';
+export type { Block } from './block';

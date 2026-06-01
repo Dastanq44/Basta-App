@@ -38,6 +38,8 @@
 | T-021 | DONE | Terms acceptance gate (versioned) |
 | T-022 | DONE | Profile setup; onboarding gate on server `onboarded` flag |
 | T-023 | DONE | Friend invite links + search; group create / join |
+| T-024 | DONE | Password reset flow. `forgot-password.tsx` + `reset-password.tsx` + `useRequestPasswordReset`/`useUpdatePassword` + `resetPasswordForEmail`/`exchangeCodeForSession`/`updatePassword` API. **Deep-link requires W-020 dashboard config.** |
+| T-025 | DONE | Leave / archive group. `leave_group` + `archive_group` SECURITY DEFINER RPCs (W-019); `useLeaveGroup`/`useArchiveGroup`; Settings footer on `app/group/[id].tsx` with confirm dialogs. Sole-owner leave guard server-side. |
 
 ### Challenges & proof (core)
 | ID | Status | Task |
@@ -48,6 +50,7 @@
 | T-033 | DONE | Durable mutation/upload queue (SQLite-backed, retry/backoff + jitter + client-UUID idempotency). `src/offline/queue/{store,processor}.ts`. |
 | T-034 | DONE | **Standard** Supabase Storage upload per D-008 (tus deferred). `src/offline/upload/storage.ts`. Bucket creation = USER action W-011. |
 | T-035 | DONE | Sync badge UI bound to the SyncStatus state machine. `src/features/proofs/ui/SyncBadge.tsx`. |
+| T-036 | DONE | Archive challenge. `archive_challenge` SECURITY DEFINER RPC (W-019); `useArchiveChallenge`; Archive button on `app/challenge/[id].tsx` (creator-only) + confirm dialog. `listMyChallenges` filters `archived_at is null`. |
 
 ### Social & scoring (server-authoritative)
 | ID | Status | Task |
@@ -60,9 +63,9 @@
 ### Notifications & trust/safety
 | ID | Status | Task |
 |----|--------|------|
-| T-050 | TODO | Push registration + reminder scheduling (quiet hours, frequency caps, controls) |
-| T-051 | TODO | Report / block (RLS filters both directions); admin soft-delete RPC |
-| T-052 | TODO | Account deletion + media/PII purge (store requirement, reachable in-app) |
+| T-050 | TODO | Push registration + reminder scheduling (quiet hours, frequency caps, controls). Blocked in Expo Go — needs dev build + EAS (bundle with T-061). |
+| T-051 | DOING | Report / block. **Server side DONE** in W-019 (`reports`/`blocks` tables, `report_target`/`block_user`/`unblock_user` RPCs, `is_blocked_by_me` helper). UI deferred to Phase 4A-2 — `src/features/moderation` still a stub, no ReportSheet, no submission Report/Block buttons, no blocked-users screen, no client-side block filter. |
+| T-052 | DOING | Account deletion request. **Server side DONE** in W-019 (`account_deletion_requests` table + `request_account_deletion` RPC). Client UI deferred to Phase 4A-2 — no Profile "Delete account" section yet. Hard deletion (auth.users + Storage) is a follow-up Edge Function. |
 
 ### Quality & release
 | ID | Status | Task |

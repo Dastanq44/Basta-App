@@ -1,5 +1,20 @@
 # Basta — Supabase Schema Draft
 
+> 📝 **Phase 4A-1 addendum (2026-06-01):**
+> [`supabase/migrations/20260601100000_phase4a_user_control_safety.sql`](../../supabase/migrations/20260601100000_phase4a_user_control_safety.sql)
+> — pending USER apply (W-019). Adds:
+> - `groups.archived_at`/`archived_by`, `challenges.archived_at`/`archived_by` (soft-delete).
+> - `report_target` enum + `reports`, `blocks`, `account_deletion_requests` tables (RLS:
+>   read-own).
+> - SECURITY DEFINER RPCs: `leave_group`, `archive_group`, `archive_challenge` (Phase 4A-1
+>   client-wired), and `report_target` + `block_user` + `unblock_user` +
+>   `request_account_deletion` (Phase 4A-2 server-ready, UI deferred).
+> - `is_blocked_by_me(uid)` SECURITY DEFINER helper for future server-side block filtering.
+>
+> Pattern is identical to B-006/B-008/D-009: all client writes through RPCs; no INSERT/UPDATE
+> RLS policies on the new tables.
+
+
 > 📝 **Status (2026-05-31):**
 > - **Phase 1 subset** (`profiles`, `groups`, `group_members`, RLS, `join_group_by_invite` RPC,
 >   `create_group` RPC, helpers) is in

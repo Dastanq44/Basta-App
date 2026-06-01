@@ -3,7 +3,7 @@
 import { supabase } from '@/shared/lib/supabase';
 import type { Group, GroupId } from '@/entities';
 
-const COLUMNS = 'id, name, owner_id, invite_code';
+const COLUMNS = 'id, name, owner_id, invite_code, archived_at';
 
 const REQUEST_TIMEOUT_MS = 10_000;
 
@@ -18,6 +18,7 @@ type GroupRow = {
   name: string;
   owner_id: string;
   invite_code: string;
+  archived_at: string | null;
 };
 
 function toGroup(row: GroupRow): Group {
@@ -26,6 +27,7 @@ function toGroup(row: GroupRow): Group {
     name: row.name,
     ownerId: row.owner_id,
     inviteCode: row.invite_code,
+    archivedAt: row.archived_at ?? undefined,
   };
 }
 
@@ -56,19 +58,48 @@ export async function createGroup(name: string): Promise<Group> {
   }
 }
 
-/** List groups the current user is a member of. */
+/** List groups the current user is a member of (excludes archived). */
 export async function listMyGroups(): Promise<Group[]> {
   const ctrl = withTimeout();
   try {
     const { data, error } = await supabase
       .from('groups')
       .select(COLUMNS)
+      .is('archived_at', null)
       .order('created_at', { ascending: false })
       .abortSignal(ctrl.signal);
     if (error) throw error;
     return (data ?? []).map((r) => toGroup(r as GroupRow));
   } catch (e) {
     console.error('[basta] listMyGroups failed:', e);
+    throw e;
+  }
+}
+
+/** Member exits a group via RPC (server enforces sole-owner guard). */
+export async function leaveGroup(groupId: string): Promise<void> {
+  const ctrl = withTimeout();
+  try {
+    const { error } = await supabase
+      .rpc('leave_group', { p_group_id: groupId })
+      .abortSignal(ctrl.signal);
+    if (error) throw new Error(error.message || 'Could not leave group');
+  } catch (e) {
+    console.error('[basta] leaveGroup failed:', e);
+    throw e;
+  }
+}
+
+/** Owner archives a group (soft-delete; data preserved). */
+export async function archiveGroup(groupId: string): Promise<void> {
+  const ctrl = withTimeout();
+  try {
+    const { error } = await supabase
+      .rpc('archive_group', { p_group_id: groupId })
+      .abortSignal(ctrl.signal);
+    if (error) throw new Error(error.message || 'Could not archive group');
+  } catch (e) {
+    console.error('[basta] archiveGroup failed:', e);
     throw e;
   }
 }

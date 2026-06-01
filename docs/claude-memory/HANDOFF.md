@@ -21,6 +21,133 @@
 
 ---
 
+## 2026-06-01 — Claude 1 / Phase 4A-1: password reset + archive actions (PARTIAL Phase 4A)
+
+**Did:** Shipped the first clean slice of Phase 4A — **account controls**. Phase 4A-2
+(report/block UI + account-deletion request UI) is deferred to the next session. Server-side
+infra for 4A-2 IS in the migration so the user only applies one SQL file.
+
+**Files changed:**
+
+*Migration (NEW, idempotent, NOT applied yet — W-019):*
+- `supabase/migrations/20260601100000_phase4a_user_control_safety.sql` — archive columns on
+  `groups`/`challenges`; SECURITY DEFINER RPCs `leave_group` / `archive_group` /
+  `archive_challenge` (Phase 4A-1) + `report_target` / `block_user` / `unblock_user` /
+  `request_account_deletion` (Phase 4A-2 prep) + `is_blocked_by_me` helper; `reports`,
+  `blocks`, `account_deletion_requests` tables with read-own RLS. Mirrors the
+  B-006/B-008/D-009 RPC-first pattern.
+
+*Password reset (A — DONE):*
+- `src/features/auth/api/index.ts` — added `resetPasswordForEmail`, `exchangeCodeForSession`,
+  `updatePassword` + `PASSWORD_RESET_REDIRECT = 'basta://reset-password'`.
+- `src/features/auth/model/schemas.ts` — `forgotPasswordInput`, `resetPasswordInput` zod.
+- `src/features/auth/hooks/{useRequestPasswordReset,useUpdatePassword}.ts` — new.
+- `src/features/auth/{hooks/index,model/index,index}.ts` — re-exports.
+- `app/(auth)/forgot-password.tsx` (new) — email entry, sends reset link.
+- `app/(auth)/reset-password.tsx` (new) — reads `?code=` deep-link param, exchanges for
+  recovery session, updates password, replaces to `/(tabs)`. Shows a clear "Open the reset
+  link" fallback when no `code` arrives (W-020).
+- `app/(auth)/sign-in.tsx` — "Forgot password?" link (cast `as Href` since typedRoutes
+  hasn't generated the new path yet).
+
+*Leave/Archive group (B + C — DONE):*
+- `src/features/groups/api/index.ts` — `listMyGroups` now filters `archived_at is null`;
+  added `leaveGroup`, `archiveGroup`; DTO maps `archivedAt`.
+- `src/features/groups/hooks/{useLeaveGroup,useArchiveGroup}.ts` — new (invalidate
+  `myGroupsQueryKey` on success).
+- `src/features/groups/{hooks/index,index}.ts` — re-exports.
+- `src/entities/group.ts` — added `archivedAt?: string`.
+- `app/group/[id].tsx` — footer "Settings" with Leave (any member) + Archive (owner-only);
+  `Alert.alert` confirmation; `router.replace('/(tabs)/groups')` on success.
+
+*Archive challenge (D — DONE):*
+- `src/features/challenges/api/index.ts` — `listMyChallenges` now filters
+  `archived_at is null`; added `archiveChallenge`; DTO maps `archivedAt`.
+- `src/features/challenges/hooks/useArchiveChallenge.ts` — new (invalidates challenges
+  list + the specific challenge query).
+- `src/features/challenges/{hooks/index,index}.ts` — re-exports.
+- `src/entities/challenge.ts` — added `archivedAt?: string`.
+- `app/challenge/[id].tsx` — footer "Settings" with Archive (creator-only); confirm flow;
+  redirects to `/(tabs)/challenges` on success.
+
+*Phase 4A-2 prep (NOT shipped this session):*
+- `src/entities/{report,block}.ts` (new) + `src/entities/index.ts` re-exports — present so
+  4A-2 can build directly on top without entity churn.
+
+**Exact migration filename:**
+`supabase/migrations/20260601100000_phase4a_user_control_safety.sql`
+
+**USER must apply manually:** YES. Open Supabase Dashboard → SQL editor → paste full
+contents → Run. Idempotent; safe to re-run. See W-019.
+
+**Smoke-test checklist (after W-019 + W-020 are done):**
+- [ ] Sign-in → tap "Forgot password?" → enter your email → see "Check your inbox" copy.
+- [ ] Tap the link in the email on your phone → app opens on reset-password screen → new
+      password → app lands on Today.
+- [ ] On group/[id], tap **Leave group** → confirm → list updates without it.
+- [ ] On group/[id] as owner, tap **Archive group** → confirm → group disappears from list
+      (rows preserved in DB).
+- [ ] On challenge/[id] as creator, tap **Archive challenge** → confirm → disappears from
+      Challenges tab.
+- [ ] As sole owner of a group, try Leave → expect "cannot leave as sole owner" error.
+
+**Tests run:** `npm run typecheck` → exit 0 ✅ · `npm run lint` → exit 0 ✅ ·
+`npx expo-doctor` → 18/18 ✅.
+**Tests NOT run:** unit/E2E (W-007); runtime on device — pending W-019 + W-020 (and
+W-014..W-018 if not yet applied).
+
+**Known issues:**
+- Phase 4A-2 (report/block UI, account-deletion request UI, blocked-users screen) NOT
+  shipped — see "Unfinished work" below.
+- Sole-owner leave guard exists server-side; UI surfaces the server error message but
+  doesn't proactively hide the Leave button when sole-owner. Acceptable for MVP.
+- typedRoutes doesn't have `/(auth)/forgot-password` in its union yet; cast `as Href`.
+  Same fix the project has used since Phase 2 dynamic routes.
+
+**Unfinished work (Phase 4A-2 — next slice):**
+- **Moderation feature:** `src/features/moderation/` is still a stub. Build api/hooks/model/
+  ui: `reportTarget`, `blockUser`, `unblockUser`, `listMyBlocks` + `useReport`, `useBlockUser`,
+  `useUnblockUser`, `useMyBlocks` + `ReportSheet` (modal).
+- **Submission Report/Block buttons** in `app/submission/[id].tsx`.
+- **Profile "Delete account" section** + double-confirm + sign-out + `useRequestAccountDeletion`
+  hook.
+- **`app/blocked-users.tsx`** screen + Profile link.
+- **Client-side block filter** in proofs/social APIs.
+- **Docs:** when 4A-2 lands, add `T-051` + `T-052` rows; update SCHEMA_DRAFT/DATA_MODEL with
+  the new tables.
+
+**Next recommended action:**
+1. **USER apply W-019** (Phase 4A migration) — RPCs and tables come live.
+2. **USER apply W-020** (Auth → URL Configuration → add `basta://reset-password`).
+3. Smoke-test the password-reset + leave/archive flows on device.
+4. **Next session:** Phase 4A-2 (report/block + account deletion UI) — server side is already
+   in place from W-019.
+
+**Warnings for the next Claude:**
+- **W-019 is the SAME file** that holds the trust/safety infra for 4A-2. Don't add another
+  migration; just write the client wrappers.
+- **All client writes still go through SECURITY DEFINER RPCs.** No direct INSERT/UPDATE
+  policies on the new tables — same pattern as B-006/B-008/D-009.
+- **Archive is soft-delete.** Don't change `archive_group` / `archive_challenge` to issue
+  `delete from` — data must be preserved (verification history, streaks, leaderboards).
+- **Don't expand the `listMy*` filters** to include archived — `app/group/[id]` already
+  reads the archived item via the cached `useMyGroups` data path; if archived items need
+  read-only screens, fetch by id directly rather than weakening the list filter.
+- **Sole-owner leave guard is server-side.** Don't try to enforce it client-side; surface
+  the server error and update the UI hint when it fires.
+- **Don't add `react-native-web`.** Don't add background tasks / push / EAS — those are
+  separate phases and out of Expo Go scope.
+- **`detectSessionInUrl: false` is intentional.** For password reset we use the explicit
+  `exchangeCodeForSession(code)` path (PKCE) — not the URL-detection auto-flow.
+
+**Branch / commit:** `mvp` + `feat(account-controls): add password reset and archive actions`.
+Pushed.
+
+**Decisions changed this session:** none. D-001..D-010 stand. (Phase 4A-2 may want a D-011
+on whether to soft-delete vs hard-delete account-deletion requests; defer to that session.)
+
+---
+
 ## 2026-05-31 — HANDOFF SNAPSHOT (ready for next Claude)
 
 > Clean checkpoint. No new implementation this session — gate hotfix + invite-code UX polish

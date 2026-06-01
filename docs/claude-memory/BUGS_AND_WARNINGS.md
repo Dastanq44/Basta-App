@@ -243,6 +243,32 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
 - **Status:** Open / accept-the-risk. Revisit during T-061 (CI/release) or the next planned SDK
   upgrade.
 
+## [OPEN] W-019 — Apply Phase 4A migration (account controls + moderation infra)
+- **Date:** 2026-06-01 · **Area:** backend / Supabase
+- **What:** Single migration `supabase/migrations/20260601100000_phase4a_user_control_safety.sql`
+  adds archive columns + RPCs (`leave_group`, `archive_group`, `archive_challenge`) and
+  trust/safety **infra** (reports/blocks/account_deletion_requests tables + their RPCs +
+  `is_blocked_by_me` helper). **Idempotent.**
+- **Apply via:** Supabase Dashboard → SQL editor → paste the file's contents → Run. Order
+  doesn't matter against Phase 3 + W-018.
+- **Why ship the trust/safety tables/RPCs now even though their UI is deferred?** They're
+  cheap to ship server-side and the UI work (Phase 4A-2) just needs the client wrappers; this
+  way the user only applies one migration. The unused RPCs sit dormant until 4A-2.
+- **Status:** Open until applied.
+
+## [OPEN] W-020 — Password-reset deep link needs Supabase URL allow-listed
+- **Date:** 2026-06-01 · **Area:** auth / deep linking
+- **What:** Phase 4A-1 forgot-password sends an email whose link points at
+  `basta://reset-password?code=…`. Supabase will REJECT a `redirectTo` that isn't in the
+  project's allowed list — so the email will either go to a default URL or fail to send.
+- **Fix (USER, one-time):** Supabase Dashboard → **Authentication → URL Configuration →
+  Redirect URLs** → add `basta://reset-password` (and optionally a wildcard `basta://**`
+  for future deep-link routes) → Save.
+- **Without it:** the `forgot-password` form will succeed-looking (the API call may not
+  error), but the email link won't open the app correctly. The `reset-password` screen
+  detects a missing `code` param and shows a clear hint pointing here.
+- **Status:** Open until configured.
+
 ## [OPEN] W-018 — Apply migration to switch invite codes to 4-digit numeric
 - **Date:** 2026-05-31 · **Area:** backend / Supabase
 - **What:** New migration `supabase/migrations/20260601000000_short_invite_codes.sql` swaps

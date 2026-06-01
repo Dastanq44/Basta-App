@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, View } from 'react-native';
-import { Link, Stack } from 'expo-router';
+import { type Href, Link, Stack } from 'expo-router';
 import { signInInput, useSignIn } from '@/features/auth';
 import { Button, Input, Screen, Text, useTheme } from '@/shared/ui';
 
@@ -67,6 +67,13 @@ export default function SignInScreen() {
             </Text>
           ) : null}
           <Button label="Sign in" onPress={onSubmit} loading={mutation.isPending} />
+          {/* typedRoutes hasn't generated the new (auth)/forgot-password path in the route
+              union yet; the resolved string href is what expo-router navigates with. */}
+          <Link href={'/(auth)/forgot-password' as Href}>
+            <Text variant="muted" style={{ textAlign: 'center' }}>
+              Forgot password?
+            </Text>
+          </Link>
           <Link href="/(auth)/sign-up">
             <Text variant="muted" style={{ textAlign: 'center' }}>
               Don't have an account? Sign up

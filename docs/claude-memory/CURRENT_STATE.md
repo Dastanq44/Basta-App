@@ -3,13 +3,20 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-05-31 — by: Claude 1 / handoff snapshot (after B-009 gate fix + W-018 invite codes)_
+_Last updated: 2026-06-01 — by: Claude 1 / Phase 4A-1 (account controls)_
 
-## Status: PHASE 3 SOCIAL LOOP COMPLETE · apply 5 migrations (W-014/W-015/W-016/W-017/W-018)
+## Status: PHASE 4A-1 ACCOUNT CONTROLS COMPLETE (4A-2 deferred) · apply 6 migrations + 1 dashboard toggle
 
-Latest session was operational only: **B-009** gate fix (onboarded users were being bounced
-off Phase 2/3 sub-routes) and **W-018** UX polish (4-digit numeric group invite codes).
-**No new features.** All checks green; working tree clean; in sync with `origin/mvp`.
+Latest session shipped a clean Phase 4A-1 slice: password reset + leave group + archive group
++ archive challenge. Phase 4A-2 (report/block UI + account deletion request UI) is deferred,
+but its server-side tables/RPCs are already in the same migration (W-019) so the user only
+applies one SQL file. All checks green.
+
+**Pending USER actions (idempotent migrations + one dashboard toggle):**
+- W-014/W-015/W-016/W-017 — Phase 3 (verification, streaks, leaderboard, social).
+- W-018 — 4-digit invite codes.
+- **W-019** — Phase 4A (archive + trust/safety infra; this session).
+- **W-020** — Auth → URL Configuration → add `basta://reset-password` to Redirect URLs.
 
 The full MVP loop now exists in code: register → group → challenge → submit proof (offline) →
 friend verifies → streak → group leaderboard, plus reactions + comments on each proof. Remaining

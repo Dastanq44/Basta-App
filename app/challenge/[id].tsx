@@ -1,7 +1,7 @@
-import { FlatList, Pressable, RefreshControl, View } from 'react-native';
+import { Alert, FlatList, Pressable, RefreshControl, View } from 'react-native';
 import { type Href, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Button, Card, Screen, Text, useTheme } from '@/shared/ui';
-import { useChallenge, useChallengeStreak } from '@/features/challenges';
+import { useArchiveChallenge, useChallenge, useChallengeStreak } from '@/features/challenges';
 import { useSession } from '@/features/auth';
 import {
   SyncBadge,
@@ -23,6 +23,7 @@ export default function ChallengeDetailScreen() {
   const today = useTodaySubmission(id);
   const queueItems = useQueueForChallenge(id);
   const submissions = useSubmissions(id);
+  const archive = useArchiveChallenge();
 
   // The "today's status" pill prefers the local queue if there's a pending/uploading entry;
   // otherwise falls back to the server-confirmed status (or "not submitted").
@@ -51,6 +52,28 @@ export default function ChallengeDetailScreen() {
   }
 
   const c = challenge.data;
+  const isCreator = !!myUid && c.creatorId === myUid;
+
+  const confirmArchive = () => {
+    Alert.alert(
+      'Archive this challenge?',
+      'It disappears from active lists. Existing submissions are preserved.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Archive',
+          style: 'destructive',
+          onPress: () =>
+            archive.mutate(c.id, {
+              onSuccess: () => router.replace('/(tabs)/challenges'),
+              onError: (e: unknown) =>
+                Alert.alert('Could not archive', e instanceof Error ? e.message : 'Unknown error'),
+            }),
+        },
+      ],
+      { cancelable: true },
+    );
+  };
 
   return (
     <Screen padded={false}>
@@ -117,6 +140,20 @@ export default function ChallengeDetailScreen() {
           />
         }
         renderItem={({ item }) => <SubmissionRow submission={item} currentUserId={myUid} />}
+        ListFooterComponent={
+          isCreator ? (
+            <View style={{ marginTop: t.spacing.lg, gap: t.spacing.sm }}>
+              <Text variant="heading">Settings</Text>
+              <Button
+                label={archive.isPending ? 'Archiving…' : 'Archive challenge'}
+                variant="destructive"
+                onPress={confirmArchive}
+                loading={archive.isPending}
+                disabled={archive.isPending}
+              />
+            </View>
+          ) : null
+        }
       />
     </Screen>
   );

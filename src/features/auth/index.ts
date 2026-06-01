@@ -6,13 +6,23 @@ export {
   useSignUp,
   useVerifyOtp,
   useSignOut,
+  useRequestPasswordReset,
+  useUpdatePassword,
   type SessionState,
 } from './hooks';
 export {
   signInInput,
   signUpInput,
   verifyOtpInput,
+  forgotPasswordInput,
+  resetPasswordInput,
   OTP_MIN_LENGTH,
   OTP_MAX_LENGTH,
 } from './model';
-export type { SignInInput, SignUpInput, VerifyOtpInput } from './model';
+export type {
+  SignInInput,
+  SignUpInput,
+  VerifyOtpInput,
+  ForgotPasswordInput,
+  ResetPasswordInput,
+} from './model';

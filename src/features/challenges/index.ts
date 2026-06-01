@@ -4,6 +4,7 @@ export {
   useChallenge,
   useCreateChallenge,
   useChallengeStreak,
+  useArchiveChallenge,
   challengesQueryKey,
   challengeQueryKey,
   challengeStreakQueryKey,

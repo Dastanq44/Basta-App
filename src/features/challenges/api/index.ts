@@ -21,6 +21,7 @@ type ChallengeRow = {
   duration_days: number;
   proof_requirement: string | null;
   verification_threshold: number;
+  archived_at: string | null;
 };
 
 function toChallenge(r: ChallengeRow): Challenge {
@@ -35,19 +36,21 @@ function toChallenge(r: ChallengeRow): Challenge {
     durationDays: r.duration_days,
     proofRequirement: r.proof_requirement ?? undefined,
     verificationThreshold: r.verification_threshold,
+    archivedAt: r.archived_at ?? undefined,
   };
 }
 
 const COLUMNS =
-  'id, group_id, creator_id, title, category, mode, start_date, duration_days, proof_requirement, verification_threshold';
+  'id, group_id, creator_id, title, category, mode, start_date, duration_days, proof_requirement, verification_threshold, archived_at';
 
-/** All challenges visible to the current user (participant + visible group challenges). */
+/** All challenges visible to the current user (participant + visible group challenges; excludes archived). */
 export async function listMyChallenges(): Promise<Challenge[]> {
   const c = ctrl();
   try {
     const { data, error } = await supabase
       .from('challenges')
       .select(COLUMNS)
+      .is('archived_at', null)
       .order('created_at', { ascending: false })
       .abortSignal(c.signal);
     if (error) throw error;
@@ -87,6 +90,20 @@ export async function getChallengeStreak(challengeId: string): Promise<Challenge
     return { current: d.current ?? 0, longest: d.longest ?? 0, todayDone: d.today_done ?? false };
   } catch (e) {
     console.error('[basta] getChallengeStreak failed:', e);
+    throw e;
+  }
+}
+
+/** Creator archives a challenge (soft-delete; submissions/streaks preserved). */
+export async function archiveChallenge(challengeId: string): Promise<void> {
+  const c = ctrl();
+  try {
+    const { error } = await supabase
+      .rpc('archive_challenge', { p_challenge_id: challengeId })
+      .abortSignal(c.signal);
+    if (error) throw new Error(error.message || 'Could not archive challenge');
+  } catch (e) {
+    console.error('[basta] archiveChallenge failed:', e);
     throw e;
   }
 }
