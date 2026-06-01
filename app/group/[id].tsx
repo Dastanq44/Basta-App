@@ -63,6 +63,23 @@ export default function GroupScreen() {
     );
   };
 
+  // Active groups come from `useMyGroups`, which filters `archived_at is null`. So if the
+  // settled list doesn't contain this id, the group is either archived, deleted, or the user
+  // is no longer a member. Show a friendly state rather than a half-rendered leaderboard.
+  if (!groups.isPending && !group) {
+    return (
+      <Screen>
+        <Stack.Screen options={{ title: 'Group' }} />
+        <View style={{ gap: t.spacing.md }}>
+          <Text variant="title">Group unavailable</Text>
+          <Text variant="muted">
+            This group has been archived, you're no longer a member, or it no longer exists.
+          </Text>
+        </View>
+      </Screen>
+    );
+  }
+
   return (
     <Screen padded={false}>
       <Stack.Screen options={{ title: group?.name ?? 'Group' }} />

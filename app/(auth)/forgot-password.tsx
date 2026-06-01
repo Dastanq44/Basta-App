@@ -44,7 +44,7 @@ export default function ForgotPasswordScreen() {
             autoComplete="email"
             textContentType="emailAddress"
             error={fieldError}
-            editable={!mutation.isPending && !mutation.isSuccess}
+            editable={!mutation.isPending}
           />
 
           {mutation.isError ? (
@@ -55,13 +55,24 @@ export default function ForgotPasswordScreen() {
 
           {mutation.isSuccess ? (
             <Text variant="muted">
-              Check your inbox. The email contains a link that opens the app on the reset
-              screen. If nothing happens when you tap it, deep-link configuration on the project
-              may still be pending — see W-020.
+              Check your inbox. The email has a link that opens the app on the reset screen. If
+              nothing happens when you tap it, deep-link configuration may still be pending —
+              see W-020. You can resend below if needed.
             </Text>
-          ) : (
-            <Button label="Send reset email" onPress={onSubmit} loading={mutation.isPending} />
-          )}
+          ) : null}
+
+          <Button
+            label={
+              mutation.isPending
+                ? 'Sending…'
+                : mutation.isSuccess
+                  ? 'Resend email'
+                  : 'Send reset email'
+            }
+            onPress={onSubmit}
+            loading={mutation.isPending}
+            variant={mutation.isSuccess ? 'secondary' : 'primary'}
+          />
 
           <Link href="/(auth)/sign-in">
             <Text variant="muted" style={{ textAlign: 'center' }}>

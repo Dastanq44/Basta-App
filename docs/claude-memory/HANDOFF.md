@@ -21,6 +21,51 @@
 
 ---
 
+## 2026-06-01 — Claude 1 / Phase 4A-1 polish (archived-state UX + forgot-password resend)
+
+**Did:** Small functionality/UX pass on the Phase 4A-1 surfaces (migrations assumed applied).
+No new features; just guard rails on edge cases users would actually hit.
+
+- **Challenge detail (`app/challenge/[id].tsx`):** when `c.archivedAt` is set, show an
+  "Archived" card at the top, hide the **Submit today's proof** Today card, and hide the
+  creator's **Archive challenge** button. The server-side `submit_proof` still validates
+  participants but had no awareness of archived; this prevents the UX from inviting a submit
+  that would feel wrong even if the row inserted.
+- **Group detail (`app/group/[id].tsx`):** when `useMyGroups` has settled and the group isn't
+  in the cache (archived, deleted, or you left), show a friendly "Group unavailable" state
+  instead of a blank header + stale leaderboard.
+- **Forgot-password (`app/(auth)/forgot-password.tsx`):** after success the button now becomes
+  a **Resend email** secondary button instead of disappearing. Email field is editable again
+  so the user can correct a typo and try a different address. Copy hints at W-020 deep-link
+  config.
+
+**Files changed:** `app/challenge/[id].tsx`, `app/group/[id].tsx`,
+`app/(auth)/forgot-password.tsx`, `docs/claude-memory/HANDOFF.md`.
+
+**No migration changes.** Phase 4A migration unchanged from `4711deb`.
+
+**Tests run:** `npm run typecheck` → 0 ✅ · `npm run lint` → 0 ✅.
+**Tests NOT run:** unit/E2E (W-007); runtime device smoke-test of these three guard cases.
+
+**Notes for next Claude:**
+- The Submit button hides on archived challenges, but `submit_proof` server-side does NOT
+  currently check `challenges.archived_at`. If a user has a queued submission for a challenge
+  that gets archived between enqueue and upload, the server will still accept it. Acceptable
+  for MVP; tighten in Phase 4A-2 if desired (add `archived_at is null` to the participant
+  check in `submit_proof`).
+- The "Group unavailable" state is a soft fallback. If we ever want to allow viewing an
+  archived group's frozen leaderboard, fetch the group directly by id (bypassing the
+  `useMyGroups` filter) rather than weakening the list filter.
+- Phase 4A-2 (moderation UI + account deletion UI) still pending; server side is already in
+  the W-019 migration.
+
+**Branch / commit:** `mvp` + `fix(account-controls): archived-state UX + forgot-password resend`.
+Pushed.
+
+**Decisions changed:** none.
+
+---
+
 ## 2026-06-01 — Claude 1 / Phase 4A-1: password reset + archive actions (PARTIAL Phase 4A)
 
 **Did:** Shipped the first clean slice of Phase 4A — **account controls**. Phase 4A-2

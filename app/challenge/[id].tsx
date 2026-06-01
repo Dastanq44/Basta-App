@@ -53,6 +53,7 @@ export default function ChallengeDetailScreen() {
 
   const c = challenge.data;
   const isCreator = !!myUid && c.creatorId === myUid;
+  const isArchived = !!c.archivedAt;
 
   const confirmArchive = () => {
     Alert.alert(
@@ -91,6 +92,16 @@ export default function ChallengeDetailScreen() {
               {c.proofRequirement ? <Text variant="body">{c.proofRequirement}</Text> : null}
             </View>
 
+            {isArchived ? (
+              <Card style={{ backgroundColor: t.colors.muted }}>
+                <Text variant="heading">Archived</Text>
+                <Text variant="muted">
+                  This challenge has been archived. History remains, but no new proofs can be
+                  submitted.
+                </Text>
+              </Card>
+            ) : null}
+
             {streak.data ? (
               <View style={{ flexDirection: 'row', gap: t.spacing.md }}>
                 <Card style={{ flex: 1 }}>
@@ -104,22 +115,24 @@ export default function ChallengeDetailScreen() {
               </View>
             ) : null}
 
-            <Card>
-              <View style={{ gap: t.spacing.sm }}>
-                <Text variant="heading">Today</Text>
-                {todayStatus ? (
-                  <SyncBadge status={todayStatus} />
-                ) : (
-                  <Text variant="muted">No proof submitted yet.</Text>
-                )}
-                <Button
-                  label={todayStatus ? 'Add another (replaces today)' : "Submit today's proof"}
-                  // typedRoutes hasn't generated the nested submit-proof path in the route
-                  // union yet; use the resolved string href, which expo-router accepts.
-                  onPress={() => router.push(`/challenge/${c.id}/submit-proof`)}
-                />
-              </View>
-            </Card>
+            {!isArchived ? (
+              <Card>
+                <View style={{ gap: t.spacing.sm }}>
+                  <Text variant="heading">Today</Text>
+                  {todayStatus ? (
+                    <SyncBadge status={todayStatus} />
+                  ) : (
+                    <Text variant="muted">No proof submitted yet.</Text>
+                  )}
+                  <Button
+                    label={todayStatus ? 'Add another (replaces today)' : "Submit today's proof"}
+                    // typedRoutes hasn't generated the nested submit-proof path in the route
+                    // union yet; use the resolved string href, which expo-router accepts.
+                    onPress={() => router.push(`/challenge/${c.id}/submit-proof`)}
+                  />
+                </View>
+              </Card>
+            ) : null}
 
             <Text variant="heading" style={{ marginTop: t.spacing.md }}>
               Recent submissions
@@ -141,7 +154,7 @@ export default function ChallengeDetailScreen() {
         }
         renderItem={({ item }) => <SubmissionRow submission={item} currentUserId={myUid} />}
         ListFooterComponent={
-          isCreator ? (
+          isCreator && !isArchived ? (
             <View style={{ marginTop: t.spacing.lg, gap: t.spacing.sm }}>
               <Text variant="heading">Settings</Text>
               <Button
