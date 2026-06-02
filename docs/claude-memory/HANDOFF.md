@@ -21,6 +21,87 @@
 
 ---
 
+## 2026-06-02 — Claude 1 / T-026: Main-app group create/join + archived group restore
+
+**Did:** Filled the UX gap where group create/join was only reachable during onboarding and
+archived groups had no recovery path. Refactored the create/join UI into a single reusable
+component so both onboarding and the main app share validation + RPC wiring.
+
+**Files created:**
+- `src/features/groups/ui/GroupCreateOrJoinForm.tsx` — owns mode toggle, name/code state, zod
+  validation, `useCreateGroup`/`useJoinGroup` mutations. Defers post-success behavior via
+  `onCreated(groupId)` / `onJoined(groupId)` callbacks so parents can complete onboarding or
+  route to detail without coupling. Uses relative imports (`from '../model'`, `from '../hooks'`)
+  to avoid a self-cycle with the feature index, which now also re-exports `ui/*`.
+- `src/features/groups/ui/index.ts` — exports the form + `GroupCreateOrJoinFormProps` +
+  `GroupCreateOrJoinMode`.
+- `src/features/groups/hooks/useMyArchivedGroups.ts` — `['groups','archived']` query;
+  direct `from('groups').not('archived_at','is',null)` works under existing RLS because
+  `group_members` rows persist through archive (sole-owner-leave guard).
+- `src/features/groups/hooks/useRestoreGroup.ts` — mutation calling the `restore_group` RPC;
+  invalidates `myGroupsQueryKey` + `myArchivedGroupsQueryKey` so both lists refresh.
+- `app/group/join-or-create.tsx` — modal route. Reads `?mode=join` to bias the initial toggle;
+  on success `router.replace`s `/group/${groupId}`.
+- `app/group/archived.tsx` — list of archived groups via `useMyArchivedGroups`; each row shows
+  a Restore button when `group.ownerId === session.userId` (owners are the only ones who can
+  restore, per the server check). `Alert.alert` confirm before the mutation.
+
+**Files modified:**
+- `supabase/migrations/20260601100000_phase4a_user_control_safety.sql` — appended a
+  `restore_group(p_group_id uuid)` SECURITY DEFINER RPC right before `archive_challenge`.
+  Auth check, owner-only check (`42501`), no-op-safe on already-active groups. (W-019 is
+  still OPEN — edit-in-place rather than a new migration.)
+- `src/features/groups/api/index.ts` — added `listMyArchivedGroups()` and `restoreGroup(id)`,
+  both with `withTimeout` + console.error on failure (matches existing helpers).
+- `src/features/groups/hooks/useCreateGroup.ts` + `useJoinGroup.ts` — invalidate
+  `myGroupsQueryKey` on success so the Groups tab refreshes immediately after the new modal
+  closes (previously only onboarding flipped routes).
+- `src/features/groups/hooks/useArchiveGroup.ts` + `useLeaveGroup.ts` — also invalidate
+  `myArchivedGroupsQueryKey` (archive adds a row, leave can remove one).
+- `src/features/groups/hooks/index.ts` + `src/features/groups/index.ts` — re-export the new
+  hooks, query key, form component, and types as the public surface.
+- `app/(onboarding)/join-or-create-group.tsx` — replaced the inline form with
+  `<GroupCreateOrJoinForm onCreated={finish} onJoined={finish} headerCopy="…" />`. Semantics
+  unchanged: complete onboarding → `router.replace('/(tabs)')`.
+- `app/(tabs)/groups.tsx` — added a sticky-looking header (title + `+ New` button + Create
+  group / Join with code action buttons), Card-based empty state, and a footer linking to
+  `Archived groups (N) ›`. Pull-to-refresh refetches both active and archived. New routes
+  use `as Href` casts since typedRoutes hasn't regenerated yet.
+- `app/_layout.tsx` — registered `group/join-or-create` (modal, title `New group`) and
+  `group/archived` (title `Archived groups`) in the root Stack.
+
+**Checks:** `npm run typecheck` ✅ · `npm run lint` ✅ · `npx expo-doctor` ✅ (18/18).
+
+**Branch / commit:** `mvp` @ <see post-commit hash>
+
+**Next up:**
+1. **User action (W-019 still OPEN):** apply
+   `supabase/migrations/20260601100000_phase4a_user_control_safety.sql` via the Supabase
+   Dashboard SQL editor. The file now exposes `leave_group`, `archive_group`, `archive_challenge`,
+   **and `restore_group`** — until it's applied, the Restore button + the existing
+   leave/archive buttons all fail with `function does not exist`.
+2. T-050 push notifications (still gated by Expo Go → needs dev build/EAS) or T-024-adjacent
+   polish; otherwise Phase 5 quality/release (T-060/T-061/T-062).
+
+**Blockers / decisions needed:** None. Restore semantics intentionally owner-only — matches
+the existing `archive_group` policy.
+
+**Notes for next session:**
+- The form is intentionally "headless-ish": no router knowledge. The two routes that use it
+  pass different `finish` callbacks; the onboarding route also flips `onboarded=true` first.
+  Resist the temptation to fold routing into the form.
+- `listMyArchivedGroups` does **not** need a dedicated RPC: RLS on `groups` lets owners and
+  members `SELECT` regardless of `archived_at`. We rely on this because `group_members` rows
+  survive archive (`leave_group` is the only path that removes membership, and a sole owner
+  cannot leave). If RLS ever tightens, switch to a `list_my_archived_groups()` SECURITY
+  DEFINER RPC.
+- Archived screen filters Restore client-side to owners; the RPC also enforces it server-side
+  (`42501` for non-owners). Both checks are required: the client check avoids a confusing
+  failure for non-owner members who happen to see an archived group; the server check is the
+  authoritative guard.
+
+---
+
 ## 2026-06-01 — Claude 1 / Phase 4A-2: moderation + account-deletion UI (T-051/T-052 DONE)
 
 **Did:** Completed Phase 4A-2 — trust/safety UI + account-deletion request UI. Also fixed an

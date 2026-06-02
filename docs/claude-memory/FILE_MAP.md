@@ -33,10 +33,11 @@ Basta_App/
 │   │   ├── api/index.ts          #   fetchProfile/upsertProfile/completeOnboarding + row→User map
 │   │   ├── hooks/                #   useProfile · useUpsertProfile · useCompleteOnboarding
 │   │   └── model/                #   CURRENT_TERMS_VERSION · profileSetupInput zod
-│   ├── groups/                   # T-023: createGroup, join via invite RPC, listMyGroups
-│   │   ├── api/index.ts          #   createGroup · joinGroupByInvite (rpc) · listMyGroups
-│   │   ├── hooks/                #   useCreateGroup · useJoinGroup · useMyGroups
-│   │   └── model/                #   createGroupInput · joinGroupInput zod
+│   ├── groups/                   # T-023/T-025/T-026: create/join/leave/archive/restore + lists
+│   │   ├── api/index.ts          #   createGroup · joinGroupByInvite · listMyGroups · listMyArchivedGroups · leaveGroup · archiveGroup · restoreGroup
+│   │   ├── hooks/                #   useCreateGroup · useJoinGroup · useMyGroups · useMyArchivedGroups · useLeaveGroup · useArchiveGroup · useRestoreGroup
+│   │   ├── model/                #   createGroupInput · joinGroupInput zod · INVITE_CODE_LENGTH
+│   │   └── ui/                   #   GroupCreateOrJoinForm (shared by onboarding + main app)
 │   ├── challenges/               # T-030/T-042: list/detail/create challenges + streak (RPC-first)
 │   │   ├── api/index.ts          #   listMyChallenges · getChallenge · createChallenge · getChallengeStreak
 │   │   ├── hooks/                #   useChallenges · useChallenge · useCreateChallenge · useChallengeStreak
@@ -152,3 +153,7 @@ app.config.ts  eas.json  package.json                                           
 | Streak function | `supabase/migrations/*_streaks.sql` | planned |
 | Leaderboard function | `supabase/migrations/*_leaderboard.sql` | planned |
 | Design tokens | `src/shared/ui/theme/tokens.ts` | live |
+| Reusable group create/join form | `src/features/groups/ui/GroupCreateOrJoinForm.tsx` | live (T-026) |
+| Group create/join modal route | `app/group/join-or-create.tsx` | live (T-026) |
+| Archived groups screen | `app/group/archived.tsx` | live (T-026) |
+| `restore_group` RPC | `supabase/migrations/20260601100000_phase4a_user_control_safety.sql` | written — apply (W-019) |

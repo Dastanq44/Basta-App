@@ -61,6 +61,25 @@ proofs/verifications from the user's groups). It is intentionally named **"Today
 > string-href form (`/challenge/${id}/submit-proof`). Functional; refresh on next
 > dev-server restart should regenerate the union.
 
+## T-026 routes (added — main-app group create/join + archived restore)
+
+- `app/group/join-or-create.tsx` — **modal** route used from the Groups tab. Reads
+  `?mode=create|join` to bias the initial toggle. Internally renders the reusable
+  `GroupCreateOrJoinForm`; on success `router.replace`s to `/group/${groupId}`.
+- `app/group/archived.tsx` — list of archived groups (`useMyArchivedGroups`). Each row
+  has a Restore button shown only when the current user is the group owner. Tapping it
+  confirms via `Alert.alert`, then calls the `restore_group` RPC and refetches both lists.
+- Onboarding's `(onboarding)/join-or-create-group.tsx` now delegates to the same shared
+  `GroupCreateOrJoinForm`, so the two flows can't drift apart.
+
+Both routes are registered in `app/_layout.tsx`'s root Stack:
+- `group/join-or-create` — `presentation: 'modal'`, title `New group`.
+- `group/archived` — title `Archived groups`.
+
+> Note (typedRoutes): typedRoutes hasn't regenerated for these paths yet, so
+> `router.push('/group/join-or-create?mode=…' as Href)` and `'/group/archived' as Href`
+> use the `Href` cast — matches the pattern already used for `/group/${id}`.
+
 ## Phase 4A-2 routes (added)
 
 - `app/blocked-users.tsx` — list + Unblock (managed via `useMyBlocks` / `useUnblockUser`).

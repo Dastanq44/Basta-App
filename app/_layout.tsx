@@ -80,6 +80,11 @@ function RootNav() {
       />
       <Stack.Screen name="verify/[submissionId]" options={{ headerShown: true, title: 'Verify proof' }} />
       <Stack.Screen name="group/[id]" options={{ headerShown: true, title: 'Group' }} />
+      <Stack.Screen
+        name="group/join-or-create"
+        options={{ headerShown: true, presentation: 'modal', title: 'New group' }}
+      />
+      <Stack.Screen name="group/archived" options={{ headerShown: true, title: 'Archived groups' }} />
       <Stack.Screen name="submission/[id]" options={{ headerShown: true, title: 'Proof' }} />
       <Stack.Screen name="blocked-users" options={{ headerShown: true, title: 'Blocked users' }} />
     </Stack>

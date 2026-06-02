@@ -76,6 +76,38 @@ export async function listMyGroups(): Promise<Group[]> {
   }
 }
 
+/** List archived groups the user is still a member of (typically owners after they archive). */
+export async function listMyArchivedGroups(): Promise<Group[]> {
+  const ctrl = withTimeout();
+  try {
+    const { data, error } = await supabase
+      .from('groups')
+      .select(COLUMNS)
+      .not('archived_at', 'is', null)
+      .order('archived_at', { ascending: false })
+      .abortSignal(ctrl.signal);
+    if (error) throw error;
+    return (data ?? []).map((r) => toGroup(r as GroupRow));
+  } catch (e) {
+    console.error('[basta] listMyArchivedGroups failed:', e);
+    throw e;
+  }
+}
+
+/** Owner restores an archived group via RPC. Idempotent on an already-active group. */
+export async function restoreGroup(groupId: string): Promise<void> {
+  const ctrl = withTimeout();
+  try {
+    const { error } = await supabase
+      .rpc('restore_group', { p_group_id: groupId })
+      .abortSignal(ctrl.signal);
+    if (error) throw new Error(error.message || 'Could not restore group');
+  } catch (e) {
+    console.error('[basta] restoreGroup failed:', e);
+    throw e;
+  }
+}
+
 /** Member exits a group via RPC (server enforces sole-owner guard). */
 export async function leaveGroup(groupId: string): Promise<void> {
   const ctrl = withTimeout();

@@ -40,6 +40,7 @@
 | T-023 | DONE | Friend invite links + search; group create / join |
 | T-024 | DONE | Password reset flow. `forgot-password.tsx` + `reset-password.tsx` + `useRequestPasswordReset`/`useUpdatePassword` + `resetPasswordForEmail`/`exchangeCodeForSession`/`updatePassword` API. **Deep-link requires W-020 dashboard config.** |
 | T-025 | DONE | Leave / archive group. `leave_group` + `archive_group` SECURITY DEFINER RPCs (W-019); `useLeaveGroup`/`useArchiveGroup`; Settings footer on `app/group/[id].tsx` with confirm dialogs. Sole-owner leave guard server-side. |
+| T-026 | DONE | Main-app group create/join + archived group restore. Reusable `GroupCreateOrJoinForm` in `src/features/groups/ui/` (used by both onboarding and main app); modal route `app/group/join-or-create.tsx`; `app/group/archived.tsx` list + Restore (owner-only). `restore_group` RPC appended to the W-019 migration. `useMyArchivedGroups`/`useRestoreGroup` hooks; create/join/archive/leave/restore all invalidate both active and archived query keys. |
 
 ### Challenges & proof (core)
 | ID | Status | Task |

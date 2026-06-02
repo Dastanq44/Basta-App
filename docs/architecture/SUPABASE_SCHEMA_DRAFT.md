@@ -13,9 +13,11 @@
 > - `groups.archived_at`/`archived_by`, `challenges.archived_at`/`archived_by` (soft-delete).
 > - `report_target` enum + `reports`, `blocks`, `account_deletion_requests` tables (RLS:
 >   read-own).
-> - SECURITY DEFINER RPCs: `leave_group`, `archive_group`, `archive_challenge` (Phase 4A-1
->   client-wired), and `report_target` + `block_user` + `unblock_user` +
->   `request_account_deletion` (Phase 4A-2 server-ready, UI deferred).
+> - SECURITY DEFINER RPCs: `leave_group`, `archive_group`, `archive_challenge`,
+>   **`restore_group`** (appended by T-026; owner-only — `42501` for non-owners;
+>   idempotent on already-active groups) — all Phase 4A-1 client-wired — and
+>   `report_target` + `block_user` + `unblock_user` + `request_account_deletion`
+>   (Phase 4A-2 server-ready, UI deferred).
 > - `is_blocked_by_me(uid)` SECURITY DEFINER helper for future server-side block filtering.
 >
 > Pattern is identical to B-006/B-008/D-009: all client writes through RPCs; no INSERT/UPDATE

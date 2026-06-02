@@ -150,6 +150,29 @@ begin
 end $$;
 grant execute on function archive_group(uuid) to authenticated;
 
+-- Owner restores an archived group (sets archived_at/by back to null). Idempotent on an
+-- already-active group. Owner-only for MVP; admin promotion can broaden this later.
+create or replace function restore_group(p_group_id uuid)
+returns void
+language plpgsql security definer
+set search_path = public
+as $$
+declare
+  v_uid      uuid := auth.uid();
+  v_owner_id uuid;
+begin
+  if v_uid is null then raise exception 'not authenticated' using errcode = '42501'; end if;
+  select owner_id into v_owner_id from public.groups where id = p_group_id;
+  if v_owner_id is null then raise exception 'group not found' using errcode = 'P0002'; end if;
+  if v_owner_id <> v_uid then
+    raise exception 'only the owner can restore a group' using errcode = '42501';
+  end if;
+  update public.groups
+     set archived_at = null, archived_by = null
+     where id = p_group_id and archived_at is not null;
+end $$;
+grant execute on function restore_group(uuid) to authenticated;
+
 create or replace function archive_challenge(p_challenge_id uuid)
 returns void
 language plpgsql security definer

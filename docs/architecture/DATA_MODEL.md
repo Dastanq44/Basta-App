@@ -78,6 +78,15 @@ local-only `draft` and `uploading` states before a row exists server-side. See
   `challenges.archived_at`/`archived_by`. List queries filter `archived_at is null`;
   detail queries by id still work so a direct URL to an archived item renders read-only.
   No hard delete — submission/streak/leaderboard history is preserved.
+- **Restore (T-026):** owners can flip a group's `archived_at`/`archived_by` back to NULL
+  via the `restore_group(p_group_id uuid)` RPC. Only the owner is allowed
+  (`42501` for non-owners), and the update is idempotent on an already-active group.
+  Challenges are intentionally **archive-only** — no `restore_challenge` — because a
+  resumed challenge would reopen day-boundary edge cases without a clear product need.
+- **Archived listing:** archived groups are read with a direct query
+  (`from('groups').not('archived_at', 'is', null)`) — no dedicated RPC needed because
+  RLS lets owners and members SELECT archived rows (`group_members` persists through
+  archive; the sole-owner-leave guard keeps owners as members).
 - **Trust/safety tables (server-ready for Phase 4A-2):** `reports` (reporter +
   target_type/target_id + reason), `blocks` (blocker/blocked PK), `account_deletion_requests`
   (one pending per user via partial unique index).

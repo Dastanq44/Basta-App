@@ -3,15 +3,20 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-06-01 — by: Claude 1 / Phase 4A-2 (moderation + account deletion UI)_
+_Last updated: 2026-06-02 — by: Claude 1 / T-026 (main-app group create/join + archived restore)_
 
-## Status: PHASE 4A COMPLETE (4A-1 + 4A-2) · apply 6 migrations + 1 dashboard toggle
+## Status: PHASE 4A COMPLETE + T-026 · apply 6 migrations + 1 dashboard toggle
 
 Phase 4A-1 (password reset + leave/archive group + archive challenge) is complete and
 Phase 4A-2 (report/block UI + account-deletion request UI) is now done too. All MVP-scope
 account controls and trust/safety surfaces exist in code. Phase 4A migration also got a
 small fix: `create policy if not exists` (unsupported in Postgres for policies) replaced
 with `drop policy if exists + create policy`.
+
+T-026 (latest session): the Groups tab now exposes Create group + Join with code CTAs and a
+link to a new Archived groups screen; the create/join UI is shared between onboarding and
+the main app via `GroupCreateOrJoinForm` in `src/features/groups/ui/`. Owners can restore
+archived groups via a new `restore_group` RPC appended to W-019.
 
 Latest session shipped a clean Phase 4A-1 slice: password reset + leave group + archive group
 + archive challenge. Phase 4A-2 (report/block UI + account deletion request UI) is deferred,

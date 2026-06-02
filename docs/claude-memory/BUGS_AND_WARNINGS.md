@@ -258,18 +258,23 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
 - **Detected by:** User-reported review of the SQL file before applying.
 - **Commit:** `feat(safety): add moderation and account deletion UI`.
 
-## [OPEN] W-019 — Apply Phase 4A migration (account controls + moderation infra)
-- **Date:** 2026-06-01 · **Area:** backend / Supabase
+## [OPEN] W-019 — Apply Phase 4A migration (account controls + moderation infra + restore_group)
+- **Date:** 2026-06-01 (updated 2026-06-02 for T-026) · **Area:** backend / Supabase
 - **What:** Single migration `supabase/migrations/20260601100000_phase4a_user_control_safety.sql`
-  adds archive columns + RPCs (`leave_group`, `archive_group`, `archive_challenge`) and
-  trust/safety **infra** (reports/blocks/account_deletion_requests tables + their RPCs +
-  `is_blocked_by_me` helper). **Idempotent.**
+  adds archive columns + RPCs (`leave_group`, `archive_group`, `archive_challenge`,
+  **`restore_group`** — appended by T-026) and trust/safety **infra**
+  (reports/blocks/account_deletion_requests tables + their RPCs + `is_blocked_by_me` helper).
+  **Idempotent.**
 - **Apply via:** Supabase Dashboard → SQL editor → paste the file's contents → Run. Order
   doesn't matter against Phase 3 + W-018.
 - **Why ship the trust/safety tables/RPCs now even though their UI is deferred?** They're
   cheap to ship server-side and the UI work (Phase 4A-2) just needs the client wrappers; this
   way the user only applies one migration. The unused RPCs sit dormant until 4A-2.
-- **Status:** Open until applied. (Migration syntax fix for B-010 included; safe to re-apply.)
+- **Why edit the existing file for T-026 instead of a new migration?** The file is still
+  OPEN (unapplied), so the user pays the same one-paste cost either way and we avoid an
+  extra file. Safe because the migration is idempotent on the parts already present.
+- **Status:** Open until applied. The Restore button on `app/group/archived.tsx` will fail
+  with `function does not exist` until then.
 
 ## [OPEN] W-021 — Blocked-user filter is client-side and partial
 - **Date:** 2026-06-01 · **Area:** trust/safety / RLS
