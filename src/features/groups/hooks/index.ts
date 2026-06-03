@@ -6,3 +6,4 @@ export { useLeaveGroup } from './useLeaveGroup';
 export { useArchiveGroup } from './useArchiveGroup';
 export { useRestoreGroup } from './useRestoreGroup';
 export { useUpdateGroup } from './useUpdateGroup';
+export { useTransferGroupLeadership } from './useTransferGroupLeadership';

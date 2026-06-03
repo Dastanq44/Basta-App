@@ -3,9 +3,9 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-06-03 — by: Claude 1 / T-029 (edit group + challenge; add Work category)_
+_Last updated: 2026-06-03 — by: Claude 1 / T-030 (group leader badge + transferable leadership)_
 
-## Status: PHASE 4A COMPLETE + T-026 + T-027 + T-028 + T-029 · apply 9 migrations + 1 dashboard toggle
+## Status: PHASE 4A COMPLETE + T-026..T-030 · apply 10 migrations + 1 dashboard toggle
 
 Phase 4A-1 (password reset + leave/archive group + archive challenge) is complete and
 Phase 4A-2 (report/block UI + account-deletion request UI) is now done too. All MVP-scope
@@ -34,14 +34,21 @@ submissions" rows and the submission detail screen. Two new SECURITY DEFINER RPC
 `authorDisplayName`. Migration `20260603100000_submission_authors.sql` (W-023) —
 USER must apply.
 
-T-029 (latest session): owners/creators can now edit group + challenge metadata in
-place. Group: name (owner-only). Challenge: title, category, duration, proof
-requirement (creator-only). `start_date`/`mode`/`group_id`/`threshold` intentionally
-NOT editable (would invalidate existing submissions). New `'work'` category added to
-the allow-list. Two SECURITY DEFINER RPCs (`update_group`, `update_challenge`) with
+T-029: owners/creators can now edit group + challenge metadata in place. Group: name
+(owner-only). Challenge: title, category, duration, proof requirement (creator-only).
+`start_date`/`mode`/`group_id`/`threshold` intentionally NOT editable. New `'work'`
+category added. Two SECURITY DEFINER RPCs (`update_group`, `update_challenge`) with
 server-side validation + duration-shrink guard. Modal routes `app/group/[id]/edit.tsx`
-and `app/challenge/[id]/edit.tsx`; Edit buttons added to both Settings footers.
-Migration `20260603200000_update_group_and_challenge.sql` (W-024) — USER must apply.
+and `app/challenge/[id]/edit.tsx`. Migration
+`20260603200000_update_group_and_challenge.sql` (W-024) — USER must apply.
+
+T-030 (latest session): group leader badge + transferable leadership. The leaderboard
+shows a small gray `CrownIcon` (built dep-free from RN primitives) next to the leader.
+When the current viewer IS the leader, tapping any non-self leaderboard row opens an
+Alert.alert confirmation to transfer leadership. New `transfer_group_leadership` RPC
+flips both `groups.owner_id` and the two `group_members.role` rows in one transaction.
+Also fixed B-012 (edit-group input silently re-filling when backspaced to empty).
+Migration `20260603300000_transfer_group_leadership.sql` (W-025) — USER must apply.
 
 Latest session shipped a clean Phase 4A-1 slice: password reset + leave group + archive group
 + archive challenge. Phase 4A-2 (report/block UI + account deletion request UI) is deferred,
@@ -54,7 +61,8 @@ applies one SQL file. All checks green.
 - W-019 — Phase 4A (archive + trust/safety infra + restore_group).
 - W-022 — Patch: treat group members as challenge participants (B-011 fix).
 - W-023 — Patch: surface submission author display name (T-028).
-- **W-024** — Patch: in-place edit of group + challenge metadata (T-029; this session).
+- W-024 — Patch: in-place edit of group + challenge metadata (T-029).
+- **W-025** — Patch: transfer group leadership (T-030; this session).
 - W-020 — Auth → URL Configuration → add `basta://reset-password` to Redirect URLs.
 
 The full MVP loop now exists in code: register → group → challenge → submit proof (offline) →

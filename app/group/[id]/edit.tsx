@@ -25,12 +25,16 @@ export default function EditGroupScreen() {
 
   const [name, setName] = useState(group?.name ?? '');
   const [fieldError, setFieldError] = useState<string | null>(null);
+  const [hydrated, setHydrated] = useState(group != null);
 
-  // Hydrate the input once the groups list resolves (we may have landed on this route
-  // before useMyGroups returned data).
+  // Seed the input ONCE the groups list resolves (the route may mount before useMyGroups
+  // settles). After that we leave the user's edits alone — otherwise backspacing to empty
+  // would silently re-fill with the previous name, which makes "clear and retype" awkward.
   useEffect(() => {
-    if (group && name === '') setName(group.name);
-  }, [group, name]);
+    if (hydrated || !group) return;
+    setName(group.name);
+    setHydrated(true);
+  }, [group, hydrated]);
 
   const onSubmit = async () => {
     if (!id) return;

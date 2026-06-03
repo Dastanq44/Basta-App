@@ -276,6 +276,27 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
 - **Status:** Open until applied. The Restore button on `app/group/archived.tsx` will fail
   with `function does not exist` until then.
 
+## [OPEN] W-025 — Apply patch migration: transfer group leadership
+- **Date:** 2026-06-03 · **Area:** backend / Supabase
+- **What:** `supabase/migrations/20260603300000_transfer_group_leadership.sql` adds the
+  `transfer_group_leadership(p_group_id, p_new_owner_id)` SECURITY DEFINER RPC. Owner-only,
+  not-archived, new owner must be an existing member and cannot be the caller. Flips
+  `groups.owner_id` AND demotes/promotes the corresponding `group_members.role` rows in
+  one transaction.
+- **Apply via:** Supabase Dashboard → SQL editor → paste → Run. Idempotent
+  (CREATE OR REPLACE). No ordering vs other open migrations.
+- **Status:** Open until applied. Tapping a leaderboard row as owner will fail with
+  `function does not exist` until then.
+
+## [RESOLVED] B-012 — Edit-group input rehydrated when backspaced to empty
+- **Date:** 2026-06-03 · **Area:** frontend / `app/group/[id]/edit.tsx`
+- **What:** The original hydration effect re-seeded `name` from `group.name` whenever
+  `name === ''`, so backspacing to clear silently refilled with the previous name —
+  making "clear and retype" hard. Replaced with a one-shot `hydrated` flag (initialized
+  to `true` if `group` is already available at mount). After the seed, user edits are
+  left alone.
+- **Commit:** `feat(groups): group leader badge + transferable leadership`.
+
 ## [OPEN] W-024 — Apply patch migration: in-place edit of group + challenge metadata
 - **Date:** 2026-06-03 · **Area:** backend / Supabase
 - **What:** `supabase/migrations/20260603200000_update_group_and_challenge.sql` adds two

@@ -21,6 +21,84 @@
 
 ---
 
+## 2026-06-03 — Claude 1 / T-030: group leader badge + transferable leadership (+ B-012 fix)
+
+**Did:** Two things in one PR — fixed an edit-group input bug (B-012) and added a real
+"group leader" concept with a crown badge on the leaderboard and a tap-to-transfer flow.
+
+### Part 1 — B-012 fix
+- `app/group/[id]/edit.tsx` previously rehydrated `name` from `group.name` whenever
+  `name === ''`. That meant a user backspacing to clear the field silently refilled with
+  the previous name. Replaced with a one-shot `hydrated` flag (init to `true` if `group`
+  is already present at mount, otherwise set on first arrival of the data). After seed,
+  user edits are left alone.
+
+### Part 2 — Group leader + transferable leadership
+- The data model already supports it: `groups.owner_id` is the leader, and
+  `group_members.role` carries `('owner','admin','member')`. The only missing piece was a
+  way to hand the role to another member. Until now the owner was the only one who could
+  edit/archive, and the sole-owner-leave guard meant they were stuck.
+
+**Files created:**
+- `supabase/migrations/20260603300000_transfer_group_leadership.sql` — idempotent
+  `transfer_group_leadership(p_group_id, p_new_owner_id)` RPC. Owner-only, not-archived,
+  new owner must be an existing non-self member. Flips both `groups.owner_id` and the
+  two relevant `group_members.role` rows (previous owner → 'member', new owner →
+  'owner') in one transaction. **USER must apply (W-025).**
+- `src/shared/ui/CrownIcon.tsx` — dep-free crown built from three border-trick triangles
+  on a small bar, tinted with `t.colors.mutedForeground` by default. Sized for inline
+  use next to heading text. We considered `@expo/vector-icons` but `npx expo install`
+  hit the recurring W-013 ERESOLVE on `react-dom`; building from `View` primitives
+  avoids the dep entirely and produces a small, theme-tintable shape.
+- `src/features/groups/hooks/useTransferGroupLeadership.ts` — mutation that invalidates
+  `myGroupsQueryKey` so the new `ownerId` and owner-only affordances refresh on the
+  previous owner's device.
+
+**Files modified:**
+- `src/features/groups/api/index.ts` — `transferGroupLeadership(groupId, newOwnerId)`
+  wrapper.
+- `src/features/groups/hooks/index.ts` + `src/features/groups/index.ts` — public surface.
+- `src/shared/ui/index.ts` — exports `CrownIcon` + `CrownIconProps`.
+- `app/group/[id].tsx` — `LeaderboardRow` now takes `isLeader` and `onTransfer`. Shows
+  the crown next to the leader's name. When the current viewer is the owner and the row
+  is a non-self member, the whole row becomes a `Pressable` that opens an `Alert.alert`
+  confirmation ("Make {name} the leader?") matching the existing confirm-pattern used by
+  Leave / Archive. Server response errors surface in a second alert.
+- `app/group/[id]/edit.tsx` — B-012 rehydration fix described above.
+
+**Checks:** `npm run typecheck` ✅ · `npm run lint` ✅ · `npx expo-doctor` ✅ (18/18).
+
+**Branch / commit:** `mvp` @ <see post-commit hash>
+
+**Next up:**
+1. **User action (W-025):** apply the patch migration via Supabase Dashboard SQL editor.
+   Tapping a leaderboard row as owner will fail with `function does not exist` until then.
+2. **User action (still open):** W-022, W-023, W-024 (this branch's prior migrations);
+   W-019 (Phase 4A + restore_group); W-014/15/16/17/18; W-020 (deep-link allow-list).
+3. T-050 push notifications or Phase 5 quality/release.
+
+**Blockers / decisions needed:** None.
+
+**Notes for next session:**
+- The "Only group leader can modify group name" requirement is already enforced by the
+  T-029 RPC (`update_group` checks `owner_id = auth.uid()`). After a transfer, the new
+  owner can edit and the previous owner can no longer reach the Edit button (it's
+  conditional on `isOwner`).
+- We did NOT add an "Admin" promotion flow even though `member_role` includes 'admin'.
+  Roles other than 'owner' have no UI consequences today; if/when we wire admin-only
+  affordances, the same RPC pattern applies.
+- `CrownIcon` is a general primitive in `shared/ui` — reusable. If a future feature
+  wants a colored variant (e.g. a gold "first place" crown on the leaderboard), pass
+  `color={...}`.
+- `useGroupLeaderboard` is invalidated by every group mutation through the existing
+  `useMyGroups` invalidation chain — but the leaderboard query key (`groupLeaderboardQueryKey`)
+  is NOT explicitly invalidated by `useTransferGroupLeadership`. The crown updates
+  because the row data already comes from `useMyGroups.ownerId`, not the leaderboard
+  RPC. If we ever move leadership info into the leaderboard RPC, also invalidate
+  `groupLeaderboardQueryKey(groupId)` on transfer success.
+
+---
+
 ## 2026-06-03 — Claude 1 / T-029: edit group + challenge in place; add Work category
 
 **Did:** Until now groups and challenges were write-once after creation. Added an in-place

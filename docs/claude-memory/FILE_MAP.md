@@ -29,16 +29,17 @@ Basta_App/
 │       ├── 20260601100000_phase4a_user_control_safety.sql  # T-024/T-025/T-036 + 4A-2 prep tables + restore_group (apply — W-019)
 │       ├── 20260603000000_group_member_is_participant.sql  # T-027 / B-011: widen is_challenge_participant; soften challenge_streak (apply — W-022)
 │       ├── 20260603100000_submission_authors.sql           # T-028: list_challenge_submissions + get_submission_with_author RPCs (apply — W-023)
-│       └── 20260603200000_update_group_and_challenge.sql   # T-029: update_group + update_challenge RPCs (apply — W-024)
+│       ├── 20260603200000_update_group_and_challenge.sql   # T-029: update_group + update_challenge RPCs (apply — W-024)
+│       └── 20260603300000_transfer_group_leadership.sql    # T-030: transfer_group_leadership RPC (apply — W-025)
 ├── src/features/
 │   ├── auth/                     # T-020: PKCE email auth, useSession, secure-store tokens
 │   ├── onboarding/               # T-021/T-022: terms, profile setup, completeOnboarding
 │   │   ├── api/index.ts          #   fetchProfile/upsertProfile/completeOnboarding + row→User map
 │   │   ├── hooks/                #   useProfile · useUpsertProfile · useCompleteOnboarding
 │   │   └── model/                #   CURRENT_TERMS_VERSION · profileSetupInput zod
-│   ├── groups/                   # T-023/T-025/T-026: create/join/leave/archive/restore + lists
-│   │   ├── api/index.ts          #   createGroup · joinGroupByInvite · listMyGroups · listMyArchivedGroups · leaveGroup · archiveGroup · restoreGroup
-│   │   ├── hooks/                #   useCreateGroup · useJoinGroup · useMyGroups · useMyArchivedGroups · useLeaveGroup · useArchiveGroup · useRestoreGroup
+│   ├── groups/                   # T-023/T-025/T-026/T-029/T-030: create/join/leave/archive/restore/rename/transfer
+│   │   ├── api/index.ts          #   createGroup · joinGroupByInvite · listMyGroups · listMyArchivedGroups · leaveGroup · archiveGroup · restoreGroup · updateGroup · transferGroupLeadership
+│   │   ├── hooks/                #   useCreateGroup · useJoinGroup · useMyGroups · useMyArchivedGroups · useLeaveGroup · useArchiveGroup · useRestoreGroup · useUpdateGroup · useTransferGroupLeadership
 │   │   ├── model/                #   createGroupInput · joinGroupInput zod · INVITE_CODE_LENGTH
 │   │   └── ui/                   #   GroupCreateOrJoinForm (shared by onboarding + main app)
 │   ├── challenges/               # T-030/T-042: list/detail/create challenges + streak (RPC-first)
@@ -156,6 +157,7 @@ app.config.ts  eas.json  package.json                                           
 | Streak function | `supabase/migrations/*_streaks.sql` | planned |
 | Leaderboard function | `supabase/migrations/*_leaderboard.sql` | planned |
 | Design tokens | `src/shared/ui/theme/tokens.ts` | live |
+| Crown icon primitive | `src/shared/ui/CrownIcon.tsx` | live (T-030) |
 | Reusable group create/join form | `src/features/groups/ui/GroupCreateOrJoinForm.tsx` | live (T-026) |
 | Group create/join modal route | `app/group/join-or-create.tsx` | live (T-026) |
 | Archived groups screen | `app/group/archived.tsx` | live (T-026) |

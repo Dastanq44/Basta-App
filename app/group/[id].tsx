@@ -1,9 +1,14 @@
 import { useState } from 'react';
 import { Alert, FlatList, Pressable, RefreshControl, View } from 'react-native';
 import { type Href, Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Button, Card, Screen, Text, useTheme } from '@/shared/ui';
+import { Button, Card, CrownIcon, Screen, Text, useTheme } from '@/shared/ui';
 import { useSession } from '@/features/auth';
-import { useArchiveGroup, useLeaveGroup, useMyGroups } from '@/features/groups';
+import {
+  useArchiveGroup,
+  useLeaveGroup,
+  useMyGroups,
+  useTransferGroupLeadership,
+} from '@/features/groups';
 import { useGroupLeaderboard } from '@/features/leaderboard';
 import { ReportSheet } from '@/features/moderation';
 import type { LeaderboardEntry } from '@/entities';
@@ -19,10 +24,39 @@ export default function GroupScreen() {
   const board = useGroupLeaderboard(id);
   const leave = useLeaveGroup();
   const archive = useArchiveGroup();
+  const transfer = useTransferGroupLeadership();
   const [reportOpen, setReportOpen] = useState(false);
 
   const group = groups.data?.find((g) => g.id === id);
   const isOwner = !!myUid && group?.ownerId === myUid;
+
+  const confirmTransfer = (entry: LeaderboardEntry) => {
+    if (!id) return;
+    const displayName = entry.displayName || entry.username || 'this member';
+    Alert.alert(
+      `Make ${displayName} the leader?`,
+      "They'll be able to rename and archive the group. You'll become a regular member.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Transfer',
+          style: 'destructive',
+          onPress: () =>
+            transfer.mutate(
+              { groupId: id, newOwnerId: entry.userId },
+              {
+                onError: (e) =>
+                  Alert.alert(
+                    'Could not transfer',
+                    e instanceof Error ? e.message : 'Unknown error',
+                  ),
+              },
+            ),
+        },
+      ],
+      { cancelable: true },
+    );
+  };
 
   const confirmLeave = () => {
     if (!id) return;
@@ -119,7 +153,21 @@ export default function GroupScreen() {
             onRefresh={() => void board.refetch()}
           />
         }
-        renderItem={({ item }) => <LeaderboardRow entry={item} isMe={item.userId === myUid} />}
+        renderItem={({ item }) => (
+          <LeaderboardRow
+            entry={item}
+            isMe={item.userId === myUid}
+            isLeader={item.userId === group?.ownerId}
+            // Only the current owner can initiate a transfer, and only to a non-self
+            // member. Tapping anyone else is a no-op (no need to gate further here —
+            // the server also enforces it).
+            onTransfer={
+              isOwner && item.userId !== myUid && !transfer.isPending
+                ? () => confirmTransfer(item)
+                : undefined
+            }
+          />
+        )}
         ListFooterComponent={
           <View style={{ marginTop: t.spacing.lg, gap: t.spacing.sm }}>
             <Text variant="heading">Settings</Text>
@@ -166,14 +214,29 @@ export default function GroupScreen() {
   );
 }
 
-function LeaderboardRow({ entry, isMe }: { entry: LeaderboardEntry; isMe: boolean }) {
+function LeaderboardRow({
+  entry,
+  isMe,
+  isLeader,
+  onTransfer,
+}: {
+  entry: LeaderboardEntry;
+  isMe: boolean;
+  isLeader: boolean;
+  /** Provided only when the current viewer is the owner and this row is a non-self
+   *  member they could promote. Tapping the row opens the transfer confirmation. */
+  onTransfer?: () => void;
+}) {
   const t = useTheme();
   const name = entry.displayName || entry.username || 'Member';
-  return (
+  const card = (
     <Card style={isMe ? { borderWidth: 1.5, borderColor: t.colors.accent } : undefined}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.md }}>
         <Text variant="title" style={{ width: 44, color: t.colors.mutedForeground }}>{entry.rank}</Text>
-        <View style={{ flex: 1 }}>
+        <View
+          style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: t.spacing.xs }}
+        >
+          {isLeader ? <CrownIcon size={14} /> : null}
           <Text variant="heading">
             {name}
             {isMe ? <Text variant="muted">  (You)</Text> : null}
@@ -184,4 +247,12 @@ function LeaderboardRow({ entry, isMe }: { entry: LeaderboardEntry; isMe: boolea
       </View>
     </Card>
   );
+  if (onTransfer) {
+    return (
+      <Pressable accessibilityRole="button" accessibilityHint="Transfer leadership" onPress={onTransfer}>
+        {card}
+      </Pressable>
+    );
+  }
+  return card;
 }

@@ -7,5 +7,7 @@ export { Screen } from './Screen';
 export type { ScreenProps } from './Screen';
 export { Input } from './Input';
 export type { InputProps } from './Input';
+export { CrownIcon } from './CrownIcon';
+export type { CrownIconProps } from './CrownIcon';
 export { ThemeProvider, useTheme, lightTheme, darkTheme } from './theme';
 export type { ThemeTokens, ColorTokens } from './theme';

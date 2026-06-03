@@ -122,6 +122,27 @@ export async function leaveGroup(groupId: string): Promise<void> {
   }
 }
 
+/** Current owner transfers leadership to another member. Server enforces owner-only,
+ *  not-archived, and that the new owner is an existing member. */
+export async function transferGroupLeadership(
+  groupId: string,
+  newOwnerId: string,
+): Promise<void> {
+  const ctrl = withTimeout();
+  try {
+    const { error } = await supabase
+      .rpc('transfer_group_leadership', {
+        p_group_id: groupId,
+        p_new_owner_id: newOwnerId,
+      })
+      .abortSignal(ctrl.signal);
+    if (error) throw new Error(error.message || 'Could not transfer leadership');
+  } catch (e) {
+    console.error('[basta] transferGroupLeadership failed:', e);
+    throw e;
+  }
+}
+
 /** Owner renames an active group via the `update_group` RPC. Throws on validation /
  *  permission failure; the RPC enforces owner-only and not-archived. */
 export async function updateGroup(groupId: string, name: string): Promise<void> {
