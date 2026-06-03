@@ -3,9 +3,9 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-06-03 — by: Claude 1 / T-027 (B-011 fix — group members are participants)_
+_Last updated: 2026-06-03 — by: Claude 1 / T-028 (submission author name on detail screens)_
 
-## Status: PHASE 4A COMPLETE + T-026 + T-027 · apply 7 migrations + 1 dashboard toggle
+## Status: PHASE 4A COMPLETE + T-026 + T-027 + T-028 · apply 8 migrations + 1 dashboard toggle
 
 Phase 4A-1 (password reset + leave/archive group + archive challenge) is complete and
 Phase 4A-2 (report/block UI + account-deletion request UI) is now done too. All MVP-scope
@@ -18,13 +18,21 @@ Archived groups screen; the create/join UI is shared between onboarding and the 
 via `GroupCreateOrJoinForm` in `src/features/groups/ui/`. Owners can restore archived
 groups via a new `restore_group` RPC appended to W-019.
 
-T-027 (latest session): fixed B-011 — group challenge verification was broken because
-only the creator was auto-joined into `challenge_participants`. Widened the
-`is_challenge_participant(uuid)` helper so group members of `mode='group'` challenges
-implicitly count as participants. Single helper change fixes all four affected RLS
-policies and three RPCs at once. `challenge_streak` softened to return null instead of
-raising for true outsiders; `getChallengeStreak` typed as `ChallengeStreak | null`.
-New migration `20260603000000_group_member_is_participant.sql` (W-022) — USER must apply.
+T-027: fixed B-011 — group challenge verification was broken because only the creator
+was auto-joined into `challenge_participants`. Widened the `is_challenge_participant(uuid)`
+helper so group members of `mode='group'` challenges implicitly count as participants.
+Single helper change fixes all four affected RLS policies and three RPCs at once.
+`challenge_streak` softened to return null instead of raising for true outsiders;
+`getChallengeStreak` typed as `ChallengeStreak | null`. New migration
+`20260603000000_group_member_is_participant.sql` (W-022) — USER must apply.
+
+T-028 (latest session): submission author display name now visible on the challenge
+detail "Recent submissions" rows and the submission detail screen. Two new SECURITY
+DEFINER RPCs (`list_challenge_submissions`, `get_submission_with_author`) join
+`profiles.username`/`display_name` server-side without widening `profiles` RLS —
+matches the `group_leaderboard` precedent. `Submission` entity grows optional
+`authorUsername`/`authorDisplayName`. Migration `20260603100000_submission_authors.sql`
+(W-023) — USER must apply.
 
 Latest session shipped a clean Phase 4A-1 slice: password reset + leave group + archive group
 + archive challenge. Phase 4A-2 (report/block UI + account deletion request UI) is deferred,
@@ -35,7 +43,8 @@ applies one SQL file. All checks green.
 - W-014/W-015/W-016/W-017 — Phase 3 (verification, streaks, leaderboard, social).
 - W-018 — 4-digit invite codes.
 - W-019 — Phase 4A (archive + trust/safety infra + restore_group).
-- **W-022** — Patch: treat group members as challenge participants (B-011 fix; this session).
+- W-022 — Patch: treat group members as challenge participants (B-011 fix).
+- **W-023** — Patch: surface submission author display name (T-028; this session).
 - W-020 — Auth → URL Configuration → add `basta://reset-password` to Redirect URLs.
 
 The full MVP loop now exists in code: register → group → challenge → submit proof (offline) →

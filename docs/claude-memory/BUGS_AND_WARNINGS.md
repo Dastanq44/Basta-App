@@ -276,6 +276,23 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
 - **Status:** Open until applied. The Restore button on `app/group/archived.tsx` will fail
   with `function does not exist` until then.
 
+## [OPEN] W-023 — Apply patch migration: surface submission author display name
+- **Date:** 2026-06-03 · **Area:** backend / Supabase
+- **What:** `supabase/migrations/20260603100000_submission_authors.sql` adds two
+  SECURITY DEFINER RPCs — `list_challenge_submissions(p_challenge_id, p_limit)` and
+  `get_submission_with_author(p_submission_id)` — that return submissions with the
+  author's `username` + `display_name` joined in. Both are participant-gated (use the
+  W-022 widened helper), so outsiders still get nothing. Idempotent (CREATE OR REPLACE).
+- **Apply via:** Supabase Dashboard → SQL editor → paste the file's contents → Run.
+  No order constraint vs other open migrations.
+- **Why RPCs instead of widening `profiles` RLS:** the leaderboard already follows this
+  pattern; an RPC exposes exactly two columns (`username`, `display_name`) per author
+  and keeps `timezone`/`onboarded`/`terms_version` private. Broader profile widening can
+  come later if more screens need it.
+- **Status:** Open until applied. Without it, both `listSubmissionsForChallenge` and
+  `getSubmission` will fail with `function does not exist` and the challenge detail +
+  submission detail screens will show their error states.
+
 ## [OPEN] W-022 — Apply patch migration: treat group members as challenge participants
 - **Date:** 2026-06-03 · **Area:** backend / Supabase
 - **What:** `supabase/migrations/20260603000000_group_member_is_participant.sql`

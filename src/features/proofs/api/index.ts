@@ -23,6 +23,12 @@ type SubmissionRow = {
   created_at: string;
 };
 
+/** Row shape returned by list_challenge_submissions / get_submission_with_author RPCs. */
+type SubmissionWithAuthorRow = SubmissionRow & {
+  author_username: string | null;
+  author_display_name: string | null;
+};
+
 function toSubmission(r: SubmissionRow): Submission {
   return {
     id: r.id,
@@ -36,39 +42,51 @@ function toSubmission(r: SubmissionRow): Submission {
   };
 }
 
+function toSubmissionWithAuthor(r: SubmissionWithAuthorRow): Submission {
+  return {
+    ...toSubmission(r),
+    authorUsername: r.author_username ?? undefined,
+    authorDisplayName: r.author_display_name ?? undefined,
+  };
+}
+
 const COLS = 'id, challenge_id, author_id, challenge_day, comment, media_path, status, verified_at, rejected_at, created_at';
 
-/** Recent submissions for a challenge — used in the detail screen. */
+/**
+ * Recent submissions for a challenge — used in the detail screen. Calls the
+ * `list_challenge_submissions` SECURITY DEFINER RPC so each row carries the author's
+ * username + display_name without widening `profiles` RLS (W-023).
+ */
 export async function listSubmissionsForChallenge(challengeId: string, limit = 20): Promise<Submission[]> {
   const c = ctrl();
   try {
     const { data, error } = await supabase
-      .from('submissions')
-      .select(COLS)
-      .eq('challenge_id', challengeId)
-      .order('created_at', { ascending: false })
-      .limit(limit)
+      .rpc('list_challenge_submissions', { p_challenge_id: challengeId, p_limit: limit })
       .abortSignal(c.signal);
     if (error) throw error;
-    return (data ?? []).map((r) => toSubmission(r as SubmissionRow));
+    const rows = (data ?? []) as SubmissionWithAuthorRow[];
+    return rows.map(toSubmissionWithAuthor);
   } catch (e) {
     console.error('[basta] listSubmissionsForChallenge failed:', e);
     throw e;
   }
 }
 
-/** A single submission by id (used by the verify screen). RLS limits this to participants. */
+/**
+ * A single submission by id, with the author's username + display_name joined in.
+ * Calls the `get_submission_with_author` SECURITY DEFINER RPC. Returns null when the
+ * submission doesn't exist; throws on permission / network errors.
+ */
 export async function getSubmission(submissionId: string): Promise<Submission | null> {
   const c = ctrl();
   try {
     const { data, error } = await supabase
-      .from('submissions')
-      .select(COLS)
-      .eq('id', submissionId)
-      .abortSignal(c.signal)
-      .maybeSingle();
+      .rpc('get_submission_with_author', { p_submission_id: submissionId })
+      .abortSignal(c.signal);
     if (error) throw error;
-    return data ? toSubmission(data as SubmissionRow) : null;
+    const rows = (data ?? []) as SubmissionWithAuthorRow[];
+    const first = rows[0];
+    return first ? toSubmissionWithAuthor(first) : null;
   } catch (e) {
     console.error('[basta] getSubmission failed:', e);
     throw e;

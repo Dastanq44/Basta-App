@@ -39,4 +39,12 @@ export type Submission = {
   mediaRemotePath?: string;
   status: SyncStatus;
   createdAt: string;
+  /**
+   * Author display fields. Present when the submission was read via a server RPC that
+   * joins `profiles` (list_challenge_submissions / get_submission_with_author).
+   * Absent on locally-queued submissions and on read paths that don't need the name
+   * (e.g. getMyTodaySubmission, where the author is always the current user).
+   */
+  authorUsername?: string;
+  authorDisplayName?: string;
 };

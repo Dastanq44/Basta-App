@@ -21,6 +21,70 @@
 
 ---
 
+## 2026-06-03 — Claude 1 / T-028: show submission author name on challenge + submission detail
+
+**Did:** Submission rows on the challenge detail and the submission detail screen
+previously only showed "Day N" with no indication of who submitted. Added the author's
+display name on both screens without widening `profiles` RLS.
+
+**Approach:** followed the existing `group_leaderboard` precedent — two new SECURITY
+DEFINER RPCs that join `profiles` server-side and expose only `username` +
+`display_name` (other profile columns stay private). Both gated by the W-022
+participant helper, so outsiders still get nothing.
+
+**Files created:**
+- `supabase/migrations/20260603100000_submission_authors.sql` — idempotent
+  CREATE OR REPLACE on two functions:
+  - `list_challenge_submissions(p_challenge_id uuid, p_limit int)` — returns the
+    challenge's recent submissions plus `author_username` + `author_display_name`.
+  - `get_submission_with_author(p_submission_id uuid)` — single-submission variant
+    used by the submission detail + verify screens.
+  **USER must apply (W-023)** — without it both screens hit `function does not exist`.
+
+**Files modified:**
+- `src/entities/submission.ts` — `Submission` grows optional `authorUsername?` and
+  `authorDisplayName?`. Present after the new RPCs; absent for locally-queued items and
+  the self-only `getMyTodaySubmission` path (where the author is always the viewer).
+- `src/features/proofs/api/index.ts` — `listSubmissionsForChallenge` and `getSubmission`
+  now call the new RPCs. Added a `SubmissionWithAuthorRow` type and a `toSubmissionWithAuthor`
+  mapper next to the existing `toSubmission`.
+- `app/challenge/[id].tsx` — `SubmissionRow` heading becomes the author label
+  (`displayName ?? @username ?? "Member"`); "Day N" demotes to a muted subline.
+- `app/submission/[id].tsx` — same label as the row heading next to the sync badge;
+  "Day N" demotes to muted subline. (Stack-screen header title still shows "Day N+1"
+  since that's the navigational context.)
+
+**Verify screen note:** `app/verify/[submissionId].tsx` also reads `useSubmission`, so
+the new author fields are present in its `submission.data`. I deliberately did not
+surface them there — the user asked for these two screens specifically, and adding it
+to verify is a one-line change a future session can do if asked.
+
+**Checks:** `npm run typecheck` ✅ · `npm run lint` ✅ · `npx expo-doctor` ✅ (18/18).
+
+**Branch / commit:** `mvp` @ <see post-commit hash>
+
+**Next up:**
+1. **User action (W-023):** apply the new migration via Supabase Dashboard SQL editor.
+2. **User action (still open):** W-022 (group-member-is-participant fix), W-019
+   (Phase 4A + restore_group), W-014/15/16/17/18, W-020 (deep-link URL allow-list).
+3. T-050 push notifications (gated by Expo Go) or Phase 5 quality/release.
+
+**Blockers / decisions needed:** None.
+
+**Notes for next session:**
+- Don't widen `profiles` RLS without a clear product reason. The leaderboard + these two
+  new RPCs are the entire surface that needs other users' names today. If a future
+  screen needs more profile fields (avatar, bio), add it to the same per-screen RPC
+  rather than broadening RLS.
+- The author label is computed inline in two places (challenge detail row + submission
+  detail header). If a third surface needs it, factor out a small helper — but two
+  copies is fine for now (not abstraction-worthy yet).
+- `getMyTodaySubmission` still uses a direct `from('submissions').select(...)` rather
+  than an RPC: it returns the **current user's** own submission, so it doesn't need
+  author info and works fine under the existing RLS path.
+
+---
+
 ## 2026-06-03 — Claude 1 / B-011 fix: treat group members as participants (T-027)
 
 **Did:** Fixed B-011 — in a group challenge, only the creator was auto-joined into

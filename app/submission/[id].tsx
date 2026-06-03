@@ -115,7 +115,12 @@ export default function SubmissionScreen() {
         </View>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Text variant="heading">Day {s.challengeDay + 1}</Text>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text variant="heading">
+              {s.authorDisplayName || (s.authorUsername ? `@${s.authorUsername}` : 'Member')}
+            </Text>
+            <Text variant="muted">Day {s.challengeDay + 1}</Text>
+          </View>
           <SyncBadge status={s.status} />
         </View>
 

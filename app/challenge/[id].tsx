@@ -211,6 +211,10 @@ function SubmissionRow({
     !!currentUserId &&
     submission.authorId !== currentUserId;
 
+  const authorLabel =
+    submission.authorDisplayName ||
+    (submission.authorUsername ? `@${submission.authorUsername}` : 'Member');
+
   return (
     // Tap the row → submission detail (photo + reactions + comments). The Verify button below is a
     // nested Pressable, so it handles its own press without triggering navigation.
@@ -221,7 +225,10 @@ function SubmissionRow({
       <Card>
         <View style={{ gap: t.spacing.sm }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text variant="heading">Day {submission.challengeDay + 1}</Text>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text variant="heading">{authorLabel}</Text>
+              <Text variant="muted">Day {submission.challengeDay + 1}</Text>
+            </View>
             <SyncBadge status={submission.status} />
           </View>
           {submission.comment ? <Text variant="muted">{submission.comment}</Text> : null}
