@@ -169,6 +169,12 @@ export default function ChallengeDetailScreen() {
               <>
                 <Text variant="heading">Settings</Text>
                 <Button
+                  label="Edit challenge"
+                  variant="secondary"
+                  onPress={() => router.push(`/challenge/${c.id}/edit` as Href)}
+                  disabled={archive.isPending}
+                />
+                <Button
                   label={archive.isPending ? 'Archiving…' : 'Archive challenge'}
                   variant="destructive"
                   onPress={confirmArchive}

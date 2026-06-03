@@ -122,6 +122,21 @@ export async function leaveGroup(groupId: string): Promise<void> {
   }
 }
 
+/** Owner renames an active group via the `update_group` RPC. Throws on validation /
+ *  permission failure; the RPC enforces owner-only and not-archived. */
+export async function updateGroup(groupId: string, name: string): Promise<void> {
+  const ctrl = withTimeout();
+  try {
+    const { error } = await supabase
+      .rpc('update_group', { p_group_id: groupId, p_name: name })
+      .abortSignal(ctrl.signal);
+    if (error) throw new Error(error.message || 'Could not update group');
+  } catch (e) {
+    console.error('[basta] updateGroup failed:', e);
+    throw e;
+  }
+}
+
 /** Owner archives a group (soft-delete; data preserved). */
 export async function archiveGroup(groupId: string): Promise<void> {
   const ctrl = withTimeout();

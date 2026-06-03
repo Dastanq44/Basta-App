@@ -78,8 +78,16 @@ function RootNav() {
         name="challenge/[id]/submit-proof"
         options={{ headerShown: true, presentation: 'modal', title: 'Submit proof' }}
       />
+      <Stack.Screen
+        name="challenge/[id]/edit"
+        options={{ headerShown: true, presentation: 'modal', title: 'Edit challenge' }}
+      />
       <Stack.Screen name="verify/[submissionId]" options={{ headerShown: true, title: 'Verify proof' }} />
       <Stack.Screen name="group/[id]" options={{ headerShown: true, title: 'Group' }} />
+      <Stack.Screen
+        name="group/[id]/edit"
+        options={{ headerShown: true, presentation: 'modal', title: 'Edit group' }}
+      />
       <Stack.Screen
         name="group/join-or-create"
         options={{ headerShown: true, presentation: 'modal', title: 'New group' }}

@@ -276,6 +276,25 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
 - **Status:** Open until applied. The Restore button on `app/group/archived.tsx` will fail
   with `function does not exist` until then.
 
+## [OPEN] W-024 — Apply patch migration: in-place edit of group + challenge metadata
+- **Date:** 2026-06-03 · **Area:** backend / Supabase
+- **What:** `supabase/migrations/20260603200000_update_group_and_challenge.sql` adds two
+  SECURITY DEFINER RPCs:
+  * `update_group(p_group_id, p_name)` — owner-only, not-archived guard, 1–60 char
+    name validation.
+  * `update_challenge(p_challenge_id, p_title, p_category, p_duration_days,
+    p_proof_requirement)` — creator-only, not-archived guard, allow-list category
+    (`fitness`, `reading`, `meditation`, `creativity`, `study`, `language`, `work`,
+    `other`), duration ∈ [1, 365], title ≤100, proof requirement ≤280. Duration shrink
+    is rejected if it would orphan an existing submission (`new_duration < max(challenge_day)+1`).
+- **Apply via:** Supabase Dashboard → SQL editor → paste → Run. Idempotent
+  (CREATE OR REPLACE on both). No ordering vs other open migrations.
+- **What's NOT editable** (intentional — would invalidate existing submissions):
+  `challenges.start_date`, `mode`, `group_id`, `verification_threshold`. If a creator
+  needs different start/mode they can archive + create a new challenge.
+- **Status:** Open until applied. Without it, the Edit buttons on group + challenge
+  detail screens will fail with `function does not exist`.
+
 ## [OPEN] W-023 — Apply patch migration: surface submission author display name
 - **Date:** 2026-06-03 · **Area:** backend / Supabase
 - **What:** `supabase/migrations/20260603100000_submission_authors.sql` adds two

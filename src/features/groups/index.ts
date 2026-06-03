@@ -8,6 +8,7 @@ export {
   useLeaveGroup,
   useArchiveGroup,
   useRestoreGroup,
+  useUpdateGroup,
   myGroupsQueryKey,
   myArchivedGroupsQueryKey,
 } from './hooks';

@@ -1,7 +1,7 @@
 // Challenges API — RPC-first for write ops (same pattern as Phase 1: avoids RLS edge cases).
 import { supabase } from '@/shared/lib/supabase';
 import type { Challenge, ChallengeStreak } from '@/entities';
-import type { CreateChallengeInput } from '../model';
+import type { CreateChallengeInput, UpdateChallengeInput } from '../model';
 
 const TIMEOUT_MS = 10_000;
 function ctrl(): AbortController {
@@ -96,6 +96,31 @@ export async function getChallengeStreak(challengeId: string): Promise<Challenge
     return { current: d.current ?? 0, longest: d.longest ?? 0, todayDone: d.today_done ?? false };
   } catch (e) {
     console.error('[basta] getChallengeStreak failed:', e);
+    throw e;
+  }
+}
+
+/** Creator edits the mutable fields on an active challenge via `update_challenge` RPC.
+ *  Server enforces creator-only, not-archived, and a duration-shrink guard so submissions
+ *  past day N can't be orphaned. */
+export async function updateChallenge(
+  challengeId: string,
+  input: UpdateChallengeInput,
+): Promise<void> {
+  const c = ctrl();
+  try {
+    const { error } = await supabase
+      .rpc('update_challenge', {
+        p_challenge_id: challengeId,
+        p_title: input.title,
+        p_category: input.category,
+        p_duration_days: input.durationDays,
+        p_proof_requirement: input.proofRequirement ?? null,
+      })
+      .abortSignal(c.signal);
+    if (error) throw new Error(error.message || 'Could not update challenge');
+  } catch (e) {
+    console.error('[basta] updateChallenge failed:', e);
     throw e;
   }
 }

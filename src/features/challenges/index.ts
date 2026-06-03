@@ -5,9 +5,10 @@ export {
   useCreateChallenge,
   useChallengeStreak,
   useArchiveChallenge,
+  useUpdateChallenge,
   challengesQueryKey,
   challengeQueryKey,
   challengeStreakQueryKey,
 } from './hooks';
-export { CHALLENGE_CATEGORIES, createChallengeInput } from './model';
-export type { ChallengeCategory, CreateChallengeInput } from './model';
+export { CHALLENGE_CATEGORIES, createChallengeInput, updateChallengeInput } from './model';
+export type { ChallengeCategory, CreateChallengeInput, UpdateChallengeInput } from './model';

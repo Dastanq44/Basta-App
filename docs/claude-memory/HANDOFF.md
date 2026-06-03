@@ -21,6 +21,85 @@
 
 ---
 
+## 2026-06-03 — Claude 1 / T-029: edit group + challenge in place; add Work category
+
+**Did:** Until now groups and challenges were write-once after creation. Added an in-place
+edit path for both (Edit button → modal form → save), plus a new `'work'` category.
+
+**Scope (intentionally tight):**
+- Group: `name` only (owner-only). Invite code stays auto-generated.
+- Challenge: `title`, `category`, `duration_days`, `proof_requirement` (creator-only).
+- NOT editable: `challenges.start_date` (would invalidate `submissions.challenge_day` —
+  the offline-safe day index is computed at submit time against this), `mode`, `group_id`,
+  `verification_threshold`. Creators needing different start/mode archive + create new.
+
+**Files created:**
+- `supabase/migrations/20260603200000_update_group_and_challenge.sql` — idempotent
+  CREATE OR REPLACE on `update_group` and `update_challenge`. Both gated by
+  owner/creator + not-archived; both validate field shapes server-side (length caps,
+  category allow-list mirroring `CHALLENGE_CATEGORIES`, duration ∈ [1,365]). The
+  challenge RPC includes a **duration-shrink guard**: if the requested duration is
+  shorter than `max(submissions.challenge_day) + 1`, the update is rejected (we don't
+  silently orphan history). **USER must apply (W-024).**
+- `src/features/groups/hooks/useUpdateGroup.ts` — invalidates `myGroupsQueryKey` +
+  `myArchivedGroupsQueryKey` so the new name lands wherever the group is referenced.
+- `src/features/challenges/hooks/useUpdateChallenge.ts` — invalidates
+  `challengesQueryKey` + `challengeQueryKey(id)`.
+- `app/group/[id]/edit.tsx` — modal route. Owner-only UI guard (server also enforces);
+  zod `groupNameSchema` for client validation; idempotent "no-op if unchanged" exit.
+- `app/challenge/[id]/edit.tsx` — modal route. Creator-only UI guard; pre-fills from
+  `useChallenge`; uses the new `updateChallengeInput` zod schema. Archived challenges
+  show a friendly "can't be edited" state instead of the form.
+
+**Files modified:**
+- `src/features/challenges/model/schemas.ts` — added `'work'` to `CHALLENGE_CATEGORIES`.
+  Extracted reusable field schemas (`challengeTitle`, `challengeCategory`, etc.) and
+  introduced `updateChallengeInput` (mutable subset). Categories list and validation
+  are now a single source of truth between create + edit forms.
+- `src/features/challenges/model/index.ts` — re-exports `updateChallengeInput` and
+  `UpdateChallengeInput`.
+- `src/features/challenges/api/index.ts` — `updateChallenge(challengeId, input)` calls
+  the new RPC (camelCase → snake_case mapping at the boundary).
+- `src/features/challenges/index.ts` + `hooks/index.ts` — public surface exports.
+- `src/features/groups/api/index.ts` — `updateGroup(groupId, name)` calls
+  `update_group` RPC.
+- `src/features/groups/hooks/index.ts` + `index.ts` — public surface exports.
+- `app/_layout.tsx` — registered two modal routes:
+  `challenge/[id]/edit` (`presentation: 'modal'`, title `Edit challenge`),
+  `group/[id]/edit` (`presentation: 'modal'`, title `Edit group`).
+- `app/group/[id].tsx` — added an **Edit group** button in the Settings footer above
+  Archive (owner-only).
+- `app/challenge/[id].tsx` — added an **Edit challenge** button in Settings above
+  Archive (creator-only, hidden for archived).
+
+**Checks:** `npm run typecheck` ✅ · `npm run lint` ✅ · `npx expo-doctor` ✅ (18/18).
+
+**Branch / commit:** `mvp` @ <see post-commit hash>
+
+**Next up:**
+1. **User action (W-024):** apply the patch migration via Supabase Dashboard SQL editor.
+   Edit buttons throw `function does not exist` until then.
+2. **User action (still open):** W-022, W-023 (this branch's previous two migrations),
+   W-019 (Phase 4A + restore_group), W-014/15/16/17/18, W-020 (deep-link allow-list).
+3. T-050 push notifications (gated by Expo Go) or Phase 5 quality/release.
+
+**Blockers / decisions needed:** None.
+
+**Notes for next session:**
+- The duration-shrink guard is the only "interesting" server check — it prevents the
+  worst footgun (silently orphaning days). If a future "Day N out of N" UI surfaces the
+  challenge end date, it stays correct after edits because we recompute from
+  `start_date + duration_days`.
+- The challenge category is stored as `text`, not a Postgres enum. The RPC enforces the
+  allow-list inline. If we later turn it into an enum, we'll need an `alter type ... add
+  value 'work'` migration first AND update the RPC's allow-list to remove the inline
+  check. Two-step on purpose — see CLAUDE.md "no half-finished" rule.
+- `start_date` edit is deferred, not forgotten. If we ever support it we'll need a
+  server function that recomputes every `submissions.challenge_day` for that challenge
+  (or rejects edits when submissions exist). For MVP, archive+recreate is the answer.
+
+---
+
 ## 2026-06-03 — Claude 1 / T-028: show submission author name on challenge + submission detail
 
 **Did:** Submission rows on the challenge detail and the submission detail screen

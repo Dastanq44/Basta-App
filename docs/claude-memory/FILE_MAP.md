@@ -28,7 +28,8 @@ Basta_App/
 │       ├── 20260601000000_short_invite_codes.sql       # 4-digit invite codes (apply — W-018)
 │       ├── 20260601100000_phase4a_user_control_safety.sql  # T-024/T-025/T-036 + 4A-2 prep tables + restore_group (apply — W-019)
 │       ├── 20260603000000_group_member_is_participant.sql  # T-027 / B-011: widen is_challenge_participant; soften challenge_streak (apply — W-022)
-│       └── 20260603100000_submission_authors.sql           # T-028: list_challenge_submissions + get_submission_with_author RPCs (apply — W-023)
+│       ├── 20260603100000_submission_authors.sql           # T-028: list_challenge_submissions + get_submission_with_author RPCs (apply — W-023)
+│       └── 20260603200000_update_group_and_challenge.sql   # T-029: update_group + update_challenge RPCs (apply — W-024)
 ├── src/features/
 │   ├── auth/                     # T-020: PKCE email auth, useSession, secure-store tokens
 │   ├── onboarding/               # T-021/T-022: terms, profile setup, completeOnboarding

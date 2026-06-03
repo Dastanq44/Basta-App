@@ -1,2 +1,2 @@
-export { CHALLENGE_CATEGORIES, createChallengeInput } from './schemas';
-export type { ChallengeCategory, CreateChallengeInput } from './schemas';
+export { CHALLENGE_CATEGORIES, createChallengeInput, updateChallengeInput } from './schemas';
+export type { ChallengeCategory, CreateChallengeInput, UpdateChallengeInput } from './schemas';

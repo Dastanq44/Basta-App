@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Alert, FlatList, Pressable, RefreshControl, View } from 'react-native';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { type Href, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Button, Card, Screen, Text, useTheme } from '@/shared/ui';
 import { useSession } from '@/features/auth';
 import { useArchiveGroup, useLeaveGroup, useMyGroups } from '@/features/groups';
@@ -131,13 +131,21 @@ export default function GroupScreen() {
               disabled={leave.isPending || archive.isPending}
             />
             {isOwner ? (
-              <Button
-                label={archive.isPending ? 'Archiving…' : 'Archive group'}
-                variant="destructive"
-                onPress={confirmArchive}
-                loading={archive.isPending}
-                disabled={leave.isPending || archive.isPending}
-              />
+              <>
+                <Button
+                  label="Edit group"
+                  variant="secondary"
+                  onPress={() => router.push(`/group/${id}/edit` as Href)}
+                  disabled={leave.isPending || archive.isPending}
+                />
+                <Button
+                  label={archive.isPending ? 'Archiving…' : 'Archive group'}
+                  variant="destructive"
+                  onPress={confirmArchive}
+                  loading={archive.isPending}
+                  disabled={leave.isPending || archive.isPending}
+                />
+              </>
             ) : null}
             <Pressable accessibilityRole="button" onPress={() => setReportOpen(true)} hitSlop={4}>
               <Text variant="muted" style={{ textAlign: 'center' }}>Report this group</Text>
