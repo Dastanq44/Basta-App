@@ -78,15 +78,21 @@ export async function getChallenge(id: string): Promise<Challenge> {
   }
 }
 
-/** The current user's server-authoritative streak on a challenge (computed from verified days). */
-export async function getChallengeStreak(challengeId: string): Promise<ChallengeStreak> {
+/**
+ * The current user's server-authoritative streak on a challenge (computed from verified days).
+ * Returns null when the RPC reports the caller has no streak on this challenge — e.g. a true
+ * outsider on a challenge they happen to have an id for. Valid viewers (participant or group
+ * member of a group challenge) always get a real object, possibly all zeros.
+ */
+export async function getChallengeStreak(challengeId: string): Promise<ChallengeStreak | null> {
   const c = ctrl();
   try {
     const { data, error } = await supabase
       .rpc('challenge_streak', { p_challenge_id: challengeId })
       .abortSignal(c.signal);
     if (error) throw error;
-    const d = (data ?? {}) as { current: number; longest: number; today_done: boolean };
+    if (data == null) return null;
+    const d = data as { current: number; longest: number; today_done: boolean };
     return { current: d.current ?? 0, longest: d.longest ?? 0, todayDone: d.today_done ?? false };
   } catch (e) {
     console.error('[basta] getChallengeStreak failed:', e);

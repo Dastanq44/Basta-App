@@ -41,6 +41,7 @@
 | T-024 | DONE | Password reset flow. `forgot-password.tsx` + `reset-password.tsx` + `useRequestPasswordReset`/`useUpdatePassword` + `resetPasswordForEmail`/`exchangeCodeForSession`/`updatePassword` API. **Deep-link requires W-020 dashboard config.** |
 | T-025 | DONE | Leave / archive group. `leave_group` + `archive_group` SECURITY DEFINER RPCs (W-019); `useLeaveGroup`/`useArchiveGroup`; Settings footer on `app/group/[id].tsx` with confirm dialogs. Sole-owner leave guard server-side. |
 | T-026 | DONE | Main-app group create/join + archived group restore. Reusable `GroupCreateOrJoinForm` in `src/features/groups/ui/` (used by both onboarding and main app); modal route `app/group/join-or-create.tsx`; `app/group/archived.tsx` list + Restore (owner-only). `restore_group` RPC appended to the W-019 migration. `useMyArchivedGroups`/`useRestoreGroup` hooks; create/join/archive/leave/restore all invalidate both active and archived query keys. |
+| T-027 | DONE | **Bug fix (B-011):** treat group members as participants. Widened `is_challenge_participant(uuid)` so group members of a `mode='group'` challenge's host group pass the helper — fixes verifier seeing empty submissions list + `getChallengeStreak 42501`. Single helper change cascades through 4 RLS policies + 3 RPCs. `challenge_streak` softened to return null for true outsiders. New idempotent migration `20260603000000_group_member_is_participant.sql` (W-022 — USER must apply). |
 
 ### Challenges & proof (core)
 | ID | Status | Task |

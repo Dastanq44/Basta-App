@@ -3,9 +3,9 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-06-02 — by: Claude 1 / T-026 (main-app group create/join + archived restore)_
+_Last updated: 2026-06-03 — by: Claude 1 / T-027 (B-011 fix — group members are participants)_
 
-## Status: PHASE 4A COMPLETE + T-026 · apply 6 migrations + 1 dashboard toggle
+## Status: PHASE 4A COMPLETE + T-026 + T-027 · apply 7 migrations + 1 dashboard toggle
 
 Phase 4A-1 (password reset + leave/archive group + archive challenge) is complete and
 Phase 4A-2 (report/block UI + account-deletion request UI) is now done too. All MVP-scope
@@ -13,10 +13,18 @@ account controls and trust/safety surfaces exist in code. Phase 4A migration als
 small fix: `create policy if not exists` (unsupported in Postgres for policies) replaced
 with `drop policy if exists + create policy`.
 
-T-026 (latest session): the Groups tab now exposes Create group + Join with code CTAs and a
-link to a new Archived groups screen; the create/join UI is shared between onboarding and
-the main app via `GroupCreateOrJoinForm` in `src/features/groups/ui/`. Owners can restore
-archived groups via a new `restore_group` RPC appended to W-019.
+T-026: the Groups tab now exposes Create group + Join with code CTAs and a link to a new
+Archived groups screen; the create/join UI is shared between onboarding and the main app
+via `GroupCreateOrJoinForm` in `src/features/groups/ui/`. Owners can restore archived
+groups via a new `restore_group` RPC appended to W-019.
+
+T-027 (latest session): fixed B-011 — group challenge verification was broken because
+only the creator was auto-joined into `challenge_participants`. Widened the
+`is_challenge_participant(uuid)` helper so group members of `mode='group'` challenges
+implicitly count as participants. Single helper change fixes all four affected RLS
+policies and three RPCs at once. `challenge_streak` softened to return null instead of
+raising for true outsiders; `getChallengeStreak` typed as `ChallengeStreak | null`.
+New migration `20260603000000_group_member_is_participant.sql` (W-022) — USER must apply.
 
 Latest session shipped a clean Phase 4A-1 slice: password reset + leave group + archive group
 + archive challenge. Phase 4A-2 (report/block UI + account deletion request UI) is deferred,
@@ -26,8 +34,9 @@ applies one SQL file. All checks green.
 **Pending USER actions (idempotent migrations + one dashboard toggle):**
 - W-014/W-015/W-016/W-017 — Phase 3 (verification, streaks, leaderboard, social).
 - W-018 — 4-digit invite codes.
-- **W-019** — Phase 4A (archive + trust/safety infra; this session).
-- **W-020** — Auth → URL Configuration → add `basta://reset-password` to Redirect URLs.
+- W-019 — Phase 4A (archive + trust/safety infra + restore_group).
+- **W-022** — Patch: treat group members as challenge participants (B-011 fix; this session).
+- W-020 — Auth → URL Configuration → add `basta://reset-password` to Redirect URLs.
 
 The full MVP loop now exists in code: register → group → challenge → submit proof (offline) →
 friend verifies → streak → group leaderboard, plus reactions + comments on each proof. Remaining

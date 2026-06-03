@@ -276,6 +276,57 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
 - **Status:** Open until applied. The Restore button on `app/group/archived.tsx` will fail
   with `function does not exist` until then.
 
+## [OPEN] W-022 — Apply patch migration: treat group members as challenge participants
+- **Date:** 2026-06-03 · **Area:** backend / Supabase
+- **What:** `supabase/migrations/20260603000000_group_member_is_participant.sql`
+  widens the `is_challenge_participant(uuid)` helper so that group members count as
+  participants for group-mode challenges, and softens `challenge_streak` to return null
+  instead of `42501` for true outsiders. Resolves B-011.
+- **Apply via:** Supabase Dashboard → SQL editor → paste the file's contents → Run.
+  Idempotent (CREATE OR REPLACE on both functions); order doesn't matter against
+  W-014/W-015/W-016/W-017/W-018/W-019.
+- **Smoke test after applying (verifies B-011 is gone):**
+  1. Account A and Account B are members of the same group.
+  2. Account A creates a **group** challenge in that group.
+  3. Account A submits a proof on the challenge (status → `pending_verification`).
+  4. Account B opens the same challenge.
+     - ✅ B sees A's submission in the list (no longer empty).
+     - ✅ No `getChallengeStreak failed: 42501 "not a participant"` in the console.
+     - ✅ B can tap the submission to view the proof photo (storage signed URL works).
+     - ✅ B sees the "Verify proof" button on A's pending submission and verifying
+       transitions it to `verified`.
+  5. A third account C, who is **not** in the group, still cannot read submissions or
+     verify (RLS for outsiders unchanged).
+- **Status:** Open until applied.
+
+## [RESOLVED] B-011 — Verifier locked out of group challenges (visible as `getChallengeStreak failed: 42501 "not a participant"`)
+- **Date:** 2026-06-03 · **Area:** backend / RLS
+- **Repro:** Two accounts (A, B) in the same group. A creates a group challenge and submits
+  proof. B opens the challenge → submissions list is empty, console shows
+  `[basta] getChallengeStreak failed: {"code":"42501","message":"not a participant"}`.
+- **Root cause:** `is_challenge_participant(p_challenge)` only checked
+  `challenge_participants` membership. Only the creator is auto-inserted there (via
+  `trg_challenges_add_creator`); other group members never get a row, so the helper
+  returned false for them. That helper gates:
+  * `submissions_select_participant` RLS
+  * `verifications_select_participant` RLS
+  * `storage_proof_media_select` storage RLS
+  * `verify_submission` RPC
+  * `challenge_streak` RPC (the visible error)
+  * `submit_proof` RPC
+  …so B was rejected by every read/verify gate at once.
+- **Fix:** widened the helper so that for `mode='group'` challenges, any
+  `group_members` row in the host group counts as participation. Single helper change
+  fixes every gate listed above. Solo and outsider behavior unchanged. Defensive tweak:
+  `challenge_streak` now returns null instead of raising `42501` for the rare true
+  outsider case; the client treats null as "no streak" and hides the streak cards.
+- **Migration:** `supabase/migrations/20260603000000_group_member_is_participant.sql`
+  (W-022).
+- **Client touch:** [src/features/challenges/api/index.ts](src/features/challenges/api/index.ts)
+  → `getChallengeStreak` return type changed to `ChallengeStreak | null`. The challenge
+  detail screen already guards on `streak.data ?` so null is rendered as "no streak."
+- **Commit:** `fix(challenges): treat group members as participants`.
+
 ## [OPEN] W-021 — Blocked-user filter is client-side and partial
 - **Date:** 2026-06-01 · **Area:** trust/safety / RLS
 - **What:** Phase 4A-2 ships a `useBlockedUserIds()` Set-based client-side filter and applies

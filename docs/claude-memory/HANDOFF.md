@@ -21,6 +21,74 @@
 
 ---
 
+## 2026-06-03 — Claude 1 / B-011 fix: treat group members as participants (T-027)
+
+**Did:** Fixed B-011 — in a group challenge, only the creator was auto-joined into
+`challenge_participants`, so every other group member (including the verifier) was
+treated as a non-participant. That tripped every read/verify/streak gate at once.
+
+**The 1-line root cause:** `is_challenge_participant(uuid)` only consulted
+`challenge_participants`; group-member implicit participation wasn't modeled.
+
+**The 1-helper fix:** widened the helper so that for `mode='group'` challenges any
+`group_members` row in the host group counts. Every gate already calls this helper, so
+the four RLS policies (`submissions_select_participant`, `verifications_select_participant`,
+`storage_proof_media_select`, `cp_select_in_challenge`) and the three RPCs
+(`verify_submission`, `submit_proof`, `challenge_streak`) are fixed without touching any
+of them. Outsiders (not in the group, no participant row) still get false.
+
+**Defensive tweak:** `challenge_streak` previously raised `42501 not a participant`;
+after the helper widening this path only fires for true outsiders, so changed it to
+`return null`. Client `getChallengeStreak` now returns `ChallengeStreak | null` and the
+challenge detail screen's `streak.data ? ...` guard already renders null as "no streak."
+
+**Files created:**
+- `supabase/migrations/20260603000000_group_member_is_participant.sql` — idempotent
+  CREATE OR REPLACE on both functions. **USER must apply (W-022)** — without it the bug
+  persists. No order constraint vs other Phase 3/4A migrations.
+
+**Files modified:**
+- `src/features/challenges/api/index.ts` — `getChallengeStreak` return type
+  `Promise<ChallengeStreak | null>` and explicit `if (data == null) return null;`
+  before mapping. No throw on the null path.
+
+**Smoke test (matches W-022 entry):**
+1. Account A and Account B in same group.
+2. A creates a group challenge in that group; A submits proof.
+3. B opens the challenge.
+   - ✅ B sees A's submission (was empty before).
+   - ✅ No `getChallengeStreak failed: 42501` in console.
+   - ✅ B can open the submission and view the photo.
+   - ✅ "Verify proof" button → tapping transitions A's submission to `verified`.
+4. Account C (not in group) → still no submissions, still cannot verify (unchanged).
+
+**Checks:** `npm run typecheck` ✅ · `npm run lint` ✅ · `npx expo-doctor` ✅ (18/18).
+
+**Branch / commit:** `mvp` @ <see post-commit hash>
+
+**Next up:**
+1. **User action (W-022):** apply the patch migration via Supabase Dashboard SQL editor.
+   The bug remains visible until then.
+2. **User action (still open: W-019):** Phase 4A migration including `restore_group`
+   from T-026.
+3. T-050 push notifications (gated by Expo Go → dev build/EAS) or Phase 5
+   quality/release (T-060/T-061/T-062).
+
+**Blockers / decisions needed:** None. The widening was intentionally surgical (one
+helper) to avoid policy/RPC churn.
+
+**Notes for next session:**
+- Don't reintroduce a "Join challenge" CTA for group members — group membership is now
+  treated as implicit participation by design (per the user's T-027 brief). A "Join
+  challenge" affordance would be confusing because there's nothing to join.
+- `join_challenge` RPC still exists and is fine — calling it for a group member is a
+  no-op (insert ... on conflict do nothing). It can remain for future "explicit opt-in"
+  semantics if we ever want to track committed vs implicit participants.
+- The leaderboard (`group_leaderboard`) ranks all group members; it was unaffected by
+  this change because it never depended on `is_challenge_participant`.
+
+---
+
 ## 2026-06-02 — Claude 1 / T-026: Main-app group create/join + archived group restore
 
 **Did:** Filled the UX gap where group create/join was only reachable during onboarding and

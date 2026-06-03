@@ -26,7 +26,8 @@ Basta_App/
 │       ├── 20260531200000_phase3_leaderboard.sql       # T-043: group_leaderboard() RPC (apply — W-016)
 │       ├── 20260531300000_phase3_social.sql            # T-041: reactions + comments tables/RPCs (apply — W-017)
 │       ├── 20260601000000_short_invite_codes.sql       # 4-digit invite codes (apply — W-018)
-│       └── 20260601100000_phase4a_user_control_safety.sql  # T-024/T-025/T-036 + 4A-2 prep tables (apply — W-019)
+│       ├── 20260601100000_phase4a_user_control_safety.sql  # T-024/T-025/T-036 + 4A-2 prep tables + restore_group (apply — W-019)
+│       └── 20260603000000_group_member_is_participant.sql  # T-027 / B-011: widen is_challenge_participant; soften challenge_streak (apply — W-022)
 ├── src/features/
 │   ├── auth/                     # T-020: PKCE email auth, useSession, secure-store tokens
 │   ├── onboarding/               # T-021/T-022: terms, profile setup, completeOnboarding
