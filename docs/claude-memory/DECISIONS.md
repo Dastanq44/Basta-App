@@ -138,3 +138,18 @@ Date · Status · Decision · Why · Consequences
   monetization. Architecture may leave thin placeholders (e.g. a `verification_source` column).
 - **Why:** Ship the accountability loop first; avoid scope creep that delays a usable product.
 - **Consequences:** Reviewers should push back on PRs that implement excluded features.
+
+## D-011 — Invite codes: high-entropy 12-char base62, case-sensitive   [Accepted]
+- **Date:** 2026-06-04
+- **Decision:** Group invite codes are **12 characters from `[A-Za-z0-9]`** (62^12 keyspace),
+  generated server-side from `gen_random_bytes` (`generate_invite_code()`), unique, and
+  **case-sensitive**, with a DB CHECK enforcing the format. This **supersedes the 4-digit numeric
+  codes** chosen for shareability (BUGS W-018) but which were brute-forceable (10,000 combinations).
+- **Why:** Join-by-code is the main way into a group; a 4-digit code lets anyone enumerate
+  0000–9999 and join arbitrary groups. 62^12 ≈ 3.2×10^21 makes guessing infeasible while staying
+  short enough to copy/paste/share.
+- **Consequences:** The join field is a plain text input (no number-pad), case preserved, copy via
+  long-press; `inviteCodeSchema = /^[A-Za-z0-9]{12}$/` (trim only — never case-fold). Migration
+  `20260604000000_secure_invite_codes.sql` (W-026); the `join_group_by_invite` RPC needed no change
+  (already an exact match). If friendlier sharing is wanted later, add deep-link invite URLs rather
+  than shortening the code.

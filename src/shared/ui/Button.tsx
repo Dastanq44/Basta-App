@@ -1,4 +1,5 @@
-import { ActivityIndicator, Pressable, type PressableProps, StyleSheet } from 'react-native';
+import type { ReactNode } from 'react';
+import { ActivityIndicator, Pressable, type PressableProps, StyleSheet, View } from 'react-native';
 import { Text } from './Text';
 import { useTheme } from './theme';
 
@@ -10,17 +11,21 @@ export type ButtonProps = Omit<PressableProps, 'children'> & {
   variant?: Variant;
   size?: Size;
   loading?: boolean;
+  /** Optional leading icon rendered before the label. */
+  icon?: ReactNode;
 };
 
 /**
  * Button primitive — the `{variant: value}[variant]` token lookup IS the cva pattern,
  * minus the web layer (DECISIONS.md D-005). Accessibility (role, ≥44pt target) is built in.
+ * Sleek-violet look: solid pills; the primary CTA gets a soft violet glow.
  */
 export function Button({
   label,
   variant = 'primary',
   size = 'md',
   loading = false,
+  icon,
   disabled,
   style,
   ...rest
@@ -38,16 +43,10 @@ export function Button({
     ghost: t.colors.foreground,
     destructive: t.colors.destructiveForeground,
   };
-  // Retro look: secondary is an OUTLINED pill (foreground-colored border), the rest are flat fills.
-  const borderColor: Record<Variant, string> = {
-    primary: 'transparent',
-    secondary: t.colors.foreground,
-    ghost: 'transparent',
-    destructive: 'transparent',
-  };
-  const borderWidth: Record<Variant, number> = { primary: 0, secondary: 1.5, ghost: 0, destructive: 0 };
-  const paddingVertical: Record<Size, number> = { sm: 10, md: 13, lg: 16 };
+  const paddingVertical: Record<Size, number> = { sm: 10, md: 14, lg: 17 };
   const isDisabled = disabled || loading;
+  // Soft violet lift under the primary CTA only (the rest stay flat).
+  const glow = variant === 'primary' && !isDisabled;
 
   return (
     <Pressable
@@ -59,24 +58,38 @@ export function Button({
         styles.base,
         {
           backgroundColor: bg[variant],
-          borderColor: borderColor[variant],
-          borderWidth: borderWidth[variant],
           paddingVertical: paddingVertical[size],
-          // Fully-rounded pill — the Retro button shape.
           borderRadius: t.radius.full,
           minHeight: t.minTapTarget,
-          opacity: isDisabled ? 0.5 : state.pressed ? 0.9 : 1,
+          opacity: isDisabled ? 0.5 : state.pressed ? 0.92 : 1,
           transform: [{ scale: state.pressed && !isDisabled ? 0.98 : 1 }],
         },
+        glow
+          ? {
+              shadowColor: t.colors.primary,
+              shadowOpacity: 0.35,
+              shadowRadius: 16,
+              shadowOffset: { width: 0, height: 8 },
+              elevation: 6,
+            }
+          : null,
         typeof style === 'function' ? style(state) : style,
       ]}
       {...rest}
     >
-      {loading ? <ActivityIndicator color={fg[variant]} /> : <Text style={{ color: fg[variant], fontWeight: '600' }}>{label}</Text>}
+      {loading ? (
+        <ActivityIndicator color={fg[variant]} />
+      ) : (
+        <View style={styles.content}>
+          {icon ? <View>{icon}</View> : null}
+          <Text style={{ color: fg[variant], fontWeight: '700' }}>{label}</Text>
+        </View>
+      )}
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  base: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16 },
+  base: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
+  content: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
 });

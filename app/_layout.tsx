@@ -5,7 +5,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { queryClient } from '@/shared/lib/queryClient';
-import { ThemeProvider, useTheme } from '@/shared/ui';
+import { ThemeProvider, useTheme, useThemeMode } from '@/shared/ui';
 import { isAtTarget, useOnboardingGate } from '@/navigation/guards';
 import { initOffline } from '@/offline';
 
@@ -31,12 +31,18 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
-          <StatusBar style="auto" />
+          <ThemedStatusBar />
           <RootNav />
         </ThemeProvider>
       </QueryClientProvider>
     </SafeAreaProvider>
   );
+}
+
+// Status bar content color follows the resolved theme (manual override aware, not just the OS).
+function ThemedStatusBar() {
+  const { scheme } = useThemeMode();
+  return <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />;
 }
 
 function RootNav() {

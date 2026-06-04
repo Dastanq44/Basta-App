@@ -288,6 +288,21 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
 - **Status:** Open until applied. Tapping a leaderboard row as owner will fail with
   `function does not exist` until then.
 
+## [OPEN] W-026 — Apply migration: secure (12-char) invite codes
+- **Date:** 2026-06-04 · **Area:** backend / Supabase / security
+- **What:** `supabase/migrations/20260604000000_secure_invite_codes.sql` replaces the weak
+  4-digit invite codes (W-018 — 10,000 combinations, brute-forceable) with **12-char base62**
+  `[A-Za-z0-9]` codes (62^12 ≈ 3.2×10^21) generated from `gen_random_bytes`. Adds
+  `generate_invite_code()`, switches the `groups.invite_code` default, regenerates any code that
+  isn't already 12-char base62, and adds a CHECK constraint so a weak code can't be inserted
+  again. Codes are **case-sensitive**.
+- **Apply via:** Supabase Dashboard → SQL editor → paste → Run. Idempotent (the regen only
+  touches non-conforming codes; the CHECK is dropped-then-added). **Apply this INSTEAD of W-018.**
+- **Side effect:** existing 4-digit codes change — share the new 12-char code. The
+  `join_group_by_invite` RPC is unchanged (already an exact `invite_code = p_code` comparison).
+- **Decision:** see DECISIONS.md **D-011**.
+- **Status:** Open until applied.
+
 ## [RESOLVED] B-012 — Edit-group input rehydrated when backspaced to empty
 - **Date:** 2026-06-03 · **Area:** frontend / `app/group/[id]/edit.tsx`
 - **What:** The original hydration effect re-seeded `name` from `group.name` whenever
@@ -412,7 +427,10 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
   detects a missing `code` param and shows a clear hint pointing here.
 - **Status:** Open until configured.
 
-## [OPEN] W-018 — Apply migration to switch invite codes to 4-digit numeric
+## [SUPERSEDED by W-026] W-018 — switch invite codes to 4-digit numeric
+> **Superseded 2026-06-04 by W-026** (secure 12-char codes). Do NOT apply W-018 separately —
+> W-026 produces strong codes and upgrades any weak ones. Kept below for history. 4-digit codes
+> were brute-forceable (10,000 combinations); see D-011.
 - **Date:** 2026-05-31 · **Area:** backend / Supabase
 - **What:** New migration `supabase/migrations/20260601000000_short_invite_codes.sql` swaps
   group invite codes from 12-char hex to **4-digit numeric** (e.g. `1023`, `0490`). Defines

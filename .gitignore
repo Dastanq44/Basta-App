@@ -113,3 +113,11 @@ ehthumbs.db
 # Temporary
 *.orig
 *.tmp
+
+# Skills CLI artifacts — account-local (re)installs via `npx skills add`.
+# The shared project skill `.claude/skills/mobile-app-architect/` stays committed; CLI-installed
+# skills, their Claude Code symlinks, and the lockfile are kept out of the app repo.
+.agents/
+skills-lock.json
+.claude/skills/find-skills/
+.claude/skills/high-end-visual-design/

@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { type Href, useRouter } from 'expo-router';
-import { Button, Card, Screen, Text, useTheme } from '@/shared/ui';
+import { Button, Card, Screen, SegmentedControl, Text, useTheme, useThemeMode } from '@/shared/ui';
 import { useSession, useSignOut } from '@/features/auth';
 import { useRequestAccountDeletion } from '@/features/moderation';
 
 export default function ProfileScreen() {
   const t = useTheme();
+  const { mode, setMode } = useThemeMode();
   const router = useRouter();
   const session = useSession();
   const signOut = useSignOut();
@@ -68,6 +69,24 @@ export default function ProfileScreen() {
             <Text variant="body">{email ?? '—'}</Text>
           </View>
         </Card>
+
+        <View style={{ gap: t.spacing.sm }}>
+          <Text variant="heading">Appearance</Text>
+          <SegmentedControl
+            options={
+              [
+                { label: 'System', value: 'system' },
+                { label: 'Light', value: 'light' },
+                { label: 'Dark', value: 'dark' },
+              ] as const
+            }
+            value={mode}
+            onChange={setMode}
+          />
+          <Text variant="caption">
+            Choose light or dark, or follow your device. Saved on this device only.
+          </Text>
+        </View>
 
         <View style={{ gap: t.spacing.sm }}>
           <Text variant="heading">Account</Text>

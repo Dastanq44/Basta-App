@@ -3,7 +3,14 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-06-03 — by: Claude 1 / T-030 (group leader badge + transferable leadership)_
+_Last updated: 2026-06-04 — by: Claude 2 (UI refresh "sleek violet" + light/dark toggle; secure 12-char invite codes, W-026)_
+
+> **2026-06-04 UI refresh:** app restyled to a violet light+dark theme (user-selectable in
+> Profile → Appearance, persisted via SecureStore — no backend). New token palette + 8 new
+> `src/shared/ui` primitives (StatTile/Chip/SegmentedControl/ProgressBar/ListRow/Avatar/Badge/Icon);
+> restyled tab bar + Today/Challenges/Groups/Profile. Detail screens inherit the theme but aren't
+> bespoke-restyled yet. Invite codes hardened to 12-char base62 (W-026, supersedes W-018).
+> **Committed to `mvp` this session and pushed to `origin/mvp`.**
 
 ## Status: PHASE 4A COMPLETE + T-026..T-030 · apply 10 migrations + 1 dashboard toggle
 
@@ -57,7 +64,7 @@ applies one SQL file. All checks green.
 
 **Pending USER actions (idempotent migrations + one dashboard toggle):**
 - W-014/W-015/W-016/W-017 — Phase 3 (verification, streaks, leaderboard, social).
-- W-018 — 4-digit invite codes.
+- **W-026** — Secure 12-char invite codes (supersedes W-018 — apply this, NOT W-018).
 - W-019 — Phase 4A (archive + trust/safety infra + restore_group).
 - W-022 — Patch: treat group members as challenge participants (B-011 fix).
 - W-023 — Patch: surface submission author display name (T-028).

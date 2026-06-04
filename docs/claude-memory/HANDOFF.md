@@ -21,6 +21,85 @@
 
 ---
 
+## 2026-06-04 — Claude 2 / UI refresh ("sleek violet") + secure invite codes
+
+**Did:** A full visual redesign of the app (from a user-supplied reference) + hardening of group
+invite codes. Both green: `npm run typecheck` ✅ · `npm run lint` ✅. **The UI work touched NO
+backend**; the only backend change is the invite-code migration (user explicitly asked for it).
+
+### Part 1 — UI refresh (violet, light + dark, switchable in settings)
+- **New tokens** (`src/shared/ui/theme/tokens.ts`): vivid violet accent (`#6C5CE7` light /
+  `#7C6CFF` dark), soft off-white light canvas + deep indigo-navy dark canvas, **system sans**
+  (dropped the Georgia serif), softer diffused shadows, added `radius.xxl` / `fontSize.xxxl` and
+  tokens `primarySoft` / `streak`. Every screen inherits via the token system (D-005).
+- **User-selectable theme mode** (light / dark / system), persisted on-device via
+  `expo-secure-store` — **no backend, no new deps**. `src/shared/lib/themePreference.ts` + a
+  rewritten `ThemeProvider` exposing `useThemeMode()`; theme-aware StatusBar. Toggle UI is in
+  **Profile → Appearance** (SegmentedControl).
+- **8 new dep-free primitives** (`src/shared/ui/`): `StatTile, Chip, SegmentedControl,
+  ProgressBar, ListRow, Avatar, Badge, Icon` (icons composed from RN Views — no icon library,
+  matching the `CrownIcon` precedent; `@expo/vector-icons` is NOT installed). Restyled `Text`
+  (sans, +`subtitle`/`label`), `Button` (violet pill + soft glow + optional `icon`), `Card`
+  (rounded + hairline border).
+- **Restyled the 4 tab screens:** tab bar (dep-free icons + violet active, native header OFF),
+  Today (new "home": greeting, momentum hero, stat tiles bound to **real** counts, quick actions),
+  Challenges + Groups (avatars / icon tiles / chevrons), Profile (+ theme toggle).
+- **NOT restyled bespoke yet (they inherit tokens though):** detail screens — group leaderboard
+  ("Лидеры"), challenge detail, submission/verify. Offered as follow-up.
+- **Scope guard:** the reference shows XP/levels (out of MVP, D-006). I replicated the *look* but
+  bound stats to **real** data (active-challenge / group counts) — did NOT build a fake XP system.
+
+### Part 2 — Secure invite codes (supersedes W-018)
+- 4-digit codes = 10,000 combos = brute-forceable (anyone could enumerate and join groups).
+  Replaced with **12-char base62 `[A-Za-z0-9]`** (62^12 ≈ 3.2×10^21), **case-sensitive**,
+  crypto-random (`gen_random_bytes`).
+- New migration `supabase/migrations/20260604000000_secure_invite_codes.sql` (**W-026**):
+  `generate_invite_code()` + new column default + regen of weak codes + a DB CHECK constraint so a
+  weak code can never be inserted again. **Join RPC unchanged** — it already does an exact
+  `invite_code = p_code` comparison, so case-sensitivity worked already.
+- Client: `inviteCodeSchema` → `/^[A-Za-z0-9]{12}$/` (trim only, case preserved);
+  `GroupCreateOrJoinForm` join input is now a plain text field (no number-pad, `autoCapitalize
+  none`, maxLength 12); `app/group/[id].tsx` shows the code as a selectable chip
+  ("tap & hold to copy"). Decision recorded as **D-011**.
+
+**USER actions:**
+- **Apply W-026** (`20260604000000_secure_invite_codes.sql`). You can **skip W-018** — it's
+  superseded, and W-026 upgrades any existing weak codes. All other pending migrations
+  (W-014..W-017, W-019, W-022..W-025) + dashboard toggles (W-020, W-008) still stand.
+
+**Changed files:**
+- Design system: `src/shared/ui/theme/{tokens,ThemeProvider,index}.ts(x)`, `src/shared/ui/index.ts`,
+  `Text.tsx`, `Button.tsx`, `Card.tsx`; NEW `src/shared/ui/{Avatar,Badge,Chip,Icon,ListRow,ProgressBar,SegmentedControl,StatTile}.tsx`;
+  NEW `src/shared/lib/themePreference.ts`.
+- Screens: `app/_layout.tsx`, `app/(tabs)/{_layout,index,challenges,groups,profile}.tsx`, `app/group/[id].tsx`.
+- Invite codes: `src/features/groups/model/schemas.ts`, `src/features/groups/ui/GroupCreateOrJoinForm.tsx`,
+  NEW `supabase/migrations/20260604000000_secure_invite_codes.sql`.
+- Docs: all six `docs/claude-memory/*`.
+
+**Tests run:** `npm run typecheck` ✅ · `npm run lint` ✅ (both green after all changes).
+**Tests NOT run:** unit/component/E2E — none configured (W-007, no test runner). The app was NOT
+launched on a device this session — the new UI (violet light/dark + theme toggle) is unverified
+visually at runtime.
+
+**Known issues / warnings for the next Claude:**
+- **Apply migration W-026** before trusting invite-code join. The rest of the backlog still stands
+  (W-014..W-017, W-019, W-022..W-025; dashboard W-020/W-008). **Skip W-018** (superseded).
+- UI not run on-device — verify the themes + Profile→Appearance toggle visually.
+- Icons are dep-free `View` art (`Icon.tsx`), not a vector set (simple geometric glyphs). For
+  crisper icons add `react-native-svg` (Expo-Go compatible) or `@expo/vector-icons` later.
+- Detail screens (group leaderboard, challenge, submission, verify, onboarding) inherit the new
+  theme via tokens but were NOT bespoke-restyled — layout polish needed to fully match the ref.
+- Skill-CLI artifacts (`.agents/`, `skills-lock.json`, `.claude/skills/{find-skills,
+  high-end-visual-design}/`) are **gitignored** (account-local). Re-install via `npx skills add`.
+
+**Branch / commit:** `mvp` — committed this session (see `git log`); pushed to `origin/mvp`.
+
+**Next up:** (1) apply W-026; (2) optional — restyle the detail screens (leaderboard avatars +
+crown, challenge, invite) to match the reference pixel-closer; (3) the standing MVP backlog
+(T-012 analytics, T-060 tests, T-061 EAS/CI → which unblocks T-050 push).
+
+---
+
 ## 2026-06-03 — Claude 1 / T-030: group leader badge + transferable leadership (+ B-012 fix)
 
 **Did:** Two things in one PR — fixed an edit-group input bug (B-012) and added a real

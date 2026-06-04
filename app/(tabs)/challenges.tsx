@@ -1,6 +1,6 @@
 import { FlatList, Pressable, RefreshControl, View } from 'react-native';
 import { Link, useRouter } from 'expo-router';
-import { Button, Card, Screen, Text, useTheme } from '@/shared/ui';
+import { Button, Card, Icon, Screen, Text, useTheme } from '@/shared/ui';
 import { useChallenges } from '@/features/challenges';
 import type { Challenge } from '@/entities';
 
@@ -15,7 +15,12 @@ export default function ChallengesTab() {
       <View style={{ padding: t.spacing.lg, gap: t.spacing.md }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <Text variant="title">Challenges</Text>
-          <Button label="+ New" size="sm" onPress={() => router.push('/challenge/new')} />
+          <Button
+            label="New"
+            size="sm"
+            icon={<Icon name="plus" size={15} color={t.colors.primaryForeground} />}
+            onPress={() => router.push('/challenge/new')}
+          />
         </View>
         {isError ? (
           <Text variant="caption" style={{ color: t.colors.destructive }}>
@@ -52,11 +57,28 @@ function ChallengeRow({ challenge }: { challenge: Challenge }) {
     <Link href={{ pathname: '/challenge/[id]', params: { id: challenge.id } }} asChild>
       <Pressable accessibilityRole="button">
         <Card>
-          <View style={{ gap: t.spacing.xs }}>
-            <Text variant="heading">{challenge.title}</Text>
-            <Text variant="muted">
-              {challenge.category} · {challenge.mode} · {challenge.durationDays} days
-            </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.md }}>
+            <View
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 14,
+                backgroundColor: t.colors.primarySoft,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Icon name="tasks" size={22} color={t.colors.primary} />
+            </View>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text variant="subtitle" numberOfLines={1}>
+                {challenge.title}
+              </Text>
+              <Text variant="caption">
+                {challenge.category} · {challenge.mode} · {challenge.durationDays} days
+              </Text>
+            </View>
+            <Icon name="chevron" size={18} color={t.colors.mutedForeground} />
           </View>
         </Card>
       </Pressable>

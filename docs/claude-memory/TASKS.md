@@ -30,6 +30,8 @@
 | T-013 | DONE | Theming (light/dark via tokens), safe areas (Screen), accessibility baseline (≥44pt targets, roles in primitives). |
 | T-014 | DONE | Pre-commit secret-scan hook in `.githooks/pre-commit` (gitleaks if present, else regex) — enforces W-006. Enable per clone: `git config core.hooksPath .githooks`. Husky/lint-staged optional once JS toolchain exists. |
 | T-016 | DONE | Two-Claude shared config: repo `.claude/skills/mobile-app-architect`, `.claude/settings.json`, `scripts/bootstrap-claude.md` |
+| T-070 | DONE | UI refresh ("sleek violet"): violet light+dark theme + user theme toggle (light/dark/system, SecureStore-persisted, no backend) + 8 new `src/shared/ui` primitives (StatTile/Chip/SegmentedControl/ProgressBar/ListRow/Avatar/Badge/Icon) + restyled tab bar & 4 tab screens. Token-driven (D-005). Detail screens inherit but aren't bespoke-restyled yet. |
+| T-071 | DONE | Security: invite codes → 12-char base62 `[A-Za-z0-9]` (supersedes 4-digit W-018), crypto-random + DB CHECK, case-sensitive. Migration W-026 (D-011). |
 
 ### Auth & onboarding
 | ID | Status | Task |

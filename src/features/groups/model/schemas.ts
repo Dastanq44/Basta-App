@@ -6,13 +6,14 @@ export const groupNameSchema = z
   .min(1, 'Group name is required')
   .max(60, 'Group name must be at most 60 characters');
 
-// Invite codes are 4-digit numeric (e.g. "1023", "0490") since the
-// 20260601 follow-up migration. Trim only — no lowercasing (digits aren't case-sensitive).
-export const INVITE_CODE_LENGTH = 4;
+// Invite codes are 12 characters from [A-Za-z0-9] (62^12 keyspace) since the 20260604
+// security migration. They are CASE-SENSITIVE — trim only, never upper/lower-case them,
+// otherwise the exact server-side comparison (`invite_code = p_code`) won't match.
+export const INVITE_CODE_LENGTH = 12;
 export const inviteCodeSchema = z
   .string()
   .trim()
-  .regex(new RegExp(`^\\d{${INVITE_CODE_LENGTH}}$`), `Enter the ${INVITE_CODE_LENGTH}-digit code`);
+  .regex(/^[A-Za-z0-9]{12}$/, `Enter the ${INVITE_CODE_LENGTH}-character invite code`);
 
 export const createGroupInput = z.object({ name: groupNameSchema });
 export type CreateGroupInput = z.infer<typeof createGroupInput>;

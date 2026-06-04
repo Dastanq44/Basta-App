@@ -96,12 +96,13 @@ export function GroupCreateOrJoinForm({
         <Input
           label="Invite code"
           value={code}
-          onChangeText={(v) => setCode(v.replace(/\D/g, '').slice(0, INVITE_CODE_LENGTH))}
+          // Strip anything outside [A-Za-z0-9]; keep case (codes are case-sensitive).
+          onChangeText={(v) => setCode(v.replace(/[^A-Za-z0-9]/g, '').slice(0, INVITE_CODE_LENGTH))}
           autoCapitalize="none"
           autoCorrect={false}
-          keyboardType="number-pad"
+          autoComplete="off"
           maxLength={INVITE_CODE_LENGTH}
-          placeholder={'0'.repeat(INVITE_CODE_LENGTH)}
+          placeholder="12-character code"
           error={fieldError ?? undefined}
           editable={!submitting}
         />

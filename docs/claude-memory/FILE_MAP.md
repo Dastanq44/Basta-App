@@ -30,7 +30,8 @@ Basta_App/
 │       ├── 20260603000000_group_member_is_participant.sql  # T-027 / B-011: widen is_challenge_participant; soften challenge_streak (apply — W-022)
 │       ├── 20260603100000_submission_authors.sql           # T-028: list_challenge_submissions + get_submission_with_author RPCs (apply — W-023)
 │       ├── 20260603200000_update_group_and_challenge.sql   # T-029: update_group + update_challenge RPCs (apply — W-024)
-│       └── 20260603300000_transfer_group_leadership.sql    # T-030: transfer_group_leadership RPC (apply — W-025)
+│       ├── 20260603300000_transfer_group_leadership.sql    # T-030: transfer_group_leadership RPC (apply — W-025)
+│       └── 20260604000000_secure_invite_codes.sql          # W-026: 12-char base62 invite codes (apply; supersedes W-018)
 ├── src/features/
 │   ├── auth/                     # T-020: PKCE email auth, useSession, secure-store tokens
 │   ├── onboarding/               # T-021/T-022: terms, profile setup, completeOnboarding
@@ -158,6 +159,8 @@ app.config.ts  eas.json  package.json                                           
 | Leaderboard function | `supabase/migrations/*_leaderboard.sql` | planned |
 | Design tokens | `src/shared/ui/theme/tokens.ts` | live |
 | Crown icon primitive | `src/shared/ui/CrownIcon.tsx` | live (T-030) |
+| Design-system primitives (2026-06 UI refresh) | `src/shared/ui/{StatTile,Chip,SegmentedControl,ProgressBar,ListRow,Avatar,Badge,Icon}.tsx` | live |
+| Theme mode (light/dark/system) + persistence | `src/shared/ui/theme/ThemeProvider.tsx` · `src/shared/lib/themePreference.ts` | live |
 | Reusable group create/join form | `src/features/groups/ui/GroupCreateOrJoinForm.tsx` | live (T-026) |
 | Group create/join modal route | `app/group/join-or-create.tsx` | live (T-026) |
 | Archived groups screen | `app/group/archived.tsx` | live (T-026) |

@@ -1,6 +1,6 @@
 import { FlatList, Pressable, RefreshControl, View } from 'react-native';
 import { type Href, useRouter } from 'expo-router';
-import { Button, Card, Screen, Text, useTheme } from '@/shared/ui';
+import { Avatar, Button, Card, Icon, Screen, Text, useTheme } from '@/shared/ui';
 import { useMyArchivedGroups, useMyGroups } from '@/features/groups';
 import type { Group } from '@/entities';
 
@@ -35,7 +35,12 @@ export default function GroupsScreen() {
               }}
             >
               <Text variant="title">Groups</Text>
-              <Button label="+ New" size="sm" onPress={() => goCreateOrJoin('create')} />
+              <Button
+                label="New"
+                size="sm"
+                icon={<Icon name="plus" size={15} color={t.colors.primaryForeground} />}
+                onPress={() => goCreateOrJoin('create')}
+              />
             </View>
             <View style={{ flexDirection: 'row', gap: t.spacing.sm }}>
               <View style={{ flex: 1 }}>
@@ -99,14 +104,19 @@ export default function GroupsScreen() {
 }
 
 function GroupRow({ group, onPress }: { group: Group; onPress: () => void }) {
+  const t = useTheme();
   return (
     <Pressable onPress={onPress} accessibilityRole="button">
       <Card>
-        <View
-          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
-        >
-          <Text variant="heading">{group.name}</Text>
-          <Text variant="muted">View leaderboard ›</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.md }}>
+          <Avatar name={group.name} size={44} />
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text variant="subtitle" numberOfLines={1}>
+              {group.name}
+            </Text>
+            <Text variant="caption">View leaderboard</Text>
+          </View>
+          <Icon name="chevron" size={18} color={t.colors.mutedForeground} />
         </View>
       </Card>
     </Pressable>

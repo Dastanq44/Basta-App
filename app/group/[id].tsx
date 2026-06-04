@@ -129,8 +129,26 @@ export default function GroupScreen() {
             {group?.inviteCode ? (
               <Card>
                 <Text variant="muted">Invite code</Text>
-                <Text variant="title" style={{ letterSpacing: 1 }}>{group.inviteCode}</Text>
-                <Text variant="caption">Share this so a friend can join the group.</Text>
+                <View
+                  style={{
+                    marginTop: t.spacing.xs,
+                    alignSelf: 'flex-start',
+                    backgroundColor: t.colors.primarySoft,
+                    borderRadius: t.radius.md,
+                    paddingHorizontal: t.spacing.md,
+                    paddingVertical: t.spacing.sm,
+                  }}
+                >
+                  <Text
+                    selectable
+                    style={{ fontSize: t.fontSize.lg, fontWeight: '700', color: t.colors.primary, letterSpacing: 1.5 }}
+                  >
+                    {group.inviteCode}
+                  </Text>
+                </View>
+                <Text variant="caption" style={{ marginTop: t.spacing.xs }}>
+                  Share this so a friend can join. Tap &amp; hold to copy.
+                </Text>
               </Card>
             ) : null}
             <Text variant="heading">Leaderboard</Text>

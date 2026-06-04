@@ -1,15 +1,14 @@
 // Semantic design tokens (shadcn mindset, adapted to native — see DECISIONS.md D-005).
 // Components reference semantic names (primary, mutedForeground, …), never raw hex.
-// Light/dark are the same token shape with different values.
+// Light/dark share one token shape with different values; the user picks
+// light / dark / system and the choice is persisted — see ThemeProvider + useThemeMode.
 //
-// THEME = Retro.app-inspired editorial minimal (user reference, 2026-05-31):
-//   crisp white, near-black ink, a bold SERIF display face for titles/headings, sans body,
-//   OUTLINED pill buttons (secondary), soft gray rounded tiles, ONE bright blue accent
-//   (avatars / links / selected / "pending"), and red for destructive/notifications.
-// Rebrand = edit the hex here. NOTE: the serif is the platform serif (Georgia/serif), zero-dep;
-// swap to an exact display face (e.g. Instrument Serif / Playfair) via expo-google-fonts later.
+// THEME = "Sleek violet" (2026-06, from a user-supplied reference): friendly geometric
+// SANS (system font, zero assets), a vivid violet accent (#6C5CE7) on a soft off-white
+// canvas (light) or a deep indigo-navy canvas (dark), rounded cards with a soft diffused
+// lift, fully-rounded pill buttons, and warm stat accents (orange streak, green done,
+// gold rank). Rebrand = edit the hex here.
 
-import { Platform } from 'react-native';
 import type { ViewStyle } from 'react-native';
 
 export type ColorTokens = {
@@ -19,6 +18,8 @@ export type ColorTokens = {
   cardForeground: string;
   primary: string;
   primaryForeground: string;
+  /** Tinted violet surface for selected rows, filter chips, icon tiles. */
+  primarySoft: string;
   secondary: string;
   secondaryForeground: string;
   muted: string;
@@ -29,6 +30,9 @@ export type ColorTokens = {
   successForeground: string;
   warning: string;
   warningForeground: string;
+  /** Streak / flame accent (the "X days in a row" stat). */
+  streak: string;
+  streakForeground: string;
   destructive: string;
   destructiveForeground: string;
   border: string;
@@ -37,10 +41,10 @@ export type ColorTokens = {
 
 export type ThemeTokens = {
   colors: ColorTokens;
-  radius: { sm: number; md: number; lg: number; xl: number; full: number };
+  radius: { sm: number; md: number; lg: number; xl: number; xxl: number; full: number };
   spacing: { xs: number; sm: number; md: number; lg: number; xl: number; xxl: number };
-  fontSize: { xs: number; sm: number; md: number; lg: number; xl: number; xxl: number };
-  /** Type faces: `display` = serif for titles/headings (the Retro look); `body` = system sans. */
+  fontSize: { xs: number; sm: number; md: number; lg: number; xl: number; xxl: number; xxxl: number };
+  /** Type faces. Both undefined = platform system sans (SF Pro / Roboto). Weight + tracking carry the style. */
   fonts: { display?: string; body?: string };
   /** Elevation presets — RN shadow style objects (iOS shadow* + Android elevation). */
   shadow: { sm: ViewStyle; md: ViewStyle; lg: ViewStyle };
@@ -48,68 +52,72 @@ export type ThemeTokens = {
   minTapTarget: number;
 };
 
-const radius = { sm: 8, md: 12, lg: 16, xl: 24, full: 999 } as const;
+const radius = { sm: 10, md: 14, lg: 18, xl: 24, xxl: 30, full: 999 } as const;
 const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32, xxl: 48 } as const;
-const fontSize = { xs: 12, sm: 13, md: 15, lg: 18, xl: 22, xxl: 32 } as const;
+const fontSize = { xs: 12, sm: 13, md: 15, lg: 18, xl: 22, xxl: 30, xxxl: 40 } as const;
 const minTapTarget = 44;
 
-const fonts: ThemeTokens['fonts'] = {
-  // Platform serif — close in spirit to Retro's editorial display face, no font asset needed.
-  display: Platform.select({ ios: 'Georgia', android: 'serif', default: 'Georgia, serif' }),
-  body: undefined, // system sans
-};
+// System sans on both faces — native, premium, zero font assets. Swap to a display face
+// (e.g. Plus Jakarta Sans / Nunito) via expo-google-fonts later if more personality is wanted.
+const fonts: ThemeTokens['fonts'] = { display: undefined, body: undefined };
 
-// Soft, restrained elevation (Retro is mostly flat — cards get a faint lift, buttons stay flat).
+// Soft, diffused, slightly violet-tinted elevation (premium look — never a harsh black drop shadow).
 const shadow = {
-  sm: { shadowColor: '#000000', shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
-  md: { shadowColor: '#000000', shadowOpacity: 0.08, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 6 },
-  lg: { shadowColor: '#000000', shadowOpacity: 0.12, shadowRadius: 28, shadowOffset: { width: 0, height: 12 }, elevation: 12 },
+  sm: { shadowColor: '#1A1340', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
+  md: { shadowColor: '#1A1340', shadowOpacity: 0.1, shadowRadius: 24, shadowOffset: { width: 0, height: 10 }, elevation: 6 },
+  lg: { shadowColor: '#1A1340', shadowOpacity: 0.16, shadowRadius: 36, shadowOffset: { width: 0, height: 18 }, elevation: 12 },
 } satisfies ThemeTokens['shadow'];
 
 export const lightColors: ColorTokens = {
-  background: '#FFFFFF',
-  foreground: '#0A0A0A',
+  background: '#F4F5F8', // soft off-white page (cards pop white on top)
+  foreground: '#16161E', // near-black ink
   card: '#FFFFFF',
-  cardForeground: '#0A0A0A',
-  primary: '#0A0A0A', // near-black: solid CTA pill (white text)
+  cardForeground: '#16161E',
+  primary: '#6C5CE7', // vivid violet — primary CTA + selected + accents
   primaryForeground: '#FFFFFF',
-  secondary: '#FFFFFF', // outlined pill — Button draws the foreground-colored border
-  secondaryForeground: '#0A0A0A',
-  muted: '#F1F1F2', // soft gray tiles
-  mutedForeground: '#9A9A9F', // light gray secondary text
-  accent: '#0A99F2', // the one bright blue (avatars / links / selected / pending)
+  primarySoft: '#ECE9FE', // violet tint (selected row / chip / icon tile bg)
+  secondary: '#EEEEF3', // soft gray pill (inactive chips, secondary button)
+  secondaryForeground: '#16161E',
+  muted: '#EFEFF4',
+  mutedForeground: '#85858F',
+  accent: '#6C5CE7',
   accentForeground: '#FFFFFF',
-  success: '#15A148',
+  success: '#22C55E',
   successForeground: '#FFFFFF',
-  warning: '#D98309',
+  warning: '#F5A623', // gold (rank / trophy)
   warningForeground: '#FFFFFF',
-  destructive: '#FF3B30', // iOS/Retro red (notifications, reject)
+  streak: '#FF7A1A', // orange (flame / days-in-a-row)
+  streakForeground: '#FFFFFF',
+  destructive: '#FF3B30',
   destructiveForeground: '#FFFFFF',
-  border: '#E3E3E5',
-  ring: '#0A99F2',
+  border: '#E7E7EE',
+  ring: '#6C5CE7',
 };
 
 export const darkColors: ColorTokens = {
-  background: '#0B0B0B',
-  foreground: '#FAFAFA',
-  card: '#161616',
-  cardForeground: '#FAFAFA',
-  primary: '#FAFAFA', // inverts in dark: white pill, black text
-  primaryForeground: '#0B0B0B',
-  secondary: '#0B0B0B', // outlined pill (border is foreground = near-white)
-  secondaryForeground: '#FAFAFA',
-  muted: '#1C1C1E',
-  mutedForeground: '#8E8E93',
-  accent: '#0A99F2',
+  background: '#131120', // deep indigo-navy (not pure black — matches the reference)
+  foreground: '#F3F2FA',
+  card: '#1E1B2D', // slightly lifted navy-violet surface
+  cardForeground: '#F3F2FA',
+  primary: '#7C6CFF', // brighter violet for contrast on dark
+  primaryForeground: '#FFFFFF',
+  primarySoft: '#2A2542',
+  secondary: '#272335',
+  secondaryForeground: '#F3F2FA',
+  muted: '#221F31',
+  mutedForeground: '#9A96AD',
+  accent: '#7C6CFF',
   accentForeground: '#FFFFFF',
-  success: '#3FB95B',
+  success: '#34D27B',
   successForeground: '#06230F',
-  warning: '#E0A312',
+  warning: '#F5B027',
   warningForeground: '#211603',
+  streak: '#FF8A42',
+  streakForeground: '#2A1402',
   destructive: '#FF453A',
   destructiveForeground: '#FFFFFF',
-  border: '#2A2A2C',
-  ring: '#0A99F2',
+  border: '#2C2841',
+  ring: '#7C6CFF',
 };
 
 export const lightTheme: ThemeTokens = { colors: lightColors, radius, spacing, fontSize, fonts, shadow, minTapTarget };
