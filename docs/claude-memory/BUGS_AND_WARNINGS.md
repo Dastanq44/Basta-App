@@ -276,6 +276,30 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
 - **Status:** Open until applied. The Restore button on `app/group/archived.tsx` will fail
   with `function does not exist` until then.
 
+## [OPEN] W-027 — Apply patch migration: challenge today/streaks/redact
+- **Date:** 2026-06-04 · **Area:** backend / Supabase
+- **What:** `supabase/migrations/20260604100000_challenge_today_and_redact.sql` adds three
+  SECURITY DEFINER RPCs feeding the revamped challenge detail screen:
+  * `get_my_today_submission(p_challenge_id)` — fixes the day-rollover bug. Previously
+    `getMyTodaySubmission` returned the **latest** submission regardless of day, so after
+    midnight with no new submission the button still said "Add another (replaces today)"
+    referencing yesterday's row. The new RPC computes today's `challenge_day` per the
+    caller's profile timezone (matches `submit_proof` math exactly) and returns only the
+    matching row.
+  * `list_challenge_streaks(p_challenge_id)` — per-participant `{current, longest,
+    today_done}` for the "Other contestants" ribbon. Group: every group member. Solo:
+    just the caller. Participant-gated (uses the W-022 widened helper).
+  * `redact_my_submission(p_submission_id, p_media_path, p_comment)` — author-only
+    in-place edit. Group: locked when status='verified'; otherwise clears all
+    `verifications` votes and resets status to `pending_verification` so the new content
+    is re-verified. Solo: only same-day edits (challenge_day must match the caller's
+    today). Not-archived guard.
+- **Apply via:** Supabase Dashboard → SQL editor → paste → Run. Idempotent
+  (CREATE OR REPLACE on all three). No ordering vs other open migrations.
+- **Status:** Open until applied. Until then: the challenge detail screen falls through to
+  error states (RPCs `does not exist`); the Edit submission button fails on tap; the
+  contestants ribbon stays hidden (RPC errors silently in the query).
+
 ## [OPEN] W-025 — Apply patch migration: transfer group leadership
 - **Date:** 2026-06-03 · **Area:** backend / Supabase
 - **What:** `supabase/migrations/20260603300000_transfer_group_leadership.sql` adds the

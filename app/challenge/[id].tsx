@@ -1,22 +1,47 @@
-import { useMemo, useState } from 'react';
-import { Alert, FlatList, Pressable, RefreshControl, View } from 'react-native';
-import { type Href, Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
+import {
+  Alert,
+  FlatList,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  View,
+} from 'react-native';
+import {
+  type Href,
+  Stack,
+  useFocusEffect,
+  useLocalSearchParams,
+  useRouter,
+} from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button, Card, Screen, Text, useTheme } from '@/shared/ui';
 import { useArchiveChallenge, useChallenge, useChallengeStreak } from '@/features/challenges';
 import { useSession } from '@/features/auth';
+import { useMyGroups } from '@/features/groups';
 import { ReportSheet, useBlockedUserIds } from '@/features/moderation';
 import {
   SyncBadge,
+  challengeStreaksQueryKey,
+  todaySubmissionQueryKey,
+  useChallengeStreaks,
   useQueueForChallenge,
   useSubmissions,
   useTodaySubmission,
 } from '@/features/proofs';
-import type { Submission, SyncStatus } from '@/entities';
+import type {
+  ChallengeMode,
+  ContestantStreak,
+  ServerSubmissionStatus,
+  Submission,
+  SyncStatus,
+} from '@/entities';
 
 // Thin route: composes domain data → primary action → list. No business logic here.
 export default function ChallengeDetailScreen() {
   const t = useTheme();
   const router = useRouter();
+  const qc = useQueryClient();
   const { id } = useLocalSearchParams<{ id: string }>();
   const session = useSession();
   const myUid = session.session?.user.id;
@@ -25,19 +50,29 @@ export default function ChallengeDetailScreen() {
   const today = useTodaySubmission(id);
   const queueItems = useQueueForChallenge(id);
   const submissions = useSubmissions(id);
+  const streaks = useChallengeStreaks(id);
+  const groups = useMyGroups();
   const archive = useArchiveChallenge();
   const blockedIds = useBlockedUserIds();
   const [reportOpen, setReportOpen] = useState(false);
 
-  // The "today's status" pill prefers the local queue if there's a pending/uploading entry;
-  // otherwise falls back to the server-confirmed status (or "not submitted").
+  // Day-rollover refresh: each time the screen comes back into focus, re-fetch the
+  // today-keyed queries. Server still owns the truth (computes today_day per the user's
+  // tz, see W-027), but the cached result would otherwise stay yesterday's after midnight.
+  useFocusEffect(
+    useCallback(() => {
+      if (!id) return;
+      void qc.invalidateQueries({ queryKey: todaySubmissionQueryKey(id) });
+      void qc.invalidateQueries({ queryKey: challengeStreaksQueryKey(id) });
+    }, [id, qc]),
+  );
+
   const localToday = queueItems[0];
-  const todayStatus: SyncStatus | null =
+  const queuedStatus: SyncStatus | null =
     localToday && (localToday.status === 'queued' || localToday.status === 'uploading' || localToday.status === 'offline_retry' || localToday.status === 'failed')
       ? localToday.status
-      : today.data?.status ?? null;
+      : null;
 
-  // Memoize BEFORE early-returns so hook order is stable across renders (rules-of-hooks).
   const filteredSubmissions = useMemo(
     () => (submissions.data ?? []).filter((s) => !blockedIds.has(s.authorId)),
     [submissions.data, blockedIds],
@@ -64,6 +99,18 @@ export default function ChallengeDetailScreen() {
   const c = challenge.data;
   const isCreator = !!myUid && c.creatorId === myUid;
   const isArchived = !!c.archivedAt;
+  const hostGroup = c.groupId ? groups.data?.find((g) => g.id === c.groupId) : undefined;
+
+  // Server-confirmed submissions only carry server statuses ('pending_verification' |
+  // 'verified' | 'rejected'); the wider SyncStatus union on Submission.status reflects
+  // the client states that exist BEFORE the row reaches the server. Narrowed here.
+  const todayStatus = (today.data?.status ?? null) as ServerSubmissionStatus | null;
+  const primary = computePrimaryAction({
+    isArchived,
+    mode: c.mode,
+    todayStatus,
+    queuedStatus,
+  });
 
   const confirmArchive = () => {
     Alert.alert(
@@ -95,12 +142,40 @@ export default function ChallengeDetailScreen() {
         contentContainerStyle={{ padding: t.spacing.lg, paddingBottom: t.spacing.xl, gap: t.spacing.md }}
         ListHeaderComponent={
           <View style={{ gap: t.spacing.md, marginBottom: t.spacing.md }}>
-            <View style={{ gap: t.spacing.xs }}>
-              <Text variant="muted">
-                {c.category} · {c.mode} · {c.durationDays} days
-              </Text>
-              {c.proofRequirement ? <Text variant="body">{c.proofRequirement}</Text> : null}
+            {/* Header: name as the main title (the stack screen title carries it too, but a
+                large in-screen title gives the page a clear top). */}
+            <Text variant="title">{c.title}</Text>
+
+            {/* Encapsulated, divided metadata chips. */}
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.spacing.xs }}>
+              <MetaChip label={titleCase(c.category)} />
+              <MetaChip
+                label={
+                  c.mode === 'group'
+                    ? hostGroup
+                      ? `Group · ${hostGroup.name}`
+                      : 'Group'
+                    : 'Solo'
+                }
+              />
+              <MetaChip label={`${c.durationDays} days`} />
             </View>
+
+            {c.proofRequirement ? (
+              <Text variant="body" style={{ color: t.colors.mutedForeground }}>
+                {c.proofRequirement}
+              </Text>
+            ) : null}
+
+            {/* Status bar — what's happening with today's proof. */}
+            <StatusBar mode={c.mode} todayStatus={todayStatus} />
+
+            {/* Offline / queued state (rare but real): the sync badge surfaces upload progress. */}
+            {queuedStatus ? (
+              <View style={{ alignSelf: 'flex-start' }}>
+                <SyncBadge status={queuedStatus} />
+              </View>
+            ) : null}
 
             {isArchived ? (
               <Card style={{ backgroundColor: t.colors.muted }}>
@@ -112,6 +187,7 @@ export default function ChallengeDetailScreen() {
               </Card>
             ) : null}
 
+            {/* Streak cards. Hidden for true outsiders (streak.data === null per W-022). */}
             {streak.data ? (
               <View style={{ flexDirection: 'row', gap: t.spacing.md }}>
                 <Card style={{ flex: 1 }}>
@@ -119,29 +195,36 @@ export default function ChallengeDetailScreen() {
                   <Text variant="title">🔥 {streak.data.current}</Text>
                 </Card>
                 <Card style={{ flex: 1 }}>
-                  <Text variant="muted">Best</Text>
+                  <Text variant="muted">Best Streak</Text>
                   <Text variant="title">{streak.data.longest}</Text>
                 </Card>
               </View>
             ) : null}
 
-            {!isArchived ? (
-              <Card>
-                <View style={{ gap: t.spacing.sm }}>
-                  <Text variant="heading">Today</Text>
-                  {todayStatus ? (
-                    <SyncBadge status={todayStatus} />
-                  ) : (
-                    <Text variant="muted">No proof submitted yet.</Text>
-                  )}
-                  <Button
-                    label={todayStatus ? 'Add another (replaces today)' : "Submit today's proof"}
-                    // typedRoutes hasn't generated the nested submit-proof path in the route
-                    // union yet; use the resolved string href, which expo-router accepts.
-                    onPress={() => router.push(`/challenge/${c.id}/submit-proof`)}
-                  />
-                </View>
-              </Card>
+            {/* Other contestants' streaks — group challenges only. Excludes self (the
+                Current/Best cards above are already the caller's own stats). */}
+            {c.mode === 'group' ? (
+              <ContestantsStreakRibbon
+                challengeId={c.id}
+                myUid={myUid}
+                data={streaks.data ?? []}
+                isPending={streaks.isPending}
+              />
+            ) : null}
+
+            {/* The primary action — single button. Submit / Edit / hidden, based on
+                today's status + mode (see computePrimaryAction). */}
+            {primary.kind !== 'hidden' && !isArchived ? (
+              <Button
+                label={primary.label}
+                onPress={() => {
+                  if (primary.kind === 'submit') {
+                    router.push(`/challenge/${c.id}/submit-proof`);
+                  } else if (primary.kind === 'redact') {
+                    router.push(`/challenge/${c.id}/edit-proof`);
+                  }
+                }}
+              />
             ) : null}
 
             <Text variant="heading" style={{ marginTop: t.spacing.md }}>
@@ -159,6 +242,7 @@ export default function ChallengeDetailScreen() {
               void submissions.refetch();
               void today.refetch();
               void streak.refetch();
+              void streaks.refetch();
             }}
           />
         }
@@ -199,6 +283,164 @@ export default function ChallengeDetailScreen() {
         targetLabel="this challenge"
       />
     </Screen>
+  );
+}
+
+// --------------------------------------------------------------------------------------
+// Primary action — the single Submit / Edit button.
+//
+// Rules (mirrors server-side enforcement in redact_my_submission):
+//   * Archived: hidden (no actions allowed).
+//   * No today submission: Submit.
+//   * Solo + has today submission: Edit (same-day only; tomorrow this row won't be "today"
+//     anymore so the no-today-submission branch above kicks in again).
+//   * Group + pending_verification | rejected: Edit (votes are cleared server-side).
+//   * Group + verified: hidden (locked).
+//   * Queued / uploading locally: hidden — the sync badge above the button is the action.
+// --------------------------------------------------------------------------------------
+type PrimaryAction =
+  | { kind: 'hidden' }
+  | { kind: 'submit'; label: string }
+  | { kind: 'redact'; label: string };
+
+function computePrimaryAction(args: {
+  isArchived: boolean;
+  mode: ChallengeMode;
+  todayStatus: ServerSubmissionStatus | null;
+  queuedStatus: SyncStatus | null;
+}): PrimaryAction {
+  if (args.isArchived) return { kind: 'hidden' };
+  if (args.queuedStatus) return { kind: 'hidden' };
+  if (!args.todayStatus) return { kind: 'submit', label: "Submit today's proof" };
+  if (args.mode === 'solo') return { kind: 'redact', label: 'Edit submission' };
+  // group
+  if (args.todayStatus === 'verified') return { kind: 'hidden' };
+  if (args.todayStatus === 'rejected') return { kind: 'redact', label: 'Edit and resubmit' };
+  return { kind: 'redact', label: 'Edit submission' };
+}
+
+// --------------------------------------------------------------------------------------
+// Subcomponents
+// --------------------------------------------------------------------------------------
+
+function MetaChip({ label }: { label: string }) {
+  const t = useTheme();
+  return (
+    <View
+      style={{
+        paddingHorizontal: t.spacing.md,
+        paddingVertical: 6,
+        borderRadius: t.radius.lg,
+        backgroundColor: t.colors.muted,
+        borderWidth: 1,
+        borderColor: t.colors.border,
+      }}
+    >
+      <Text style={{ color: t.colors.foreground, fontWeight: '600' }}>{label}</Text>
+    </View>
+  );
+}
+
+function StatusBar({
+  mode,
+  todayStatus,
+}: {
+  mode: ChallengeMode;
+  todayStatus: ServerSubmissionStatus | null;
+}) {
+  const t = useTheme();
+  const { label, color } = describeStatus(mode, todayStatus, t.colors);
+  return (
+    <View
+      style={{
+        paddingVertical: t.spacing.sm,
+        paddingHorizontal: t.spacing.md,
+        borderRadius: t.radius.md,
+        backgroundColor: t.colors.muted,
+        borderLeftWidth: 4,
+        borderLeftColor: color,
+      }}
+    >
+      <Text variant="caption" style={{ color: t.colors.mutedForeground }}>Today</Text>
+      <Text variant="heading" style={{ color }}>{label}</Text>
+    </View>
+  );
+}
+
+function describeStatus(
+  mode: ChallengeMode,
+  todayStatus: ServerSubmissionStatus | null,
+  colors: { destructive: string; primary: string; mutedForeground: string; accent: string },
+): { label: string; color: string } {
+  if (mode === 'solo') {
+    if (!todayStatus) return { label: 'Not submitted', color: colors.mutedForeground };
+    return { label: 'Submitted', color: colors.primary };
+  }
+  // group
+  if (!todayStatus) return { label: 'Not submitted', color: colors.mutedForeground };
+  if (todayStatus === 'pending_verification') return { label: 'Pending verification', color: colors.accent };
+  if (todayStatus === 'verified') return { label: 'Verified', color: colors.primary };
+  return { label: 'Rejected', color: colors.destructive };
+}
+
+function ContestantsStreakRibbon({
+  challengeId: _challengeId,
+  myUid,
+  data,
+  isPending,
+}: {
+  challengeId: string;
+  myUid: string | undefined;
+  data: ContestantStreak[];
+  isPending: boolean;
+}) {
+  const t = useTheme();
+  // Hide self — the Current/Best cards above already cover the caller's stats.
+  const others = useMemo(() => data.filter((d) => d.userId !== myUid), [data, myUid]);
+
+  if (isPending) return null;
+  if (others.length === 0) return null;
+
+  return (
+    <View style={{ gap: t.spacing.xs }}>
+      <Text variant="caption" style={{ color: t.colors.mutedForeground }}>
+        Other contestants
+      </Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <View style={{ flexDirection: 'row', gap: t.spacing.sm, paddingRight: t.spacing.lg }}>
+          {others.map((entry) => (
+            <ContestantStreakChip key={entry.userId} entry={entry} />
+          ))}
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+function ContestantStreakChip({ entry }: { entry: ContestantStreak }) {
+  const t = useTheme();
+  const name = entry.displayName || entry.username || 'Member';
+  return (
+    <View
+      style={{
+        minWidth: 120,
+        paddingHorizontal: t.spacing.md,
+        paddingVertical: t.spacing.sm,
+        borderRadius: t.radius.md,
+        borderWidth: 1,
+        borderColor: t.colors.border,
+        backgroundColor: t.colors.background,
+        gap: 2,
+      }}
+    >
+      <Text variant="caption" style={{ color: t.colors.mutedForeground }} numberOfLines={1}>
+        {name}
+      </Text>
+      <Text variant="heading">🔥 {entry.current}</Text>
+      <Text variant="caption" style={{ color: t.colors.mutedForeground }}>
+        Best {entry.longest}
+      </Text>
+    </View>
   );
 }
 
@@ -252,4 +494,9 @@ function SubmissionRow({
       </Card>
     </Pressable>
   );
+}
+
+function titleCase(s: string): string {
+  if (!s) return s;
+  return s[0]!.toUpperCase() + s.slice(1);
 }

@@ -5,22 +5,38 @@ import { Button, Card, Input, Screen, Text, useTheme } from '@/shared/ui';
 
 export type ProofComposerSubmit = (input: { mediaLocalUri: string; comment?: string }) => Promise<void>;
 
+export type ProofComposerProps = {
+  onSubmit: ProofComposerSubmit;
+  submitting: boolean;
+  errorMessage?: string | null;
+  /** Optional override for the screen title — defaults to "Today's proof". */
+  title?: string;
+  /** Optional override for the helper line under the title. */
+  intro?: string;
+  /** Optional override for the primary CTA label (e.g. "Save changes" in edit mode). */
+  ctaLabel?: string;
+  /** Pre-fill the comment field — used by the redact (edit) flow. */
+  initialComment?: string;
+};
+
 /**
  * Photo-first proof composer. Camera or library; comment is optional.
  * Stays a presentational component — orchestration (queue + upload) lives in the parent screen.
+ * Used by BOTH the submit-proof modal (initial submission via the offline queue) and the
+ * edit-proof modal (in-place redact, direct RPC).
  */
 export function ProofComposer({
   onSubmit,
   submitting,
   errorMessage,
-}: {
-  onSubmit: ProofComposerSubmit;
-  submitting: boolean;
-  errorMessage?: string | null;
-}) {
+  title,
+  intro,
+  ctaLabel,
+  initialComment,
+}: ProofComposerProps) {
   const t = useTheme();
   const [mediaLocalUri, setMediaLocalUri] = useState<string | null>(null);
-  const [comment, setComment] = useState('');
+  const [comment, setComment] = useState(initialComment ?? '');
   const [pickerError, setPickerError] = useState<string | null>(null);
 
   const pickFromLibrary = async () => {
@@ -69,8 +85,10 @@ export function ProofComposer({
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <Screen padded={false}>
         <ScrollView contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.lg, paddingBottom: t.spacing.xl }}>
-          <Text variant="title">Today's proof</Text>
-          <Text variant="muted">Take a photo or pick one from your library. You can add a short note.</Text>
+          <Text variant="title">{title ?? "Today's proof"}</Text>
+          <Text variant="muted">
+            {intro ?? 'Take a photo or pick one from your library. You can add a short note.'}
+          </Text>
 
           {mediaLocalUri ? (
             <Card>
@@ -119,7 +137,7 @@ export function ProofComposer({
           ) : null}
 
           <Button
-            label={submitting ? 'Saving…' : 'Submit proof'}
+            label={ctaLabel ?? (submitting ? 'Saving…' : 'Submit proof')}
             onPress={handleSubmit}
             loading={submitting}
             disabled={submitting || !mediaLocalUri}

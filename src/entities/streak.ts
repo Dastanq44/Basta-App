@@ -10,3 +10,17 @@ export type ChallengeStreak = {
   /** Whether today's proof is already verified. */
   todayDone: boolean;
 };
+
+/**
+ * Per-participant streak entry for the "other contestants" ribbon on the challenge
+ * detail screen. One row per group member for group challenges (membership = participation
+ * per T-027); just the caller for solo challenges. Produced by `list_challenge_streaks`.
+ */
+export type ContestantStreak = {
+  userId: string;
+  username?: string;
+  displayName?: string;
+  current: number;
+  longest: number;
+  todayDone: boolean;
+};

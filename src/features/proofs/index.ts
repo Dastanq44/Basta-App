@@ -7,10 +7,13 @@ export {
   useProofSignedUrl,
   useQueueForChallenge,
   useSubmitProof,
+  useChallengeStreaks,
+  useRedactMySubmission,
   submissionsQueryKey,
   todaySubmissionQueryKey,
   submissionQueryKey,
   proofSignedUrlQueryKey,
+  challengeStreaksQueryKey,
 } from './hooks';
 export { proofInput } from './model';
 export type { ProofInput } from './model';

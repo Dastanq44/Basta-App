@@ -21,6 +21,115 @@
 
 ---
 
+## 2026-06-04 — Claude 1 / T-031: challenge detail revamp + redact-submission flow
+
+**Did:** Substantial rebuild of the challenge detail screen per the user's revamp spec,
+plus a correctness fix for the day-rollover bug they called out.
+
+### UI changes ([app/challenge/[id].tsx](app/challenge/[id].tsx))
+- Removed the "Today" Card entirely (status + submit button merged into the new layout).
+- In-screen title (`<Text variant="title">{c.title}</Text>`) at the top.
+- New encapsulated metadata chips below the title — three `MetaChip`s: category,
+  mode (`Solo` or `Group · <name>`), duration.
+- New `StatusBar` with a left color accent: "Not submitted" / "Pending verification" /
+  "Verified" / "Rejected" for group, collapses to "Not submitted" / "Submitted" for solo.
+- Streak cards: "Best" → "**Best Streak**" (user's exact phrasing). 🔥 Current unchanged.
+- New `ContestantsStreakRibbon` — horizontal scroll strip of `{name, 🔥 current, Best
+  longest}` chips. Group-only (hidden for solo). Excludes self (the Current/Best cards
+  above are already the caller's stats).
+- Single primary button via `computePrimaryAction()`:
+  * archived / queued → **hidden** (sync badge surfaces queue state).
+  * no today submission → **Submit today's proof**.
+  * solo + has today submission → **Edit submission**.
+  * group + pending_verification → **Edit submission**.
+  * group + rejected → **Edit and resubmit**.
+  * group + verified → **hidden** (locked).
+  No more "Add another (replaces today)" state.
+
+### The day-rollover fix (the bug the user explicitly mentioned)
+- Root cause was in `getMyTodaySubmission`: it pulled `.order('created_at').limit(1)`,
+  which returns the LATEST submission regardless of day. After midnight with no new
+  submission, that latest row is yesterday's — so today's status appeared "submitted"
+  when it should be "not submitted."
+- Fix: server RPC `get_my_today_submission(p_challenge_id)` computes today's
+  `challenge_day` per the caller's profile timezone (matches `submit_proof`'s math
+  exactly) and returns ONLY the matching row.
+- Plus: the screen uses `useFocusEffect` (expo-router) to invalidate
+  `todaySubmissionQueryKey(id)` + `challengeStreaksQueryKey(id)` every time it gains
+  focus. Combined with the server-side day math, putting the phone down at 11:58 PM
+  and reopening at 7 AM yields the correct "Not submitted" + Submit button.
+
+### Redact (in-place edit) flow
+- New modal route `app/challenge/[id]/edit-proof.tsx`.
+- Reuses `ProofComposer` — I extended it with optional `title`, `intro`, `ctaLabel`,
+  `initialComment` props so the same UI serves both new submissions (offline-queue
+  path) and edits (direct RPC path).
+- New hook `useRedactMySubmission` — uploads the new photo at the SAME deterministic
+  Storage path (`<uid>/<challengeId>/<submissionId>.jpg`, upsert overwrites → no
+  orphaned objects), then calls the redact RPC. NOT routed through the offline queue
+  by design (queuing an edit while offline would race against verifications on the
+  prior content; comment in the hook explains).
+- Server `redact_my_submission` RPC enforces:
+  * author-only, not-archived;
+  * group + status='verified' → locked (per user's explicit rule);
+  * solo + challenge_day != today's day → locked (per user's explicit rule);
+  * group + pending|rejected → clears all `verifications` rows, resets status to
+    `pending_verification` so the new content is re-verified.
+- Cache invalidation in the mutation: today / submissions list / single / streak /
+  streaks-ribbon / signed-URL (the path is unchanged, but a fresh signed URL is
+  generated so RN `Image` sees a new URL string and refetches).
+
+### Files
+**Created:**
+- `supabase/migrations/20260604100000_challenge_today_and_redact.sql` — three RPCs
+  above. **USER must apply (W-027).**
+- `src/features/proofs/hooks/useChallengeStreaks.ts`.
+- `src/features/proofs/hooks/useRedactMySubmission.ts`.
+- `app/challenge/[id]/edit-proof.tsx`.
+
+**Modified:**
+- `app/challenge/[id].tsx` — full rebuild as described above.
+- `app/_layout.tsx` — registered `challenge/[id]/edit-proof` modal.
+- `src/features/proofs/api/index.ts` — `getMyTodaySubmission` now calls RPC; new
+  `listChallengeStreaks` + `redactMySubmission`. Removed the now-unused `COLS` const.
+- `src/features/proofs/hooks/index.ts` + `src/features/proofs/index.ts` — public surface.
+- `src/features/proofs/ui/ProofComposer.tsx` — added `title`/`intro`/`ctaLabel`/
+  `initialComment` optional props (back-compat — defaults match the old behavior).
+- `src/entities/streak.ts` + `src/entities/index.ts` — new `ContestantStreak` type.
+
+**Checks:** `npm run typecheck` ✅ · `npm run lint` ✅ (was 1 warning about unused
+`COLS`, fixed by removal).
+
+**Branch / commit:** `mvp` @ <see post-commit hash>
+
+**Next up:**
+1. **User action (W-027):** apply the new migration via Supabase Dashboard SQL editor.
+   The challenge detail screen will throw "function does not exist" errors until then.
+2. Stack of pending USER actions also includes W-026 (Claude 2's secure invite codes),
+   W-022..W-025, W-019, W-014/15/16/17, W-018 (skip — superseded by W-026), W-020 + W-008.
+3. T-050 push notifications or Phase 5 quality/release.
+
+**Blockers / decisions needed:** None.
+
+**Notes for next session:**
+- The redact RPC purposely clears group votes on edit. If a UX review later prefers
+  "preserve votes when only the comment changed" we'd need a `comment_only` flag — but
+  for MVP, treating any edit as a content change is correct and simpler.
+- Storage path is reused on redact (overwrite). If we ever want a per-version history,
+  switch to versioned filenames + cleanup on a cron — not now.
+- The contestants ribbon excludes self **on the client**, not server-side, because the
+  RPC returns everyone (the caller might want their own row visible elsewhere). If we
+  add a "compare to my streak" feature later, this client filter is the only thing that
+  needs to change.
+- I picked the **scrollable horizontal ribbon** (user offered "scrollable OR expandable")
+  for minimal extra UI state. Swap to expandable later if it doesn't fit the violet
+  design language — the component is `<ContestantsStreakRibbon>` and self-contained.
+- I left the "Other contestants" header label as a small caption. Probably wants
+  a violet-design polish pass alongside the other detail-screen restyles Claude 2
+  flagged in the prior handoff.
+
+---
+
 ## 2026-06-04 — Claude 2 / UI refresh ("sleek violet") + secure invite codes
 
 **Did:** A full visual redesign of the app (from a user-supplied reference) + hardening of group

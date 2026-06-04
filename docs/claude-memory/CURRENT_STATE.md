@@ -3,7 +3,7 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-06-04 — by: Claude 2 (UI refresh "sleek violet" + light/dark toggle; secure 12-char invite codes, W-026)_
+_Last updated: 2026-06-04 — by: Claude 1 (T-031 challenge detail revamp + redact-submission; W-027)_
 
 > **2026-06-04 UI refresh:** app restyled to a violet light+dark theme (user-selectable in
 > Profile → Appearance, persisted via SecureStore — no backend). New token palette + 8 new
@@ -12,7 +12,7 @@ _Last updated: 2026-06-04 — by: Claude 2 (UI refresh "sleek violet" + light/da
 > bespoke-restyled yet. Invite codes hardened to 12-char base62 (W-026, supersedes W-018).
 > **Committed to `mvp` this session and pushed to `origin/mvp`.**
 
-## Status: PHASE 4A COMPLETE + T-026..T-030 · apply 10 migrations + 1 dashboard toggle
+## Status: PHASE 4A COMPLETE + T-026..T-031 · apply 11 migrations + 1 dashboard toggle
 
 Phase 4A-1 (password reset + leave/archive group + archive challenge) is complete and
 Phase 4A-2 (report/block UI + account-deletion request UI) is now done too. All MVP-scope
@@ -49,13 +49,25 @@ server-side validation + duration-shrink guard. Modal routes `app/group/[id]/edi
 and `app/challenge/[id]/edit.tsx`. Migration
 `20260603200000_update_group_and_challenge.sql` (W-024) — USER must apply.
 
-T-030 (latest session): group leader badge + transferable leadership. The leaderboard
-shows a small gray `CrownIcon` (built dep-free from RN primitives) next to the leader.
-When the current viewer IS the leader, tapping any non-self leaderboard row opens an
-Alert.alert confirmation to transfer leadership. New `transfer_group_leadership` RPC
-flips both `groups.owner_id` and the two `group_members.role` rows in one transaction.
-Also fixed B-012 (edit-group input silently re-filling when backspaced to empty).
-Migration `20260603300000_transfer_group_leadership.sql` (W-025) — USER must apply.
+T-030: group leader badge + transferable leadership. The leaderboard shows a small gray
+`CrownIcon` (built dep-free from RN primitives) next to the leader. When the current
+viewer IS the leader, tapping any non-self leaderboard row opens an Alert.alert
+confirmation to transfer leadership. New `transfer_group_leadership` RPC. Also fixed
+B-012 (edit-group input silently re-filling when backspaced to empty). Migration
+`20260603300000_transfer_group_leadership.sql` (W-025) — USER must apply.
+
+T-031 (latest session): challenge detail revamp. Removed the "Today" Card; in-screen
+title + chip strip (category / mode+group / duration) + colored status bar
+("Not submitted" / "Pending verification" / "Verified" / "Rejected"; solo collapses to
+Submitted / Not submitted). "Best" → "Best Streak". New horizontal "Other contestants"
+ribbon (group-only) showing each member's current+best streak. Primary button is
+Submit-or-Edit (never "Add another"); hidden when archived/queued/group-verified;
+"Edit submission" or "Edit and resubmit" otherwise. Three new SECURITY DEFINER RPCs:
+`get_my_today_submission` (fixes the day-rollover bug — was returning latest, not
+today's), `list_challenge_streaks`, `redact_my_submission`. New modal route
+`app/challenge/[id]/edit-proof.tsx` reusing an extended `ProofComposer`. `useFocusEffect`
+catches midnight rollover. Migration `20260604100000_challenge_today_and_redact.sql`
+(W-027) — USER must apply.
 
 Latest session shipped a clean Phase 4A-1 slice: password reset + leave group + archive group
 + archive challenge. Phase 4A-2 (report/block UI + account deletion request UI) is deferred,
@@ -69,7 +81,8 @@ applies one SQL file. All checks green.
 - W-022 — Patch: treat group members as challenge participants (B-011 fix).
 - W-023 — Patch: surface submission author display name (T-028).
 - W-024 — Patch: in-place edit of group + challenge metadata (T-029).
-- **W-025** — Patch: transfer group leadership (T-030; this session).
+- W-025 — Patch: transfer group leadership (T-030).
+- **W-027** — Patch: challenge detail revamp / today + streaks + redact (T-031; this session).
 - W-020 — Auth → URL Configuration → add `basta://reset-password` to Redirect URLs.
 
 The full MVP loop now exists in code: register → group → challenge → submit proof (offline) →

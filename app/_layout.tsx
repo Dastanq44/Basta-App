@@ -85,6 +85,10 @@ function RootNav() {
         options={{ headerShown: true, presentation: 'modal', title: 'Submit proof' }}
       />
       <Stack.Screen
+        name="challenge/[id]/edit-proof"
+        options={{ headerShown: true, presentation: 'modal', title: 'Edit proof' }}
+      />
+      <Stack.Screen
         name="challenge/[id]/edit"
         options={{ headerShown: true, presentation: 'modal', title: 'Edit challenge' }}
       />
