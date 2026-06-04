@@ -399,6 +399,8 @@ function describeStatus(
 }
 
 type StreakSortKey = 'current' | 'longest';
+type StreakSortDirection = 'desc' | 'asc';
+type StreakSort = { key: StreakSortKey; direction: StreakSortDirection };
 
 function ContestantsStreakRibbon({
   challengeId: _challengeId,
@@ -414,28 +416,40 @@ function ContestantsStreakRibbon({
   const t = useTheme();
   // Self is shown by the Current/Best cards above — exclude from the table.
   const others = useMemo(() => data.filter((d) => d.userId !== myUid), [data, myUid]);
-  const [sortKey, setSortKey] = useState<StreakSortKey>('current');
+  // Default: sort by Current, biggest streak first.
+  const [sort, setSort] = useState<StreakSort>({ key: 'current', direction: 'desc' });
 
-  // Always descending — biggest streak at the top is the only useful order. Tiebreakers
-  // fall through to the other streak column, then to the username for a stable order.
+  // Sort by the selected column in the requested direction. Tiebreakers fall through to
+  // the other streak column (always desc — "more streak = better" regardless of primary
+  // direction) and then to the username so the order is stable.
   const sorted = useMemo(() => {
     const copy = [...others];
+    const getPrimary = (s: ContestantStreak) => (sort.key === 'current' ? s.current : s.longest);
+    const getSecondary = (s: ContestantStreak) =>
+      sort.key === 'current' ? s.longest : s.current;
+    const sign = sort.direction === 'desc' ? 1 : -1;
     copy.sort((a, b) => {
-      const primary = sortKey === 'current' ? b.current - a.current : b.longest - a.longest;
+      const primary = (getPrimary(b) - getPrimary(a)) * sign;
       if (primary !== 0) return primary;
-      const secondary =
-        sortKey === 'current' ? b.longest - a.longest : b.current - a.current;
+      const secondary = getSecondary(b) - getSecondary(a);
       if (secondary !== 0) return secondary;
       return (a.displayName || a.username || '').localeCompare(b.displayName || b.username || '');
     });
     return copy;
-  }, [others, sortKey]);
+  }, [others, sort]);
 
   if (isPending) return null;
   if (others.length === 0) return null;
 
-  const cycleSort = () =>
-    setSortKey((prev) => (prev === 'current' ? 'longest' : 'current'));
+  // Tap-to-sort: same column → flip direction; different column → switch and reset to
+  // descending (the natural "top performer first" default). Mirrors the convention used
+  // by every table sort UX.
+  const onHeaderPress = (key: StreakSortKey) =>
+    setSort((prev) =>
+      prev.key === key
+        ? { key, direction: prev.direction === 'desc' ? 'asc' : 'desc' }
+        : { key, direction: 'desc' },
+    );
 
   return (
     <View
@@ -448,41 +462,15 @@ function ContestantsStreakRibbon({
         padding: t.spacing.sm,
       }}
     >
-      {/* Header row: section label + sort toggle. Tapping the toggle flips between
-          "Current" and "Best" — explicit one-action button per the spec, not a tab. */}
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingHorizontal: t.spacing.xs,
-          paddingTop: 2,
-        }}
-      >
+      <View style={{ paddingHorizontal: t.spacing.xs, paddingTop: 2 }}>
         <Text variant="caption" style={{ color: t.colors.mutedForeground }}>
           Other contestants
         </Text>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityHint="Toggle sort between Current and Best streak"
-          onPress={cycleSort}
-          hitSlop={6}
-          style={{
-            paddingHorizontal: t.spacing.sm,
-            paddingVertical: 4,
-            borderRadius: t.radius.sm,
-            borderWidth: 1,
-            borderColor: t.colors.border,
-          }}
-        >
-          <Text variant="caption" style={{ color: t.colors.foreground, fontWeight: '600' }}>
-            Sort: {sortKey === 'current' ? 'Current' : 'Best'}
-          </Text>
-        </Pressable>
       </View>
 
-      {/* Column headers — the active sort column gets emphasized. */}
-      <ContestantsHeaderRow sortKey={sortKey} />
+      {/* Column headers double as sort controls — tap a column to sort by it; tap the
+          active column again to flip asc/desc. */}
+      <ContestantsHeaderRow sort={sort} onSort={onHeaderPress} />
 
       {/* Rows */}
       <View>
@@ -490,7 +478,7 @@ function ContestantsStreakRibbon({
           <ContestantsBodyRow
             key={entry.userId}
             entry={entry}
-            sortKey={sortKey}
+            sortKey={sort.key}
             isLast={i === sorted.length - 1}
           />
         ))}
@@ -499,10 +487,18 @@ function ContestantsStreakRibbon({
   );
 }
 
-function ContestantsHeaderRow({ sortKey }: { sortKey: StreakSortKey }) {
+function ContestantsHeaderRow({
+  sort,
+  onSort,
+}: {
+  sort: StreakSort;
+  onSort: (key: StreakSortKey) => void;
+}) {
   const t = useTheme();
-  const active = (k: StreakSortKey) =>
-    sortKey === k
+  const arrow = (k: StreakSortKey) =>
+    sort.key === k ? (sort.direction === 'desc' ? ' ↓' : ' ↑') : '';
+  const activeStyle = (k: StreakSortKey) =>
+    sort.key === k
       ? { color: t.colors.foreground, fontWeight: '700' as const }
       : { color: t.colors.mutedForeground };
   return (
@@ -516,21 +512,31 @@ function ContestantsHeaderRow({ sortKey }: { sortKey: StreakSortKey }) {
         borderBottomColor: t.colors.border,
       }}
     >
-      <Text variant="caption" style={[{ flex: 1 }, { color: t.colors.mutedForeground }]}>
+      <Text variant="caption" style={{ flex: 1, color: t.colors.mutedForeground }}>
         Name
       </Text>
-      <Text
-        variant="caption"
-        style={[{ width: 60, textAlign: 'right' }, active('longest')]}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityHint="Sort by best streak"
+        onPress={() => onSort('longest')}
+        hitSlop={6}
+        style={{ width: 60 }}
       >
-        Best{sortKey === 'longest' ? ' ↓' : ''}
-      </Text>
-      <Text
-        variant="caption"
-        style={[{ width: 72, textAlign: 'right' }, active('current')]}
+        <Text variant="caption" style={[{ textAlign: 'right' }, activeStyle('longest')]}>
+          Best{arrow('longest')}
+        </Text>
+      </Pressable>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityHint="Sort by current streak"
+        onPress={() => onSort('current')}
+        hitSlop={6}
+        style={{ width: 72 }}
       >
-        Current{sortKey === 'current' ? ' ↓' : ''}
-      </Text>
+        <Text variant="caption" style={[{ textAlign: 'right' }, activeStyle('current')]}>
+          Current{arrow('current')}
+        </Text>
+      </Pressable>
     </View>
   );
 }
