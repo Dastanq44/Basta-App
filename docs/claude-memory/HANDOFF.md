@@ -21,6 +21,77 @@
 
 ---
 
+## 2026-06-04 — Claude 1 / T-031 polish: SQL bug + safe-area + status box restyle
+
+**Did:** Three small fixes on top of T-031 from earlier today.
+
+### Fix 1 — B-013: SQL `column reference "id" is ambiguous`
+- `get_my_today_submission` (added in W-027) raised PostgreSQL 42702 on every call.
+- The function returns a TABLE whose first OUT column is `id`. Inside a plpgsql body,
+  the OUT params are in scope as variables. The body had
+  `where id = v_uid` on `public.profiles` — that bare `id` collided with the OUT
+  variable `id` and Postgres can't decide which.
+- Fix: qualify the references (`where profiles.id = v_uid`,
+  `where challenges.id = p_challenge_id`). Issued as a fresh patch migration
+  (`20260604200000_fix_today_submission_ambiguity.sql`, **W-028**) instead of editing
+  W-027 in place, since the user has already applied W-027 and the audit trail
+  is more honest with a follow-up file.
+- The other table-returning RPCs in the same family (`list_challenge_streaks`,
+  `get_submission_with_author`, `list_challenge_submissions`) were already
+  fully qualified — no rework needed.
+
+### Fix 2 — UI: background-colored strip above the challenge name
+- The user saw a rectangle in the screen background color between the native Stack
+  header (white) and the in-screen title, and content scrolled behind it.
+- Root cause: `Screen` defaults `edges={['top','bottom']}`. The native Stack header
+  already accounts for the top safe-area inset; when we ALSO add 'top' inside the
+  `SafeAreaView`, a background-colored stripe equal to the inset height appears
+  between the header and content.
+- Fix: `<Screen padded={false} edges={['bottom']}>` on the challenge detail. Comment
+  in the file explains why. Other screens with the same pattern (`app/group/[id].tsx`,
+  `app/submission/[id].tsx`, `app/verify/[submissionId].tsx`) have the same latent
+  issue but the user only flagged challenge detail — leaving them for if/when they
+  surface the others.
+
+### Fix 3 — Status box restyle
+- Removed the 4px left-side colored accent ("the small shadow on the left").
+- Added a full 1.5px contour in the status color (with `t.colors.card` background).
+- New muted palette in [app/challenge/[id].tsx](app/challenge/[id].tsx) (above
+  `StatusBar`):
+  - `STATUS_RED = '#C26B6B'` (soft brick) — "Not submitted" / "Rejected".
+  - `STATUS_AMBER = '#C9A04C'` (muted gold) — "Pending verification".
+  - `STATUS_GREEN = '#7FA88A'` (sage) — "Submitted" / "Verified".
+  Inline constants because no other screen needs them yet; promote to theme tokens
+  if a second surface adopts them. They're readable on both light and dark
+  backgrounds and explicitly avoid neon brightness per the user's instruction.
+- Label text now uses `t.colors.foreground` (was using the same color as the
+  border, which competed with the contour visually).
+
+**Checks:** `npm run typecheck` ✅ · `npm run lint` ✅ · `npx expo-doctor` ✅.
+
+**Branch / commit:** `mvp` @ <see post-commit hash>
+
+**Next up:**
+1. **User action (W-028):** apply the small SQL fix via Supabase Dashboard SQL editor.
+   Without it the challenge detail still 42702s.
+2. The other W-actions pending: W-022..W-027 + W-019, W-014..W-017, W-018 (skip,
+   superseded by W-026), W-020 + W-008 (dashboard toggles).
+3. Optional: the same safe-area fix on group/submission/verify detail screens if the
+   user reports the same stripe elsewhere.
+
+**Blockers / decisions needed:** None.
+
+**Notes for next session:**
+- Future plpgsql functions that `RETURNS TABLE (id …, …)`: ALWAYS qualify every column
+  reference in the body, even the ones that look unambiguous. Postgres' "PL/pgSQL var
+  vs column" check fires on bare identifiers. A simple project convention prevents this.
+- The status box uses local constants, not theme tokens. If we ever want to make the
+  status colors theme-aware (different shades light vs dark), promote them to
+  `tokens.ts` as `statusRed` / `statusAmber` / `statusGreen` — but the current hex
+  values are intentionally chosen to read on both modes.
+
+---
+
 ## 2026-06-04 — Claude 1 / T-031: challenge detail revamp + redact-submission flow
 
 **Did:** Substantial rebuild of the challenge detail screen per the user's revamp spec,

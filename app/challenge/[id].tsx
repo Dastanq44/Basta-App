@@ -134,7 +134,10 @@ export default function ChallengeDetailScreen() {
   };
 
   return (
-    <Screen padded={false}>
+    // edges={['bottom']}: the native Stack header already handles top safe-area inset; if
+    // we included 'top' here too, SafeAreaView would add a background-colored stripe under
+    // the header that the FlatList scrolls behind.
+    <Screen padded={false} edges={['bottom']}>
       <Stack.Screen options={{ title: c.title }} />
       <FlatList
         data={filteredSubmissions}
@@ -341,6 +344,13 @@ function MetaChip({ label }: { label: string }) {
   );
 }
 
+// Muted status palette — readable on both light and dark backgrounds without feeling
+// toxic-neon (the user explicitly said not too bright). Inline to keep the screen
+// self-contained; promote to theme tokens if a second screen needs them.
+const STATUS_RED = '#C26B6B';   // soft brick — "Not submitted" / "Rejected"
+const STATUS_AMBER = '#C9A04C'; // muted gold — "Pending verification"
+const STATUS_GREEN = '#7FA88A'; // sage     — "Submitted" / "Verified"
+
 function StatusBar({
   mode,
   todayStatus,
@@ -349,20 +359,22 @@ function StatusBar({
   todayStatus: ServerSubmissionStatus | null;
 }) {
   const t = useTheme();
-  const { label, color } = describeStatus(mode, todayStatus, t.colors);
+  const { label, color } = describeStatus(mode, todayStatus);
   return (
     <View
       style={{
         paddingVertical: t.spacing.sm,
         paddingHorizontal: t.spacing.md,
         borderRadius: t.radius.md,
-        backgroundColor: t.colors.muted,
-        borderLeftWidth: 4,
-        borderLeftColor: color,
+        // Card background + a full contour in the status color. No left-side accent /
+        // shadow — replaced by a full border per the spec.
+        backgroundColor: t.colors.card,
+        borderWidth: 1.5,
+        borderColor: color,
       }}
     >
       <Text variant="caption" style={{ color: t.colors.mutedForeground }}>Today</Text>
-      <Text variant="heading" style={{ color }}>{label}</Text>
+      <Text variant="heading" style={{ color: t.colors.foreground }}>{label}</Text>
     </View>
   );
 }
@@ -370,17 +382,16 @@ function StatusBar({
 function describeStatus(
   mode: ChallengeMode,
   todayStatus: ServerSubmissionStatus | null,
-  colors: { destructive: string; primary: string; mutedForeground: string; accent: string },
 ): { label: string; color: string } {
   if (mode === 'solo') {
-    if (!todayStatus) return { label: 'Not submitted', color: colors.mutedForeground };
-    return { label: 'Submitted', color: colors.primary };
+    if (!todayStatus) return { label: 'Not submitted', color: STATUS_RED };
+    return { label: 'Submitted', color: STATUS_GREEN };
   }
   // group
-  if (!todayStatus) return { label: 'Not submitted', color: colors.mutedForeground };
-  if (todayStatus === 'pending_verification') return { label: 'Pending verification', color: colors.accent };
-  if (todayStatus === 'verified') return { label: 'Verified', color: colors.primary };
-  return { label: 'Rejected', color: colors.destructive };
+  if (!todayStatus) return { label: 'Not submitted', color: STATUS_RED };
+  if (todayStatus === 'pending_verification') return { label: 'Pending verification', color: STATUS_AMBER };
+  if (todayStatus === 'verified') return { label: 'Verified', color: STATUS_GREEN };
+  return { label: 'Rejected', color: STATUS_RED };
 }
 
 function ContestantsStreakRibbon({

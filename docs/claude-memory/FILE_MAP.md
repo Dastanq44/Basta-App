@@ -32,7 +32,8 @@ Basta_App/
 │       ├── 20260603200000_update_group_and_challenge.sql   # T-029: update_group + update_challenge RPCs (apply — W-024)
 │       ├── 20260603300000_transfer_group_leadership.sql    # T-030: transfer_group_leadership RPC (apply — W-025)
 │       ├── 20260604000000_secure_invite_codes.sql          # W-026: 12-char base62 invite codes (apply; supersedes W-018)
-│       └── 20260604100000_challenge_today_and_redact.sql   # T-031: get_my_today_submission + list_challenge_streaks + redact_my_submission (apply — W-027)
+│       ├── 20260604100000_challenge_today_and_redact.sql   # T-031: get_my_today_submission + list_challenge_streaks + redact_my_submission (apply — W-027)
+│       └── 20260604200000_fix_today_submission_ambiguity.sql # B-013 fix: qualify column refs in get_my_today_submission (apply — W-028)
 ├── src/features/
 │   ├── auth/                     # T-020: PKCE email auth, useSession, secure-store tokens
 │   ├── onboarding/               # T-021/T-022: terms, profile setup, completeOnboarding

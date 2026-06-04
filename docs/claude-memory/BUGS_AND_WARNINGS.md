@@ -276,6 +276,38 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
 - **Status:** Open until applied. The Restore button on `app/group/archived.tsx` will fail
   with `function does not exist` until then.
 
+## [OPEN] W-028 — Apply patch migration: fix get_my_today_submission column ambiguity
+- **Date:** 2026-06-04 · **Area:** backend / Supabase
+- **What:** `supabase/migrations/20260604200000_fix_today_submission_ambiguity.sql`
+  recreates `get_my_today_submission` with qualified column references (resolves B-013).
+  Idempotent — applies cleanly on top of W-027.
+- **Apply via:** Supabase Dashboard → SQL editor → paste → Run. No ordering vs other
+  open migrations (but must come AFTER W-027 since this is a CREATE OR REPLACE on a
+  function W-027 introduced).
+- **Status:** Open until applied. Until then, opening any challenge detail screen will
+  log `[basta] getMyTodaySubmission failed: { code: "42702", message: "column reference
+  'id' is ambiguous" }` and the screen falls into its error state.
+
+## [RESOLVED] B-013 — `column reference "id" is ambiguous` on get_my_today_submission
+- **Date:** 2026-06-04 · **Area:** backend / Supabase
+- **Repro:** Open any challenge detail screen with W-027 applied. Console logs the 42702
+  error from `getMyTodaySubmission`.
+- **Root cause:** `get_my_today_submission` declares OUT params via
+  `returns table (id uuid, challenge_id uuid, ...)`. Inside the plpgsql function body
+  those OUT params are in scope as variables. The body's profile lookup was
+  `where id = v_uid` (unqualified). PostgreSQL can't decide whether `id` is the
+  `profiles` column or the OUT param and raises 42702. The fault was the unqualified
+  reference — other table-returning RPCs I added in the same migration (`list_challenge_streaks`)
+  qualify everything; only `get_my_today_submission` had the bug.
+- **Fix:** Qualified the offending lines: `where profiles.id = v_uid` and
+  `where challenges.id = p_challenge_id`. Re-issued as a fresh patch migration
+  (`20260604200000_fix_today_submission_ambiguity.sql`) so the apply-trail is explicit.
+- **Why it didn't show in the prior identical-shape RPCs** (`get_submission_with_author`,
+  `list_challenge_submissions`): those queries prefixed every column reference with the
+  table alias (`s.id`, `p.id`, etc.). Only `get_my_today_submission` had unqualified refs.
+- **Commit:** `fix(challenges): qualify column refs in get_my_today_submission + status
+  bar polish`.
+
 ## [OPEN] W-027 — Apply patch migration: challenge today/streaks/redact
 - **Date:** 2026-06-04 · **Area:** backend / Supabase
 - **What:** `supabase/migrations/20260604100000_challenge_today_and_redact.sql` adds three
