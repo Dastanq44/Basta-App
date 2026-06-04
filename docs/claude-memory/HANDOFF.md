@@ -21,6 +21,54 @@
 
 ---
 
+## 2026-06-04 — Claude 1 / T-031b polish: contestants table + brighter status box
+
+**Did:** Two UI tweaks on the challenge detail screen. No backend changes.
+
+### Other-contestants ribbon → sortable table
+- The horizontal-scroll chip ribbon is replaced by a vertical table inside a Card
+  ([app/challenge/[id].tsx](app/challenge/[id].tsx) — `ContestantsStreakRibbon` kept
+  the name but its internals are now a small data table).
+- Columns: **Name** (flex), **Best** (right-aligned), **Current** (right-aligned).
+- A single **Sort: Current/Best** button in the section header cycles between sort
+  keys on tap (per the user's "do not make it an openable tab"). Always descending.
+- Tiebreaker: the other streak column, then the username, so the order is stable.
+- The active sort column gets bolder weight + a `↓` indicator in the header.
+- Container is a `Card`-shaped View with `border + radius` so it sits in the layout
+  next to the Current/Best streak cards above.
+
+### Status box — brighter + tinted background per state
+- Replaced the muted palette with a brighter set; box background is now a tinted
+  fill of the same hue (not gray).
+  - Red border `#D45656` + fill `rgba(212,86,86,0.16)` — Not submitted / Rejected.
+  - Amber border `#D49A38` + fill `rgba(212,154,56,0.18)` — Pending verification.
+  - Green border `#6FAE85` + fill `rgba(111,174,133,0.18)` — Submitted / Verified.
+- Fills use `rgba` translucency so they tint both light and dark themes without a
+  separate palette.
+- Still intentionally below the brightness of the theme's `success` / `warning` /
+  `destructive` tokens — bumped one notch up from the prior muted set per the
+  user's "a bit brighter, not toxic" guidance.
+
+**Checks:** `npm run typecheck` ✅ · `npm run lint` ✅. UI-only change — no
+migration, no new hook, no new dependency.
+
+**Branch / commit:** `mvp` @ <see post-commit hash>
+
+**Next up:** unchanged — apply pending migrations W-022..W-028 and dashboard
+toggles. No new W- or B- entries this turn.
+
+**Blockers / decisions needed:** None.
+
+**Notes for next session:**
+- The sort button is a single tap-cycle (`Current` ↔ `Best`). If a future request
+  needs an asc/desc toggle, the cleanest path is a second tap modifier or a tap on
+  the column header — both small additions on the existing `StreakSortKey` state.
+- The status palette is still inline constants in the screen file. Promote to
+  `tokens.ts` (as `statusRedBorder` / `statusRedBg` / etc.) the moment a second
+  surface adopts these — until then the colocation keeps the file self-contained.
+
+---
+
 ## 2026-06-04 — Claude 1 / T-031 polish: SQL bug + safe-area + status box restyle
 
 **Did:** Three small fixes on top of T-031 from earlier today.

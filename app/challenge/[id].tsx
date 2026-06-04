@@ -4,7 +4,6 @@ import {
   FlatList,
   Pressable,
   RefreshControl,
-  ScrollView,
   View,
 } from 'react-native';
 import {
@@ -344,12 +343,17 @@ function MetaChip({ label }: { label: string }) {
   );
 }
 
-// Muted status palette — readable on both light and dark backgrounds without feeling
-// toxic-neon (the user explicitly said not too bright). Inline to keep the screen
-// self-contained; promote to theme tokens if a second screen needs them.
-const STATUS_RED = '#C26B6B';   // soft brick — "Not submitted" / "Rejected"
-const STATUS_AMBER = '#C9A04C'; // muted gold — "Pending verification"
-const STATUS_GREEN = '#7FA88A'; // sage     — "Submitted" / "Verified"
+// Status palette — bumped up from the prior muted set per the user's "a bit brighter"
+// note. Each state has a solid border color (the contour) and a tinted same-hue fill
+// (translucent so it reads on both light and dark theme backgrounds without two
+// separate palettes). Still intentionally not neon — these sit one step below the
+// theme's `success` / `warning` / `destructive` brights.
+const STATUS_RED_BORDER = '#D45656';
+const STATUS_RED_BG = 'rgba(212, 86, 86, 0.16)';
+const STATUS_AMBER_BORDER = '#D49A38';
+const STATUS_AMBER_BG = 'rgba(212, 154, 56, 0.18)';
+const STATUS_GREEN_BORDER = '#6FAE85';
+const STATUS_GREEN_BG = 'rgba(111, 174, 133, 0.18)';
 
 function StatusBar({
   mode,
@@ -359,18 +363,18 @@ function StatusBar({
   todayStatus: ServerSubmissionStatus | null;
 }) {
   const t = useTheme();
-  const { label, color } = describeStatus(mode, todayStatus);
+  const { label, border, fill } = describeStatus(mode, todayStatus);
   return (
     <View
       style={{
         paddingVertical: t.spacing.sm,
         paddingHorizontal: t.spacing.md,
         borderRadius: t.radius.md,
-        // Card background + a full contour in the status color. No left-side accent /
-        // shadow — replaced by a full border per the spec.
-        backgroundColor: t.colors.card,
+        // Tinted same-hue fill (translucent → tints whatever theme bg sits below) +
+        // a solid contour in the matching state color. No left-side accent.
+        backgroundColor: fill,
         borderWidth: 1.5,
-        borderColor: color,
+        borderColor: border,
       }}
     >
       <Text variant="caption" style={{ color: t.colors.mutedForeground }}>Today</Text>
@@ -382,17 +386,19 @@ function StatusBar({
 function describeStatus(
   mode: ChallengeMode,
   todayStatus: ServerSubmissionStatus | null,
-): { label: string; color: string } {
+): { label: string; border: string; fill: string } {
   if (mode === 'solo') {
-    if (!todayStatus) return { label: 'Not submitted', color: STATUS_RED };
-    return { label: 'Submitted', color: STATUS_GREEN };
+    if (!todayStatus) return { label: 'Not submitted', border: STATUS_RED_BORDER, fill: STATUS_RED_BG };
+    return { label: 'Submitted', border: STATUS_GREEN_BORDER, fill: STATUS_GREEN_BG };
   }
   // group
-  if (!todayStatus) return { label: 'Not submitted', color: STATUS_RED };
-  if (todayStatus === 'pending_verification') return { label: 'Pending verification', color: STATUS_AMBER };
-  if (todayStatus === 'verified') return { label: 'Verified', color: STATUS_GREEN };
-  return { label: 'Rejected', color: STATUS_RED };
+  if (!todayStatus) return { label: 'Not submitted', border: STATUS_RED_BORDER, fill: STATUS_RED_BG };
+  if (todayStatus === 'pending_verification') return { label: 'Pending verification', border: STATUS_AMBER_BORDER, fill: STATUS_AMBER_BG };
+  if (todayStatus === 'verified') return { label: 'Verified', border: STATUS_GREEN_BORDER, fill: STATUS_GREEN_BG };
+  return { label: 'Rejected', border: STATUS_RED_BORDER, fill: STATUS_RED_BG };
 }
+
+type StreakSortKey = 'current' | 'longest';
 
 function ContestantsStreakRibbon({
   challengeId: _challengeId,
@@ -406,50 +412,178 @@ function ContestantsStreakRibbon({
   isPending: boolean;
 }) {
   const t = useTheme();
-  // Hide self — the Current/Best cards above already cover the caller's stats.
+  // Self is shown by the Current/Best cards above — exclude from the table.
   const others = useMemo(() => data.filter((d) => d.userId !== myUid), [data, myUid]);
+  const [sortKey, setSortKey] = useState<StreakSortKey>('current');
+
+  // Always descending — biggest streak at the top is the only useful order. Tiebreakers
+  // fall through to the other streak column, then to the username for a stable order.
+  const sorted = useMemo(() => {
+    const copy = [...others];
+    copy.sort((a, b) => {
+      const primary = sortKey === 'current' ? b.current - a.current : b.longest - a.longest;
+      if (primary !== 0) return primary;
+      const secondary =
+        sortKey === 'current' ? b.longest - a.longest : b.current - a.current;
+      if (secondary !== 0) return secondary;
+      return (a.displayName || a.username || '').localeCompare(b.displayName || b.username || '');
+    });
+    return copy;
+  }, [others, sortKey]);
 
   if (isPending) return null;
   if (others.length === 0) return null;
 
+  const cycleSort = () =>
+    setSortKey((prev) => (prev === 'current' ? 'longest' : 'current'));
+
   return (
-    <View style={{ gap: t.spacing.xs }}>
-      <Text variant="caption" style={{ color: t.colors.mutedForeground }}>
-        Other contestants
-      </Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <View style={{ flexDirection: 'row', gap: t.spacing.sm, paddingRight: t.spacing.lg }}>
-          {others.map((entry) => (
-            <ContestantStreakChip key={entry.userId} entry={entry} />
-          ))}
-        </View>
-      </ScrollView>
+    <View
+      style={{
+        gap: t.spacing.xs,
+        backgroundColor: t.colors.card,
+        borderRadius: t.radius.md,
+        borderWidth: 1,
+        borderColor: t.colors.border,
+        padding: t.spacing.sm,
+      }}
+    >
+      {/* Header row: section label + sort toggle. Tapping the toggle flips between
+          "Current" and "Best" — explicit one-action button per the spec, not a tab. */}
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingHorizontal: t.spacing.xs,
+          paddingTop: 2,
+        }}
+      >
+        <Text variant="caption" style={{ color: t.colors.mutedForeground }}>
+          Other contestants
+        </Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityHint="Toggle sort between Current and Best streak"
+          onPress={cycleSort}
+          hitSlop={6}
+          style={{
+            paddingHorizontal: t.spacing.sm,
+            paddingVertical: 4,
+            borderRadius: t.radius.sm,
+            borderWidth: 1,
+            borderColor: t.colors.border,
+          }}
+        >
+          <Text variant="caption" style={{ color: t.colors.foreground, fontWeight: '600' }}>
+            Sort: {sortKey === 'current' ? 'Current' : 'Best'}
+          </Text>
+        </Pressable>
+      </View>
+
+      {/* Column headers — the active sort column gets emphasized. */}
+      <ContestantsHeaderRow sortKey={sortKey} />
+
+      {/* Rows */}
+      <View>
+        {sorted.map((entry, i) => (
+          <ContestantsBodyRow
+            key={entry.userId}
+            entry={entry}
+            sortKey={sortKey}
+            isLast={i === sorted.length - 1}
+          />
+        ))}
+      </View>
     </View>
   );
 }
 
-function ContestantStreakChip({ entry }: { entry: ContestantStreak }) {
+function ContestantsHeaderRow({ sortKey }: { sortKey: StreakSortKey }) {
   const t = useTheme();
-  const name = entry.displayName || entry.username || 'Member';
+  const active = (k: StreakSortKey) =>
+    sortKey === k
+      ? { color: t.colors.foreground, fontWeight: '700' as const }
+      : { color: t.colors.mutedForeground };
   return (
     <View
       style={{
-        minWidth: 120,
-        paddingHorizontal: t.spacing.md,
-        paddingVertical: t.spacing.sm,
-        borderRadius: t.radius.md,
-        borderWidth: 1,
-        borderColor: t.colors.border,
-        backgroundColor: t.colors.background,
-        gap: 2,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: t.spacing.xs,
+        paddingVertical: t.spacing.xs,
+        borderBottomWidth: 1,
+        borderBottomColor: t.colors.border,
       }}
     >
-      <Text variant="caption" style={{ color: t.colors.mutedForeground }} numberOfLines={1}>
+      <Text variant="caption" style={[{ flex: 1 }, { color: t.colors.mutedForeground }]}>
+        Name
+      </Text>
+      <Text
+        variant="caption"
+        style={[{ width: 60, textAlign: 'right' }, active('longest')]}
+      >
+        Best{sortKey === 'longest' ? ' ↓' : ''}
+      </Text>
+      <Text
+        variant="caption"
+        style={[{ width: 72, textAlign: 'right' }, active('current')]}
+      >
+        Current{sortKey === 'current' ? ' ↓' : ''}
+      </Text>
+    </View>
+  );
+}
+
+function ContestantsBodyRow({
+  entry,
+  sortKey,
+  isLast,
+}: {
+  entry: ContestantStreak;
+  sortKey: StreakSortKey;
+  isLast: boolean;
+}) {
+  const t = useTheme();
+  const name = entry.displayName || entry.username || 'Member';
+  const activeWeight = (k: StreakSortKey) =>
+    sortKey === k ? ('700' as const) : ('500' as const);
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: t.spacing.xs,
+        paddingVertical: t.spacing.sm,
+        borderBottomWidth: isLast ? 0 : 1,
+        borderBottomColor: t.colors.border,
+      }}
+    >
+      <Text
+        style={{ flex: 1, color: t.colors.foreground, fontWeight: '500' }}
+        numberOfLines={1}
+      >
         {name}
       </Text>
-      <Text variant="heading">🔥 {entry.current}</Text>
-      <Text variant="caption" style={{ color: t.colors.mutedForeground }}>
-        Best {entry.longest}
+      <Text
+        style={{
+          width: 60,
+          textAlign: 'right',
+          color: t.colors.foreground,
+          fontWeight: activeWeight('longest'),
+        }}
+      >
+        {entry.longest}
+      </Text>
+      <Text
+        style={{
+          width: 72,
+          textAlign: 'right',
+          color: t.colors.foreground,
+          fontWeight: activeWeight('current'),
+        }}
+      >
+        🔥 {entry.current}
       </Text>
     </View>
   );
