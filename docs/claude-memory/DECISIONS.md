@@ -153,3 +153,19 @@ Date · Status · Decision · Why · Consequences
   `20260604000000_secure_invite_codes.sql` (W-026); the `join_group_by_invite` RPC needed no change
   (already an exact match). If friendlier sharing is wanted later, add deep-link invite URLs rather
   than shortening the code.
+
+## D-012 — UI overhaul (2026-06): indigo theme, additive migrations, post-MVP placeholders   [Accepted]
+- **Date:** 2026-06-05
+- **Decision:** The app's visual language is the "sleek" card/tab system in **INDIGO**
+  (`#4F46E5` light / `#6366F1` dark), user-selectable light/dark (persisted locally, no backend).
+  Two rules for new surfaces: (a) the **Explore tab** and the group **"Global / international"
+  leaderboard are placeholders only** (post-MVP per D-006); (b) **backend changes are ADDITIVE** —
+  never change the signature of an existing create RPC (`create_group`, `create_challenge`) and
+  don't add columns to base `select` lists; set new fields via a follow-up best-effort RPC and read
+  them via a dedicated RPC (`get_group_overview`, `get_home_overview`).
+- **Why:** Many migrations are pending at once; breaking a currently-working flow (create
+  group/challenge) between commit and migration-apply is worse than a new feature being temporarily
+  absent. Mirrors the W-026 invite-code approach (keep the working path, add the new behaviour).
+- **Consequences:** Challenge emoji is embedded in the title and start+end→duration (no challenge
+  schema change); group description/avatar live behind `get_group_overview` + a public
+  `group-avatars` bucket. Supersedes the "Sleek violet" colour note — the palette is now indigo.

@@ -194,3 +194,83 @@ export async function joinGroupByInvite(code: string): Promise<GroupId> {
     throw e;
   }
 }
+
+// ── Group profile (description + photo avatar) — W-030. Additive: create_group / update_group
+// stay untouched so the existing create + rename flows keep working before the migration. ──────
+const GROUP_AVATAR_BUCKET = 'group-avatars';
+
+export type GroupOverview = {
+  description: string | null;
+  avatarPath: string | null;
+  avatarUrl: string | null;
+  createdAt: string | null;
+  memberCount: number;
+};
+
+/** Public URL for a group avatar storage path (bucket is public). Null when unset. */
+export function groupAvatarUrl(path: string | null | undefined): string | null {
+  if (!path) return null;
+  return supabase.storage.from(GROUP_AVATAR_BUCKET).getPublicUrl(path).data.publicUrl ?? null;
+}
+
+/** Main-info fields not on the base Group row (description / avatar / created_at / member count). */
+export async function getGroupOverview(groupId: string): Promise<GroupOverview> {
+  const c = withTimeout();
+  try {
+    const { data, error } = await supabase
+      .rpc('get_group_overview', { p_group_id: groupId })
+      .abortSignal(c.signal);
+    if (error) throw error;
+    const d = (data ?? {}) as {
+      description: string | null;
+      avatar_path: string | null;
+      created_at: string | null;
+      member_count: number;
+    };
+    return {
+      description: d.description ?? null,
+      avatarPath: d.avatar_path ?? null,
+      avatarUrl: groupAvatarUrl(d.avatar_path),
+      createdAt: d.created_at ?? null,
+      memberCount: d.member_count ?? 0,
+    };
+  } catch (e) {
+    console.error('[basta] getGroupOverview failed:', e);
+    throw e;
+  }
+}
+
+/** Owner updates name + description + avatar path via the W-030 RPC. */
+export async function updateGroupMeta(
+  groupId: string,
+  input: { name: string; description?: string | null; avatarPath?: string | null },
+): Promise<void> {
+  const c = withTimeout();
+  try {
+    const { error } = await supabase
+      .rpc('update_group_meta', {
+        p_group_id: groupId,
+        p_name: input.name,
+        p_description: input.description ?? null,
+        p_avatar_path: input.avatarPath ?? null,
+      })
+      .abortSignal(c.signal);
+    if (error) throw new Error(error.message || 'Could not update group');
+  } catch (e) {
+    console.error('[basta] updateGroupMeta failed:', e);
+    throw e;
+  }
+}
+
+/** Uploads a group avatar image to the public `group-avatars` bucket; returns the storage path. */
+export async function uploadGroupAvatar(groupId: string, localUri: string): Promise<string> {
+  const remotePath = `${groupId}/avatar.jpg`;
+  const res = await fetch(localUri);
+  if (!res.ok) throw new Error(`Could not read image (${res.status})`);
+  const buf = await res.arrayBuffer();
+  const { error } = await supabase.storage
+    .from(GROUP_AVATAR_BUCKET)
+    .upload(remotePath, buf, { contentType: 'image/jpeg', upsert: true, cacheControl: '3600' });
+  if (error) throw error;
+  return remotePath;
+}

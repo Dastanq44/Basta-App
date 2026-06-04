@@ -3,8 +3,8 @@
 // Light/dark share one token shape with different values; the user picks
 // light / dark / system and the choice is persisted — see ThemeProvider + useThemeMode.
 //
-// THEME = "Sleek violet" (2026-06, from a user-supplied reference): friendly geometric
-// SANS (system font, zero assets), a vivid violet accent (#6C5CE7) on a soft off-white
+// THEME = "Sleek indigo" (2026-06, from a user-supplied reference): friendly geometric
+// SANS (system font, zero assets), a vivid indigo accent (#4F46E5) on a soft off-white
 // canvas (light) or a deep indigo-navy canvas (dark), rounded cards with a soft diffused
 // lift, fully-rounded pill buttons, and warm stat accents (orange streak, green done,
 // gold rank). Rebrand = edit the hex here.
@@ -18,7 +18,7 @@ export type ColorTokens = {
   cardForeground: string;
   primary: string;
   primaryForeground: string;
-  /** Tinted violet surface for selected rows, filter chips, icon tiles. */
+  /** Tinted indigo surface for selected rows, filter chips, icon tiles. */
   primarySoft: string;
   secondary: string;
   secondaryForeground: string;
@@ -61,11 +61,11 @@ const minTapTarget = 44;
 // (e.g. Plus Jakarta Sans / Nunito) via expo-google-fonts later if more personality is wanted.
 const fonts: ThemeTokens['fonts'] = { display: undefined, body: undefined };
 
-// Soft, diffused, slightly violet-tinted elevation (premium look — never a harsh black drop shadow).
+// Soft, diffused, slightly indigo-tinted elevation (premium look — never a harsh black drop shadow).
 const shadow = {
-  sm: { shadowColor: '#1A1340', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
-  md: { shadowColor: '#1A1340', shadowOpacity: 0.1, shadowRadius: 24, shadowOffset: { width: 0, height: 10 }, elevation: 6 },
-  lg: { shadowColor: '#1A1340', shadowOpacity: 0.16, shadowRadius: 36, shadowOffset: { width: 0, height: 18 }, elevation: 12 },
+  sm: { shadowColor: '#1E1B4B', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
+  md: { shadowColor: '#1E1B4B', shadowOpacity: 0.1, shadowRadius: 24, shadowOffset: { width: 0, height: 10 }, elevation: 6 },
+  lg: { shadowColor: '#1E1B4B', shadowOpacity: 0.16, shadowRadius: 36, shadowOffset: { width: 0, height: 18 }, elevation: 12 },
 } satisfies ThemeTokens['shadow'];
 
 export const lightColors: ColorTokens = {
@@ -73,14 +73,14 @@ export const lightColors: ColorTokens = {
   foreground: '#16161E', // near-black ink
   card: '#FFFFFF',
   cardForeground: '#16161E',
-  primary: '#6C5CE7', // vivid violet — primary CTA + selected + accents
+  primary: '#4F46E5', // vivid indigo — primary CTA + selected + accents
   primaryForeground: '#FFFFFF',
-  primarySoft: '#ECE9FE', // violet tint (selected row / chip / icon tile bg)
+  primarySoft: '#E0E7FF', // indigo tint (selected row / chip / icon tile bg)
   secondary: '#EEEEF3', // soft gray pill (inactive chips, secondary button)
   secondaryForeground: '#16161E',
   muted: '#EFEFF4',
   mutedForeground: '#85858F',
-  accent: '#6C5CE7',
+  accent: '#4F46E5',
   accentForeground: '#FFFFFF',
   success: '#22C55E',
   successForeground: '#FFFFFF',
@@ -91,22 +91,22 @@ export const lightColors: ColorTokens = {
   destructive: '#FF3B30',
   destructiveForeground: '#FFFFFF',
   border: '#E7E7EE',
-  ring: '#6C5CE7',
+  ring: '#4F46E5',
 };
 
 export const darkColors: ColorTokens = {
   background: '#131120', // deep indigo-navy (not pure black — matches the reference)
   foreground: '#F3F2FA',
-  card: '#1E1B2D', // slightly lifted navy-violet surface
+  card: '#1E1B2D', // slightly lifted navy-indigo surface
   cardForeground: '#F3F2FA',
-  primary: '#7C6CFF', // brighter violet for contrast on dark
+  primary: '#6366F1', // brighter indigo for contrast on dark
   primaryForeground: '#FFFFFF',
-  primarySoft: '#2A2542',
+  primarySoft: '#262B4D',
   secondary: '#272335',
   secondaryForeground: '#F3F2FA',
   muted: '#221F31',
   mutedForeground: '#9A96AD',
-  accent: '#7C6CFF',
+  accent: '#6366F1',
   accentForeground: '#FFFFFF',
   success: '#34D27B',
   successForeground: '#06230F',
@@ -117,7 +117,7 @@ export const darkColors: ColorTokens = {
   destructive: '#FF453A',
   destructiveForeground: '#FFFFFF',
   border: '#2C2841',
-  ring: '#7C6CFF',
+  ring: '#6366F1',
 };
 
 export const lightTheme: ThemeTokens = { colors: lightColors, radius, spacing, fontSize, fonts, shadow, minTapTarget };

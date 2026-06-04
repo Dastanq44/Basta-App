@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { type Href, useRouter } from 'expo-router';
-import { Button, Card, Screen, SegmentedControl, Text, useTheme, useThemeMode } from '@/shared/ui';
+import { Avatar, Button, Card, Screen, SegmentedControl, Text, useTheme, useThemeMode } from '@/shared/ui';
 import { useSession, useSignOut } from '@/features/auth';
 import { useRequestAccountDeletion } from '@/features/moderation';
 
@@ -61,14 +61,15 @@ export default function ProfileScreen() {
           paddingBottom: t.spacing.xl,
         }}
       >
-        <Text variant="title">Profile</Text>
-
-        <Card>
-          <View style={{ gap: t.spacing.xs }}>
-            <Text variant="muted">Signed in as</Text>
-            <Text variant="body">{email ?? '—'}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.md }}>
+          <Avatar name={email ?? 'U'} size={64} />
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text variant="title">Profile</Text>
+            <Text variant="muted" numberOfLines={1}>
+              {email ?? '—'}
+            </Text>
           </View>
-        </Card>
+        </View>
 
         <View style={{ gap: t.spacing.sm }}>
           <Text variant="heading">Appearance</Text>

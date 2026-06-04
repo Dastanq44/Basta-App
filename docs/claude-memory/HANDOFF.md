@@ -21,6 +21,86 @@
 
 ---
 
+## 2026-06-05 — Claude 2 / UI overhaul phases 1–4 (indigo theme · Home · Groups · challenge wizard)
+
+**Did:** Phases 1–4 of a large UI overhaul from a user reference (the study-app mockups, recoloured
+to **INDIGO**). Green: `npm run typecheck` ✅ · `npm run lint` ✅ (1 pre-existing warning in
+`app/challenge/[id].tsx` — Claude 1's `useMemo`/`myUid`, NOT mine, left untouched to avoid
+conflicts). **Phase 5 NOT started.** Committed + pushed as part of this handoff.
+
+### Phase 1 — Indigo recolor + Explore tab + Profile header
+- Recoloured theme tokens violet → INDIGO (`#4F46E5` light / `#6366F1` dark, soft `#E0E7FF`) in
+  `src/shared/ui/theme/tokens.ts` — cascades to every screen, light + dark.
+- Added a 5th tab **Explore** (between Challenges and Groups) → placeholder "Coming soon"
+  (`app/(tabs)/explore.tsx`; new dep-free `Icon` glyph `explore`). Post-MVP per D-006 → placeholder.
+- Profile: avatar + email header.
+
+### Phase 2 — Home revamp (server-authoritative)
+- `app/(tabs)/index.tsx` rebuilt: "This week" card (days active /7 + progress bar), stat tiles
+  (streak 🔥 + today's tasks done/total), and a **conditional "Verify a friend" button** shown only
+  when group proofs await the caller → new inbox `app/verifications.tsx`.
+- NEW feature `src/features/home/*` + migration `20260604300000_home_overview.sql` (**W-029**):
+  `get_home_overview()` + `list_pending_verifications_for_me()`. Tz-correct (D-010); Home refetches
+  on focus (catches midnight + just-cleared verifications).
+
+### Phase 3 — Groups (create + 3-tab detail + gear)
+- Create group: **photo avatar** (image upload) + **description** — best-effort, so the group is
+  still created if the migration/bucket aren't there yet.
+- Group detail = **3 tabs** (Main info / Leaderboard / Global placeholder) via SegmentedControl +
+  a **gear (⚙️ header-right)** action sheet: owner → Edit/Archive, everyone → Leave/Report.
+- Edit screen now edits name + description + avatar.
+- Migration `20260604400000_group_profile.sql` (**W-030**): `groups.description` + `avatar_path`,
+  `get_group_overview()`, `update_group_meta()`, Storage RLS for a **public `group-avatars` bucket
+  (USER must create it)**. `create_group`/`update_group` left UNCHANGED on purpose (additive, D-012).
+
+### Phase 4 — Step-by-step challenge wizard (NO migration)
+- `app/challenge/new.tsx` rebuilt as a wizard: `[solo/group] → category → name+emoji → start → end
+  → description`. Progress bar + per-step validation. No backend: emoji is prefixed onto the title
+  (`🏃 Morning run`), start+end → `duration_days` (computed), description → existing
+  `proof_requirement`. Solo+group both kept. `groupId` param skips the type step (ready for an
+  in-group "+"). Added a **New challenge** button on the Groups tab.
+
+**Changed files:**
+- Tokens/icons: `src/shared/ui/theme/tokens.ts`, `src/shared/ui/Icon.tsx`.
+- Screens: `app/(tabs)/{_layout,index,groups,profile}.tsx`, NEW `app/(tabs)/explore.tsx`,
+  NEW `app/verifications.tsx`, `app/_layout.tsx`, `app/challenge/new.tsx`, `app/group/[id].tsx`,
+  `app/group/[id]/edit.tsx`.
+- Home feature: NEW `src/features/home/{api,hooks,index}`.
+- Groups feature: `api/index.ts`, `hooks/index.ts` + NEW `hooks/{useGroupOverview,useUpdateGroupMeta}.ts`,
+  `model/{schemas,index}.ts`, `index.ts`, `ui/index.ts` + NEW `ui/GroupAvatarPicker.tsx`,
+  rewrote `ui/GroupCreateOrJoinForm.tsx`.
+- Migrations: NEW `20260604300000_home_overview.sql` (W-029), `20260604400000_group_profile.sql` (W-030).
+
+**Unfinished work / next recommended task:** **Phase 5** — Challenges tab: a "My challenges" view
+(active/completed) + an **Instagram-style submissions feed** (your + groupmates' proofs across active
+challenges, today → older) + a gear to edit/delete challenges. Needs a NEW cross-challenge "feed"
+read (an RPC like `list_feed_submissions()` + signed-URL handling, mirroring the proof screens).
+
+**USER actions added this session:**
+- **Apply W-029** — else Home shows zeros (no crash).
+- **Apply W-030** AND **create a PUBLIC Storage bucket `group-avatars`** — else group avatar +
+  description silently don't save (the group still creates).
+- Phase 4 needs NO migration. All prior pending actions still stand (W-014..W-028 minus W-018; W-020/W-008).
+
+**Tests run:** `npm run typecheck` ✅ · `npm run lint` ✅ (0 errors).
+**Tests NOT run:** unit/component/E2E — none configured (W-007). The app was NOT launched on a
+device — none of this UI is visually verified; image upload (group avatar) + the new RPCs are unexercised.
+
+**Known issues / warnings for the next Claude:**
+- New features are gated at runtime by W-029 / W-030 + the `group-avatars` bucket. Everything
+  degrades gracefully (zeros / partial / group-created-without-avatar) before they're applied.
+- The 1 lint warning in `app/challenge/[id].tsx` is Claude 1's, not from this session.
+- **Additive-migration discipline (D-012):** don't change existing create-RPC signatures and don't
+  add columns to base `select` lists; set new fields via a best-effort follow-up RPC and read them
+  via a dedicated RPC. This is why `create_group`/`create_challenge` were untouched.
+- Group avatar = real image upload (expo-image-picker → arrayBuffer → public bucket, mirrors
+  `src/offline/upload/storage.ts`); public URL has no cache-buster (changed avatar may be stale ~1h).
+- Two-account concurrency: `origin/mvp` was level with local at handoff; still pull before work.
+
+**Branch / commit:** `mvp` — committed this session (see `git log`); pushed to `origin/mvp`.
+
+---
+
 ## 2026-06-04 — Claude 1 / T-031b polish: contestants table + brighter status box
 
 **Did:** Two UI tweaks on the challenge detail screen. No backend changes.

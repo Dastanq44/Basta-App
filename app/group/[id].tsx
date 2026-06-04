@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Alert, FlatList, Pressable, RefreshControl, View } from 'react-native';
+import { Alert, FlatList, Image, Modal, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { type Href, Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Button, Card, CrownIcon, Screen, Text, useTheme } from '@/shared/ui';
+import { Avatar, Card, CrownIcon, Screen, SegmentedControl, Text, useTheme } from '@/shared/ui';
 import { useSession } from '@/features/auth';
 import {
   useArchiveGroup,
+  useGroupOverview,
   useLeaveGroup,
   useMyGroups,
   useTransferGroupLeadership,
@@ -13,7 +14,10 @@ import { useGroupLeaderboard } from '@/features/leaderboard';
 import { ReportSheet } from '@/features/moderation';
 import type { LeaderboardEntry } from '@/entities';
 
-// Thin route: group name + invite code to share + the server-authoritative leaderboard.
+type Tab = 'main' | 'board' | 'global';
+
+// Group detail: three tabs (Main info / Leaderboard / Global placeholder) + a gear action menu
+// (owner → edit/archive; everyone → leave/report). Server enforces every action server-side.
 export default function GroupScreen() {
   const t = useTheme();
   const router = useRouter();
@@ -21,10 +25,13 @@ export default function GroupScreen() {
   const session = useSession();
   const myUid = session.session?.user.id;
   const groups = useMyGroups();
+  const overview = useGroupOverview(id);
   const board = useGroupLeaderboard(id);
   const leave = useLeaveGroup();
   const archive = useArchiveGroup();
   const transfer = useTransferGroupLeadership();
+  const [tab, setTab] = useState<Tab>('main');
+  const [menuOpen, setMenuOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
 
   const group = groups.data?.find((g) => g.id === id);
@@ -44,13 +51,7 @@ export default function GroupScreen() {
           onPress: () =>
             transfer.mutate(
               { groupId: id, newOwnerId: entry.userId },
-              {
-                onError: (e) =>
-                  Alert.alert(
-                    'Could not transfer',
-                    e instanceof Error ? e.message : 'Unknown error',
-                  ),
-              },
+              { onError: (e) => Alert.alert('Could not transfer', e instanceof Error ? e.message : 'Unknown error') },
             ),
         },
       ],
@@ -100,9 +101,6 @@ export default function GroupScreen() {
     );
   };
 
-  // Active groups come from `useMyGroups`, which filters `archived_at is null`. So if the
-  // settled list doesn't contain this id, the group is either archived, deleted, or the user
-  // is no longer a member. Show a friendly state rather than a half-rendered leaderboard.
   if (!groups.isPending && !group) {
     return (
       <Screen>
@@ -110,7 +108,7 @@ export default function GroupScreen() {
         <View style={{ gap: t.spacing.md }}>
           <Text variant="title">Group unavailable</Text>
           <Text variant="muted">
-            This group has been archived, you're no longer a member, or it no longer exists.
+            This group has been archived, you&apos;re no longer a member, or it no longer exists.
           </Text>
         </View>
       </Screen>
@@ -118,107 +116,185 @@ export default function GroupScreen() {
   }
 
   return (
-    <Screen padded={false}>
-      <Stack.Screen options={{ title: group?.name ?? 'Group' }} />
-      <FlatList
-        data={board.data ?? []}
-        keyExtractor={(e) => e.userId}
-        contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.sm, paddingBottom: t.spacing.xl }}
-        ListHeaderComponent={
-          <View style={{ gap: t.spacing.md, marginBottom: t.spacing.sm }}>
-            {group?.inviteCode ? (
-              <Card>
-                <Text variant="muted">Invite code</Text>
-                <View
-                  style={{
-                    marginTop: t.spacing.xs,
-                    alignSelf: 'flex-start',
-                    backgroundColor: t.colors.primarySoft,
-                    borderRadius: t.radius.md,
-                    paddingHorizontal: t.spacing.md,
-                    paddingVertical: t.spacing.sm,
-                  }}
-                >
-                  <Text
-                    selectable
-                    style={{ fontSize: t.fontSize.lg, fontWeight: '700', color: t.colors.primary, letterSpacing: 1.5 }}
-                  >
-                    {group.inviteCode}
-                  </Text>
-                </View>
-                <Text variant="caption" style={{ marginTop: t.spacing.xs }}>
-                  Share this so a friend can join. Tap &amp; hold to copy.
-                </Text>
-              </Card>
-            ) : null}
-            <Text variant="heading">Leaderboard</Text>
-          </View>
-        }
-        ListEmptyComponent={
-          board.isPending ? (
-            <Text variant="muted">Loading…</Text>
-          ) : board.isError ? (
-            <Text variant="caption" style={{ color: t.colors.destructive }}>
-              {board.error instanceof Error ? board.error.message : 'Could not load the leaderboard.'}
+    <Screen padded={false} edges={['bottom']}>
+      <Stack.Screen
+        options={{
+          title: group?.name ?? 'Group',
+          headerRight: () => (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Group settings"
+              hitSlop={8}
+              onPress={() => setMenuOpen(true)}
+              style={{ paddingHorizontal: 4 }}
+            >
+              <Text style={{ fontSize: 20 }}>⚙️</Text>
+            </Pressable>
+          ),
+        }}
+      />
+
+      <View style={{ paddingHorizontal: t.spacing.lg, paddingTop: t.spacing.md }}>
+        <SegmentedControl
+          options={
+            [
+              { label: 'Main info', value: 'main' },
+              { label: 'Leaderboard', value: 'board' },
+              { label: 'Global', value: 'global' },
+            ] as const
+          }
+          value={tab}
+          onChange={setTab}
+        />
+      </View>
+
+      {tab === 'main' ? (
+        <ScrollView contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.md, paddingBottom: t.spacing.xl }}>
+          <View style={{ alignItems: 'center', gap: t.spacing.sm }}>
+            {overview.data?.avatarUrl ? (
+              <Image source={{ uri: overview.data.avatarUrl }} style={{ width: 88, height: 88, borderRadius: 44 }} />
+            ) : (
+              <Avatar name={group?.name ?? '?'} size={88} />
+            )}
+            <Text variant="title" style={{ textAlign: 'center' }}>
+              {group?.name ?? 'Group'}
             </Text>
-          ) : (
-            <Text variant="muted">No members yet.</Text>
-          )
-        }
-        refreshControl={
-          <RefreshControl
-            refreshing={board.isFetching && !board.isPending}
-            onRefresh={() => void board.refetch()}
-          />
-        }
-        renderItem={({ item }) => (
-          <LeaderboardRow
-            entry={item}
-            isMe={item.userId === myUid}
-            isLeader={item.userId === group?.ownerId}
-            // Only the current owner can initiate a transfer, and only to a non-self
-            // member. Tapping anyone else is a no-op (no need to gate further here —
-            // the server also enforces it).
-            onTransfer={
-              isOwner && item.userId !== myUid && !transfer.isPending
-                ? () => confirmTransfer(item)
-                : undefined
-            }
-          />
-        )}
-        ListFooterComponent={
-          <View style={{ marginTop: t.spacing.lg, gap: t.spacing.sm }}>
-            <Text variant="heading">Settings</Text>
-            <Button
-              label={leave.isPending ? 'Leaving…' : 'Leave group'}
-              variant="secondary"
-              onPress={confirmLeave}
-              loading={leave.isPending}
-              disabled={leave.isPending || archive.isPending}
+            {overview.data?.description ? (
+              <Text variant="muted" style={{ textAlign: 'center' }}>
+                {overview.data.description}
+              </Text>
+            ) : null}
+          </View>
+
+          <Card>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <Text variant="muted">Members</Text>
+              <Text variant="subtitle">{overview.data?.memberCount ?? '—'}</Text>
+            </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: t.spacing.sm }}>
+              <Text variant="muted">Created</Text>
+              <Text variant="subtitle">
+                {overview.data?.createdAt ? new Date(overview.data.createdAt).toLocaleDateString() : '—'}
+              </Text>
+            </View>
+          </Card>
+
+          {group?.inviteCode ? (
+            <Card>
+              <Text variant="muted">Invite code</Text>
+              <View
+                style={{
+                  marginTop: t.spacing.xs,
+                  alignSelf: 'flex-start',
+                  backgroundColor: t.colors.primarySoft,
+                  borderRadius: t.radius.md,
+                  paddingHorizontal: t.spacing.md,
+                  paddingVertical: t.spacing.sm,
+                }}
+              >
+                <Text selectable style={{ fontSize: t.fontSize.lg, fontWeight: '700', color: t.colors.primary, letterSpacing: 1.5 }}>
+                  {group.inviteCode}
+                </Text>
+              </View>
+              <Text variant="caption" style={{ marginTop: t.spacing.xs }}>
+                Share this so a friend can join. Tap &amp; hold to copy.
+              </Text>
+            </Card>
+          ) : null}
+        </ScrollView>
+      ) : tab === 'board' ? (
+        <FlatList
+          data={board.data ?? []}
+          keyExtractor={(e) => e.userId}
+          contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.sm, paddingBottom: t.spacing.xl }}
+          ListEmptyComponent={
+            board.isPending ? (
+              <Text variant="muted">Loading…</Text>
+            ) : board.isError ? (
+              <Text variant="caption" style={{ color: t.colors.destructive }}>
+                {board.error instanceof Error ? board.error.message : 'Could not load the leaderboard.'}
+              </Text>
+            ) : (
+              <Text variant="muted">No members yet.</Text>
+            )
+          }
+          refreshControl={
+            <RefreshControl refreshing={board.isFetching && !board.isPending} onRefresh={() => void board.refetch()} />
+          }
+          renderItem={({ item }) => (
+            <LeaderboardRow
+              entry={item}
+              isMe={item.userId === myUid}
+              isLeader={item.userId === group?.ownerId}
+              onTransfer={
+                isOwner && item.userId !== myUid && !transfer.isPending ? () => confirmTransfer(item) : undefined
+              }
             />
+          )}
+        />
+      ) : (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: t.spacing.xl, gap: t.spacing.sm }}>
+          <Text variant="heading">Global leaderboard</Text>
+          <Text variant="muted" style={{ textAlign: 'center' }}>
+            Ranking across all groups is coming soon.
+          </Text>
+        </View>
+      )}
+
+      {/* Gear action menu */}
+      <Modal visible={menuOpen} transparent animationType="fade" onRequestClose={() => setMenuOpen(false)}>
+        <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }} onPress={() => setMenuOpen(false)}>
+          <Pressable
+            onPress={() => {}}
+            style={{
+              backgroundColor: t.colors.card,
+              borderTopLeftRadius: t.radius.xl,
+              borderTopRightRadius: t.radius.xl,
+              padding: t.spacing.lg,
+              paddingBottom: t.spacing.xl,
+              gap: t.spacing.xs,
+            }}
+          >
+            <View style={{ alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: t.colors.border, marginBottom: t.spacing.sm }} />
             {isOwner ? (
               <>
-                <Button
+                <MenuItem
                   label="Edit group"
-                  variant="secondary"
-                  onPress={() => router.push(`/group/${id}/edit` as Href)}
-                  disabled={leave.isPending || archive.isPending}
+                  onPress={() => {
+                    setMenuOpen(false);
+                    router.push(`/group/${id}/edit` as Href);
+                  }}
                 />
-                <Button
+                <MenuItem
                   label={archive.isPending ? 'Archiving…' : 'Archive group'}
-                  variant="destructive"
-                  onPress={confirmArchive}
-                  loading={archive.isPending}
-                  disabled={leave.isPending || archive.isPending}
+                  destructive
+                  onPress={() => {
+                    setMenuOpen(false);
+                    confirmArchive();
+                  }}
                 />
               </>
             ) : null}
-            <Pressable accessibilityRole="button" onPress={() => setReportOpen(true)} hitSlop={4}>
-              <Text variant="muted" style={{ textAlign: 'center' }}>Report this group</Text>
-            </Pressable>
-          </View>
-        }
-      />
+            <MenuItem
+              label={leave.isPending ? 'Leaving…' : 'Leave group'}
+              destructive
+              onPress={() => {
+                setMenuOpen(false);
+                confirmLeave();
+              }}
+            />
+            <MenuItem
+              label="Report group"
+              onPress={() => {
+                setMenuOpen(false);
+                setReportOpen(true);
+              }}
+            />
+            <MenuItem label="Cancel" onPress={() => setMenuOpen(false)} />
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       {id ? (
         <ReportSheet
           visible={reportOpen}
@@ -232,6 +308,26 @@ export default function GroupScreen() {
   );
 }
 
+function MenuItem({ label, destructive, onPress }: { label: string; destructive?: boolean; onPress: () => void }) {
+  const t = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => ({
+        paddingVertical: 14,
+        paddingHorizontal: t.spacing.sm,
+        borderRadius: t.radius.md,
+        opacity: pressed ? 0.6 : 1,
+      })}
+    >
+      <Text variant="subtitle" style={{ color: destructive ? t.colors.destructive : t.colors.foreground, textAlign: 'center' }}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
 function LeaderboardRow({
   entry,
   isMe,
@@ -241,8 +337,6 @@ function LeaderboardRow({
   entry: LeaderboardEntry;
   isMe: boolean;
   isLeader: boolean;
-  /** Provided only when the current viewer is the owner and this row is a non-self
-   *  member they could promote. Tapping the row opens the transfer confirmation. */
   onTransfer?: () => void;
 }) {
   const t = useTheme();
@@ -250,10 +344,10 @@ function LeaderboardRow({
   const card = (
     <Card style={isMe ? { borderWidth: 1.5, borderColor: t.colors.accent } : undefined}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.md }}>
-        <Text variant="title" style={{ width: 44, color: t.colors.mutedForeground }}>{entry.rank}</Text>
-        <View
-          style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: t.spacing.xs }}
-        >
+        <Text variant="title" style={{ width: 44, color: t.colors.mutedForeground }}>
+          {entry.rank}
+        </Text>
+        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: t.spacing.xs }}>
           {isLeader ? <CrownIcon size={14} /> : null}
           <Text variant="heading">
             {name}

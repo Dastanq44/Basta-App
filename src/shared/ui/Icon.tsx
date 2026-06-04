@@ -13,7 +13,8 @@ export type IconName =
   | 'bell'
   | 'search'
   | 'check'
-  | 'copy';
+  | 'copy'
+  | 'explore';
 
 export type IconProps = { name: IconName; size?: number; color?: string; strokeWidth?: number };
 
@@ -111,6 +112,14 @@ export function Icon({ name, size = 24, color, strokeWidth = 2 }: IconProps) {
         <View style={box}>
           <View style={{ width: size * 0.42, height: size * 0.5, borderWidth: sw, borderColor: c, borderRadius: 4, position: 'absolute', top: size * 0.1, left: size * 0.14 }} />
           <View style={{ width: size * 0.42, height: size * 0.5, borderWidth: sw, borderColor: c, borderRadius: 4, position: 'absolute', bottom: size * 0.1, right: size * 0.14, backgroundColor: t.colors.card }} />
+        </View>
+      );
+    case 'explore':
+      return (
+        <View style={box}>
+          <View style={{ width: size * 0.78, height: size * 0.78, borderRadius: size * 0.39, borderWidth: sw, borderColor: c, alignItems: 'center', justifyContent: 'center' }}>
+            <View style={{ width: size * 0.28, height: size * 0.28, backgroundColor: c, transform: [{ rotate: '45deg' }] }} />
+          </View>
         </View>
       );
     default:

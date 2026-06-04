@@ -3,7 +3,15 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-06-04 — by: Claude 1 (T-031 polish: B-013 SQL fix + safe-area + status box restyle; W-028)_
+_Last updated: 2026-06-05 — by: Claude 2 (UI overhaul phases 1–4: indigo theme, Home, Groups, challenge wizard; W-029 + W-030)_
+
+> **2026-06-05 UI overhaul (phases 1–4):** theme recoloured violet → **INDIGO** (still
+> user-selectable light/dark, Profile → Appearance). Added 5th **Explore** tab (placeholder).
+> **Home** rebuilt (week + streak + today + conditional "Verify a friend" → `app/verifications.tsx`;
+> RPCs W-029). **Groups**: create with photo avatar + description; 3-tab detail (Main / Leaderboard /
+> Global placeholder) + gear menu; W-030 + a USER-created public `group-avatars` bucket. **Challenge
+> creation** is a step wizard now (no migration). **Phase 5 (Challenges feed) NOT started.**
+> Committed + pushed to `origin/mvp` this session.
 
 > **2026-06-04 UI refresh:** app restyled to a violet light+dark theme (user-selectable in
 > Profile → Appearance, persisted via SecureStore — no backend). New token palette + 8 new
@@ -12,7 +20,7 @@ _Last updated: 2026-06-04 — by: Claude 1 (T-031 polish: B-013 SQL fix + safe-a
 > bespoke-restyled yet. Invite codes hardened to 12-char base62 (W-026, supersedes W-018).
 > **Committed to `mvp` this session and pushed to `origin/mvp`.**
 
-## Status: PHASE 4A COMPLETE + T-026..T-031 · apply 12 migrations + 1 dashboard toggle
+## Status: PHASE 4A COMPLETE + T-026..T-031 + UI overhaul ph.1–4 · apply 14 migrations + 1 dashboard toggle + 1 storage bucket (group-avatars)
 
 Phase 4A-1 (password reset + leave/archive group + archive challenge) is complete and
 Phase 4A-2 (report/block UI + account-deletion request UI) is now done too. All MVP-scope
@@ -83,7 +91,9 @@ applies one SQL file. All checks green.
 - W-024 — Patch: in-place edit of group + challenge metadata (T-029).
 - W-025 — Patch: transfer group leadership (T-030).
 - W-027 — Patch: challenge detail revamp / today + streaks + redact (T-031).
-- **W-028** — Patch: qualify column refs in `get_my_today_submission` (B-013 fix; this session).
+- **W-028** — Patch: qualify column refs in `get_my_today_submission` (B-013 fix).
+- **W-029** — Home overview RPCs (Home tab counts/streak + Verify inbox; 2026-06-05).
+- **W-030** — Group profile: description + avatar columns/RPCs + RLS; ALSO create a public `group-avatars` Storage bucket (2026-06-05).
 - W-020 — Auth → URL Configuration → add `basta://reset-password` to Redirect URLs.
 
 The full MVP loop now exists in code: register → group → challenge → submit proof (offline) →

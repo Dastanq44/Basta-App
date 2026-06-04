@@ -15,6 +15,12 @@ export const inviteCodeSchema = z
   .trim()
   .regex(/^[A-Za-z0-9]{12}$/, `Enter the ${INVITE_CODE_LENGTH}-character invite code`);
 
+// Optional group description (Main info). Trim; empty string is treated as "no description".
+export const groupDescriptionSchema = z
+  .string()
+  .trim()
+  .max(280, 'Description must be at most 280 characters');
+
 export const createGroupInput = z.object({ name: groupNameSchema });
 export type CreateGroupInput = z.infer<typeof createGroupInput>;
 

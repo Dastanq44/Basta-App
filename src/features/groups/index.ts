@@ -9,17 +9,23 @@ export {
   useArchiveGroup,
   useRestoreGroup,
   useUpdateGroup,
+  useGroupOverview,
+  useUpdateGroupMeta,
+  groupOverviewQueryKey,
   useTransferGroupLeadership,
   myGroupsQueryKey,
   myArchivedGroupsQueryKey,
 } from './hooks';
+export { uploadGroupAvatar, groupAvatarUrl } from './api';
+export type { GroupOverview } from './api';
 export {
   groupNameSchema,
+  groupDescriptionSchema,
   inviteCodeSchema,
   createGroupInput,
   joinGroupInput,
   INVITE_CODE_LENGTH,
 } from './model';
 export type { CreateGroupInput, JoinGroupInput } from './model';
-export { GroupCreateOrJoinForm } from './ui';
-export type { GroupCreateOrJoinFormProps, GroupCreateOrJoinMode } from './ui';
+export { GroupCreateOrJoinForm, GroupAvatarPicker } from './ui';
+export type { GroupCreateOrJoinFormProps, GroupCreateOrJoinMode, GroupAvatarPickerProps } from './ui';

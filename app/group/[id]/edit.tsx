@@ -4,13 +4,16 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Button, Input, Screen, Text, useTheme } from '@/shared/ui';
 import { useSession } from '@/features/auth';
 import {
+  GroupAvatarPicker,
+  groupDescriptionSchema,
   groupNameSchema,
+  uploadGroupAvatar,
+  useGroupOverview,
   useMyGroups,
-  useUpdateGroup,
+  useUpdateGroupMeta,
 } from '@/features/groups';
 
-// Thin route: rename an active group (owner-only). The server also enforces owner +
-// not-archived; this screen just guards the UI from non-owners.
+// Thin route: owner edits name + description + avatar. Server enforces owner + not-archived.
 export default function EditGroupScreen() {
   const t = useTheme();
   const router = useRouter();
@@ -18,41 +21,62 @@ export default function EditGroupScreen() {
   const session = useSession();
   const myUid = session.session?.user.id;
   const groups = useMyGroups();
-  const update = useUpdateGroup();
+  const overview = useGroupOverview(id);
+  const update = useUpdateGroupMeta();
 
   const group = groups.data?.find((g) => g.id === id);
   const isOwner = !!myUid && group?.ownerId === myUid;
 
   const [name, setName] = useState(group?.name ?? '');
+  const [description, setDescription] = useState('');
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [fieldError, setFieldError] = useState<string | null>(null);
-  const [hydrated, setHydrated] = useState(group != null);
+  const [hydrated, setHydrated] = useState(false);
+  const [descHydrated, setDescHydrated] = useState(false);
+  const [busy, setBusy] = useState(false);
 
-  // Seed the input ONCE the groups list resolves (the route may mount before useMyGroups
-  // settles). After that we leave the user's edits alone — otherwise backspacing to empty
-  // would silently re-fill with the previous name, which makes "clear and retype" awkward.
+  // Seed name + description once their sources resolve (one-shot — don't clobber edits).
   useEffect(() => {
     if (hydrated || !group) return;
     setName(group.name);
     setHydrated(true);
   }, [group, hydrated]);
+  useEffect(() => {
+    if (descHydrated || overview.data == null) return;
+    setDescription(overview.data.description ?? '');
+    setDescHydrated(true);
+  }, [overview.data, descHydrated]);
+
+  const submitError = update.error instanceof Error ? update.error.message : null;
 
   const onSubmit = async () => {
     if (!id) return;
     setFieldError(null);
-    const parsed = groupNameSchema.safeParse(name);
-    if (!parsed.success) {
-      setFieldError(parsed.error.issues[0]?.message ?? 'Invalid name');
+    const parsedName = groupNameSchema.safeParse(name);
+    if (!parsedName.success) {
+      setFieldError(parsedName.error.issues[0]?.message ?? 'Invalid name');
       return;
     }
-    if (parsed.data === group?.name) {
-      router.back();
+    const parsedDesc = groupDescriptionSchema.safeParse(description);
+    if (!parsedDesc.success) {
+      setFieldError(parsedDesc.error.issues[0]?.message ?? 'Invalid description');
       return;
     }
+    setBusy(true);
     try {
-      await update.mutateAsync({ groupId: id, name: parsed.data });
+      let avatarPath: string | null = null; // null = keep the existing avatar
+      if (avatarUri) avatarPath = await uploadGroupAvatar(id, avatarUri);
+      await update.mutateAsync({
+        groupId: id,
+        name: parsedName.data,
+        description: parsedDesc.data.trim() || null,
+        avatarPath,
+      });
       router.back();
     } catch {
-      /* surfaced via update.error */
+      /* surfaced via submitError */
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -64,17 +88,15 @@ export default function EditGroupScreen() {
       </Screen>
     );
   }
-
   if (!group) {
     return (
       <Screen>
         <Stack.Screen options={{ title: 'Edit group' }} />
         <Text variant="title">Group unavailable</Text>
-        <Text variant="muted">This group is archived or you're no longer a member.</Text>
+        <Text variant="muted">This group is archived or you&apos;re no longer a member.</Text>
       </Screen>
     );
   }
-
   if (!isOwner) {
     return (
       <Screen>
@@ -84,19 +106,17 @@ export default function EditGroupScreen() {
     );
   }
 
-  const submitError = update.error instanceof Error ? update.error.message : null;
+  const previewUri = avatarUri ?? overview.data?.avatarUrl ?? null;
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={{ flex: 1 }}
-    >
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <Screen padded={false}>
         <Stack.Screen options={{ title: 'Edit group' }} />
         <ScrollView
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.lg, paddingBottom: t.spacing.xl }}
         >
+          <GroupAvatarPicker uri={previewUri} onPick={setAvatarUri} />
           <Input
             label="Group name"
             value={name}
@@ -104,7 +124,16 @@ export default function EditGroupScreen() {
             autoCapitalize="words"
             placeholder="Group name"
             error={fieldError ?? undefined}
-            editable={!update.isPending}
+            editable={!busy}
+          />
+          <Input
+            label="Description (optional)"
+            value={description}
+            onChangeText={setDescription}
+            placeholder="What's this group about?"
+            multiline
+            maxLength={280}
+            editable={!busy}
           />
           {submitError ? (
             <Text variant="caption" style={{ color: t.colors.destructive }}>
@@ -113,20 +142,10 @@ export default function EditGroupScreen() {
           ) : null}
           <View style={{ flexDirection: 'row', gap: t.spacing.md }}>
             <View style={{ flex: 1 }}>
-              <Button
-                label="Cancel"
-                variant="secondary"
-                onPress={() => router.back()}
-                disabled={update.isPending}
-              />
+              <Button label="Cancel" variant="secondary" onPress={() => router.back()} disabled={busy} />
             </View>
             <View style={{ flex: 1 }}>
-              <Button
-                label={update.isPending ? 'Saving…' : 'Save'}
-                onPress={onSubmit}
-                loading={update.isPending}
-                disabled={update.isPending}
-              />
+              <Button label={busy ? 'Saving…' : 'Save'} onPress={onSubmit} loading={busy} disabled={busy} />
             </View>
           </View>
         </ScrollView>

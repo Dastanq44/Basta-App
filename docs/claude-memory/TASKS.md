@@ -32,6 +32,7 @@
 | T-016 | DONE | Two-Claude shared config: repo `.claude/skills/mobile-app-architect`, `.claude/settings.json`, `scripts/bootstrap-claude.md` |
 | T-070 | DONE | UI refresh ("sleek violet"): violet light+dark theme + user theme toggle (light/dark/system, SecureStore-persisted, no backend) + 8 new `src/shared/ui` primitives (StatTile/Chip/SegmentedControl/ProgressBar/ListRow/Avatar/Badge/Icon) + restyled tab bar & 4 tab screens. Token-driven (D-005). Detail screens inherit but aren't bespoke-restyled yet. |
 | T-071 | DONE | Security: invite codes → 12-char base62 `[A-Za-z0-9]` (supersedes 4-digit W-018), crypto-random + DB CHECK, case-sensitive. Migration W-026 (D-011). |
+| T-072 | DOING | UI overhaul (D-012). **Ph.1–4 DONE:** indigo recolor; Explore tab (placeholder); Home rebuild (week/streak/today + conditional Verify inbox `app/verifications.tsx`, W-029); Groups create w/ photo avatar + description + 3-tab detail + gear (W-030 + USER-created `group-avatars` bucket); step-by-step challenge wizard (no migration). **Ph.5 TODO:** Challenges tab "My challenges" + Instagram-style submissions feed + gear edit/delete (needs a feed RPC). |
 
 ### Auth & onboarding
 | ID | Status | Task |

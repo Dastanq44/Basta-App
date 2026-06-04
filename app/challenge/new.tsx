@@ -1,186 +1,320 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   CHALLENGE_CATEGORIES,
   createChallengeInput,
   useCreateChallenge,
   type ChallengeCategory,
-  type CreateChallengeInput,
 } from '@/features/challenges';
 import { useMyGroups } from '@/features/groups';
-import { Button, Input, Screen, Text, useTheme } from '@/shared/ui';
+import { Button, Chip, Input, ProgressBar, Screen, Text, useTheme } from '@/shared/ui';
 
-type FieldErrors = Partial<Record<keyof CreateChallengeInput, string>>;
+const EMOJIS = ['💪', '🏃', '📚', '🧘', '🎨', '✍️', '💻', '🌅', '💧', '🥗', '😴', '🎯', '🔥', '⭐', '🏆', '🎸', '🚭', '🧠', '🏋️', '☀️'];
 
 function todayISO(): string {
   const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function addDaysISO(iso: string, days: number): string {
+  const d = new Date(`${iso}T00:00:00`);
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function isISO(s: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(new Date(`${s}T00:00:00`).getTime());
+}
+/** Inclusive day count between two ISO dates, or null if invalid. */
+function diffDaysInclusive(start: string, end: string): number | null {
+  if (!isISO(start) || !isISO(end)) return null;
+  const s = new Date(`${start}T00:00:00`).getTime();
+  const e = new Date(`${end}T00:00:00`).getTime();
+  return Math.round((e - s) / 86_400_000) + 1;
 }
 
+// Step-by-step new-challenge wizard: [type?] → category → name+emoji → start → end → description.
+// The "type" step is skipped when a groupId param is passed (created from inside a group).
+// No migration: emoji is prefixed onto the title; start+end become duration_days; the description
+// is stored in proof_requirement.
 export default function CreateChallengeScreen() {
   const t = useTheme();
   const router = useRouter();
   const create = useCreateChallenge();
   const groups = useMyGroups();
+  const params = useLocalSearchParams<{ groupId?: string }>();
+  const presetGroupId = typeof params.groupId === 'string' ? params.groupId : null;
 
-  const [title, setTitle] = useState('');
+  const needsType = !presetGroupId;
+  const stepKeys = needsType
+    ? (['type', 'category', 'name', 'start', 'end', 'desc'] as const)
+    : (['category', 'name', 'start', 'end', 'desc'] as const);
+
+  const [stepIdx, setStepIdx] = useState(0);
+  const [mode, setMode] = useState<'solo' | 'group'>(presetGroupId ? 'group' : 'solo');
+  const [groupId, setGroupId] = useState<string | null>(presetGroupId);
   const [category, setCategory] = useState<ChallengeCategory>('fitness');
-  const [mode, setMode] = useState<'solo' | 'group'>('solo');
-  const [groupId, setGroupId] = useState<string | null>(null);
+  const [name, setName] = useState('');
+  const [emoji, setEmoji] = useState('💪');
   const [startDate, setStartDate] = useState(todayISO());
-  const [durationDays, setDurationDays] = useState('30');
-  const [proofRequirement, setProofRequirement] = useState('');
-  const [errors, setErrors] = useState<FieldErrors>({});
+  const [endDate, setEndDate] = useState(addDaysISO(todayISO(), 29));
+  const [description, setDescription] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
-  const onSubmit = async () => {
-    setErrors({});
+  const step = stepKeys[stepIdx];
+  const isLast = stepIdx === stepKeys.length - 1;
+  const mutationError = create.error instanceof Error ? create.error.message : null;
+
+  const validateStep = (): boolean => {
+    setError(null);
+    if (step === 'type') {
+      if (mode === 'group' && !groupId) {
+        setError('Pick a group');
+        return false;
+      }
+    } else if (step === 'name') {
+      if (name.trim().length === 0) {
+        setError('Give your challenge a name');
+        return false;
+      }
+    } else if (step === 'start') {
+      if (!isISO(startDate)) {
+        setError('Enter a valid start date (YYYY-MM-DD)');
+        return false;
+      }
+    } else if (step === 'end') {
+      const days = diffDaysInclusive(startDate, endDate);
+      if (days == null) {
+        setError('Enter a valid end date (YYYY-MM-DD)');
+        return false;
+      }
+      if (days < 1) {
+        setError('End date must be on or after the start date');
+        return false;
+      }
+      if (days > 365) {
+        setError('Challenge can be at most 365 days');
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const onNext = async () => {
+    if (!validateStep()) return;
+    if (!isLast) {
+      setStepIdx((i) => i + 1);
+      return;
+    }
+    // Final submit.
+    const days = diffDaysInclusive(startDate, endDate);
+    const title = `${emoji ? `${emoji} ` : ''}${name.trim()}`;
     const parsed = createChallengeInput.safeParse({
       title,
       category,
       mode,
       startDate,
-      durationDays: Number(durationDays),
-      proofRequirement: proofRequirement.trim() || undefined,
+      durationDays: days ?? 0,
+      proofRequirement: description.trim() || undefined,
       groupId: mode === 'group' ? groupId : null,
     });
     if (!parsed.success) {
-      const errs: FieldErrors = {};
-      parsed.error.issues.forEach((i) => {
-        const k = i.path[0] as keyof CreateChallengeInput | undefined;
-        if (k && !errs[k]) errs[k] = i.message;
-      });
-      setErrors(errs);
-      return;
-    }
-    if (parsed.data.mode === 'group' && !parsed.data.groupId) {
-      setErrors({ groupId: 'Pick a group' });
+      setError(parsed.error.issues[0]?.message ?? 'Please check your inputs');
       return;
     }
     try {
       const id = await create.mutateAsync(parsed.data);
       router.replace({ pathname: '/challenge/[id]', params: { id } });
     } catch {
-      /* surfaced via mutationError below */
+      /* surfaced via mutationError */
     }
   };
 
-  const mutationError = create.error instanceof Error ? create.error.message : null;
+  const onBack = () => {
+    setError(null);
+    if (stepIdx === 0) router.back();
+    else setStepIdx((i) => i - 1);
+  };
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <Screen padded={false}>
         <Stack.Screen options={{ title: 'New challenge' }} />
-        <ScrollView contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.lg, paddingBottom: t.spacing.xl }}>
-          <Input
-            label="Title"
-            value={title}
-            onChangeText={setTitle}
-            placeholder="e.g. 30 days of pushups"
-            error={errors.title}
-            editable={!create.isPending}
-          />
-          <View style={{ gap: t.spacing.xs }}>
-            <Text variant="caption">Category</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.spacing.xs }}>
-              {CHALLENGE_CATEGORIES.map((c) => (
-                <Chip key={c} label={c} selected={category === c} onPress={() => setCategory(c)} />
-              ))}
-            </View>
-            {errors.category ? (
-              <Text variant="caption" style={{ color: t.colors.destructive }}>{errors.category}</Text>
-            ) : null}
-          </View>
-          <View style={{ gap: t.spacing.xs }}>
-            <Text variant="caption">Mode</Text>
-            <View style={{ flexDirection: 'row', gap: t.spacing.xs }}>
-              <Chip label="Solo" selected={mode === 'solo'} onPress={() => setMode('solo')} />
-              <Chip label="Group" selected={mode === 'group'} onPress={() => setMode('group')} />
-            </View>
-          </View>
-          {mode === 'group' ? (
-            <View style={{ gap: t.spacing.xs }}>
-              <Text variant="caption">Group</Text>
-              {groups.isPending ? (
-                <Text variant="muted">Loading groups…</Text>
-              ) : !groups.data || groups.data.length === 0 ? (
-                <Text variant="muted">You're not in a group yet. Join or create one first.</Text>
-              ) : (
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.spacing.xs }}>
-                  {groups.data.map((g) => (
-                    <Chip key={g.id} label={g.name} selected={groupId === g.id} onPress={() => setGroupId(g.id)} />
-                  ))}
-                </View>
-              )}
-              {errors.groupId ? (
-                <Text variant="caption" style={{ color: t.colors.destructive }}>{errors.groupId}</Text>
+        <View style={{ paddingHorizontal: t.spacing.lg, paddingTop: t.spacing.md, gap: t.spacing.xs }}>
+          <Text variant="label">
+            STEP {stepIdx + 1} OF {stepKeys.length}
+          </Text>
+          <ProgressBar value={(stepIdx + 1) / stepKeys.length} />
+        </View>
+
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.lg, paddingBottom: t.spacing.xl }}
+        >
+          {step === 'type' ? (
+            <View style={{ gap: t.spacing.md }}>
+              <Text variant="heading">Solo or group?</Text>
+              <View style={{ flexDirection: 'row', gap: t.spacing.sm }}>
+                <Chip label="Solo" selected={mode === 'solo'} onPress={() => setMode('solo')} />
+                <Chip label="Group" selected={mode === 'group'} onPress={() => setMode('group')} />
+              </View>
+              {mode === 'group' ? (
+                groups.isPending ? (
+                  <Text variant="muted">Loading groups…</Text>
+                ) : !groups.data || groups.data.length === 0 ? (
+                  <Text variant="muted">You&apos;re not in a group yet. Create or join one first.</Text>
+                ) : (
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.spacing.sm }}>
+                    {groups.data.map((g) => (
+                      <Chip key={g.id} label={g.name} selected={groupId === g.id} onPress={() => setGroupId(g.id)} />
+                    ))}
+                  </View>
+                )
               ) : null}
             </View>
+          ) : step === 'category' ? (
+            <View style={{ gap: t.spacing.md }}>
+              <Text variant="heading">Pick a category</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.spacing.sm }}>
+                {CHALLENGE_CATEGORIES.map((c) => (
+                  <Chip key={c} label={c} selected={category === c} onPress={() => setCategory(c)} />
+                ))}
+              </View>
+            </View>
+          ) : step === 'name' ? (
+            <View style={{ gap: t.spacing.md }}>
+              <Text variant="heading">Name &amp; icon</Text>
+              <View style={{ alignItems: 'center', gap: t.spacing.xs }}>
+                <View
+                  style={{
+                    width: 72,
+                    height: 72,
+                    borderRadius: 24,
+                    backgroundColor: t.colors.primarySoft,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text style={{ fontSize: 36 }}>{emoji || '🙂'}</Text>
+                </View>
+              </View>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.spacing.sm, justifyContent: 'center' }}>
+                {EMOJIS.map((e) => (
+                  <Pressable
+                    key={e}
+                    accessibilityRole="button"
+                    onPress={() => setEmoji(e)}
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: t.radius.md,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: emoji === e ? t.colors.primarySoft : t.colors.muted,
+                      borderWidth: emoji === e ? 1.5 : 0,
+                      borderColor: t.colors.primary,
+                    }}
+                  >
+                    <Text style={{ fontSize: 22 }}>{e}</Text>
+                  </Pressable>
+                ))}
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm }}>
+                <Text variant="caption">Or type any emoji:</Text>
+                <TextInput
+                  value={emoji}
+                  onChangeText={setEmoji}
+                  placeholder="🙂"
+                  placeholderTextColor={t.colors.mutedForeground}
+                  style={{
+                    minWidth: 56,
+                    textAlign: 'center',
+                    fontSize: 22,
+                    paddingVertical: 6,
+                    paddingHorizontal: 10,
+                    borderWidth: 1,
+                    borderColor: t.colors.border,
+                    borderRadius: t.radius.md,
+                    color: t.colors.foreground,
+                  }}
+                />
+              </View>
+              <Input
+                label="Name"
+                value={name}
+                onChangeText={setName}
+                placeholder="e.g. Morning run"
+                autoCapitalize="sentences"
+                editable={!create.isPending}
+              />
+            </View>
+          ) : step === 'start' ? (
+            <View style={{ gap: t.spacing.md }}>
+              <Text variant="heading">Start date</Text>
+              <Input
+                label="Start (YYYY-MM-DD)"
+                value={startDate}
+                onChangeText={setStartDate}
+                autoCapitalize="none"
+                placeholder="2026-06-05"
+                editable={!create.isPending}
+              />
+            </View>
+          ) : step === 'end' ? (
+            <View style={{ gap: t.spacing.md }}>
+              <Text variant="heading">End date</Text>
+              <Input
+                label="End (YYYY-MM-DD)"
+                value={endDate}
+                onChangeText={setEndDate}
+                autoCapitalize="none"
+                placeholder="2026-07-05"
+                editable={!create.isPending}
+              />
+              {diffDaysInclusive(startDate, endDate) != null ? (
+                <Text variant="muted">{diffDaysInclusive(startDate, endDate)} day challenge</Text>
+              ) : null}
+            </View>
+          ) : (
+            <View style={{ gap: t.spacing.md }}>
+              <Text variant="heading">Description (optional)</Text>
+              <Input
+                label="What's the challenge about? / what proof to submit"
+                value={description}
+                onChangeText={setDescription}
+                placeholder="e.g. a photo of your completed run"
+                multiline
+                maxLength={280}
+                editable={!create.isPending}
+              />
+            </View>
+          )}
+
+          {error ? (
+            <Text variant="caption" style={{ color: t.colors.destructive }}>
+              {error}
+            </Text>
           ) : null}
-          <Input
-            label="Start date"
-            value={startDate}
-            onChangeText={setStartDate}
-            placeholder="YYYY-MM-DD"
-            autoCapitalize="none"
-            error={errors.startDate}
-            editable={!create.isPending}
-          />
-          <Input
-            label="Duration (days)"
-            value={durationDays}
-            onChangeText={(v) => setDurationDays(v.replace(/\D/g, '').slice(0, 3))}
-            placeholder="30"
-            keyboardType="number-pad"
-            error={errors.durationDays}
-            editable={!create.isPending}
-          />
-          <Input
-            label="Proof requirement (optional)"
-            value={proofRequirement}
-            onChangeText={setProofRequirement}
-            placeholder="e.g. photo of completed workout"
-            error={errors.proofRequirement}
-            editable={!create.isPending}
-          />
           {mutationError ? (
-            <Text variant="caption" style={{ color: t.colors.destructive }}>{mutationError}</Text>
+            <Text variant="caption" style={{ color: t.colors.destructive }}>
+              {mutationError}
+            </Text>
           ) : null}
-          <Button
-            label={create.isPending ? 'Creating…' : 'Create challenge'}
-            onPress={onSubmit}
-            loading={create.isPending}
-            disabled={create.isPending}
-          />
         </ScrollView>
+
+        <View style={{ flexDirection: 'row', gap: t.spacing.md, padding: t.spacing.lg, paddingTop: 0 }}>
+          <View style={{ flex: 1 }}>
+            <Button label={stepIdx === 0 ? 'Cancel' : 'Back'} variant="secondary" onPress={onBack} disabled={create.isPending} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Button
+              label={isLast ? (create.isPending ? 'Creating…' : 'Create') : 'Next'}
+              onPress={onNext}
+              loading={create.isPending}
+              disabled={create.isPending}
+            />
+          </View>
+        </View>
       </Screen>
     </KeyboardAvoidingView>
-  );
-}
-
-function Chip({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
-  const t = useTheme();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ selected }}
-      onPress={onPress}
-      hitSlop={4}
-      style={{
-        paddingHorizontal: t.spacing.md,
-        paddingVertical: 8,
-        borderRadius: t.radius.lg,
-        borderWidth: 1,
-        borderColor: selected ? t.colors.primary : t.colors.border,
-        backgroundColor: selected ? t.colors.accent : 'transparent',
-      }}
-    >
-      <Text style={{ color: selected ? t.colors.accentForeground : t.colors.foreground, fontWeight: '600' }}>
-        {label}
-      </Text>
-    </Pressable>
   );
 }

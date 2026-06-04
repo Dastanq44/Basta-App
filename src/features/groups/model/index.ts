@@ -1,5 +1,6 @@
 export {
   groupNameSchema,
+  groupDescriptionSchema,
   inviteCodeSchema,
   createGroupInput,
   joinGroupInput,

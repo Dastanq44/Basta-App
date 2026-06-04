@@ -288,6 +288,29 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
   log `[basta] getMyTodaySubmission failed: { code: "42702", message: "column reference
   'id' is ambiguous" }` and the screen falls into its error state.
 
+## [OPEN] W-029 — Apply migration: Home overview RPCs
+- **Date:** 2026-06-05 · **Area:** backend / Supabase
+- **What:** `supabase/migrations/20260604300000_home_overview.sql` adds `get_home_overview()` and
+  `list_pending_verifications_for_me()` — the Home ("Today") tab's streak / week / today / pending-
+  verification counts + the "Verify a friend" inbox (`app/verifications.tsx`). Tz-correct (D-010).
+  Idempotent (CREATE OR REPLACE).
+- **Apply via:** Supabase Dashboard → SQL editor → Run. Reads existing tables (submissions,
+  challenges, verifications, group_members).
+- **Status:** Open until applied. Before then the Home tab shows zeros and the Verify inbox shows
+  "Nothing to verify" — no crash (the query just errors and the screen degrades).
+
+## [OPEN] W-030 — Apply migration + create bucket: group profile (description + photo avatar)
+- **Date:** 2026-06-05 · **Area:** backend / Supabase / Storage
+- **What:** `supabase/migrations/20260604400000_group_profile.sql` adds `groups.description` +
+  `groups.avatar_path`, RPCs `get_group_overview()` + `update_group_meta()`, and Storage RLS for a
+  public `group-avatars` bucket. `create_group` / `update_group` are left UNCHANGED (additive — see
+  D-012), so group create/rename keep working before this is applied.
+- **USER actions (BOTH required):**
+  1. Apply the migration (SQL editor → Run).
+  2. **Create a PUBLIC bucket `group-avatars`** (Dashboard → Storage → New bucket → Public: ON).
+- **Status:** Open until applied. Before then: group **create still works** (name only); the photo
+  avatar + description silently don't save, and the group's Main-info tab shows partial data.
+
 ## [RESOLVED] B-013 — `column reference "id" is ambiguous` on get_my_today_submission
 - **Date:** 2026-06-04 · **Area:** backend / Supabase
 - **Repro:** Open any challenge detail screen with W-027 applied. Console logs the 42702

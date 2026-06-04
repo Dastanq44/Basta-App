@@ -105,6 +105,7 @@ function RootNav() {
       <Stack.Screen name="group/archived" options={{ headerShown: true, title: 'Archived groups' }} />
       <Stack.Screen name="submission/[id]" options={{ headerShown: true, title: 'Proof' }} />
       <Stack.Screen name="blocked-users" options={{ headerShown: true, title: 'Blocked users' }} />
+      <Stack.Screen name="verifications" options={{ headerShown: true, title: 'Verify proofs' }} />
     </Stack>
   );
 }

@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { Button, Input, Text, useTheme } from '@/shared/ui';
 // Relative imports keep this free of a self-cycle once `index.ts` re-exports ui.
-import { createGroupInput, INVITE_CODE_LENGTH, joinGroupInput } from '../model';
-import { useCreateGroup, useJoinGroup } from '../hooks';
+import { createGroupInput, groupDescriptionSchema, INVITE_CODE_LENGTH, joinGroupInput } from '../model';
+import { useCreateGroup, useJoinGroup, useUpdateGroupMeta } from '../hooks';
+import { uploadGroupAvatar } from '../api';
+import { GroupAvatarPicker } from './GroupAvatarPicker';
 
 export type Mode = 'create' | 'join';
 
@@ -20,10 +22,9 @@ export type GroupCreateOrJoinFormProps = {
 
 /**
  * Reusable create-or-join form. Owns local state + zod validation + RPC mutations,
- * but defers post-success behavior to the parent (onboarding completes onboarding then
- * routes to tabs; the main app invalidates queries then routes to the new group).
- *
- * Parent screens stay thin: they only wire callbacks and present the result.
+ * but defers post-success behavior to the parent. On create it also (best-effort) uploads
+ * the chosen avatar + sets the description — the group is created regardless, so this works
+ * even before the W-030 migration / group-avatars bucket exist.
  */
 export function GroupCreateOrJoinForm({
   onCreated,
@@ -34,12 +35,15 @@ export function GroupCreateOrJoinForm({
   const t = useTheme();
   const [mode, setMode] = useState<Mode>(initialMode);
   const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [code, setCode] = useState('');
   const [fieldError, setFieldError] = useState<string | null>(null);
 
   const create = useCreateGroup();
   const join = useJoinGroup();
-  const submitting = create.isPending || join.isPending;
+  const updateMeta = useUpdateGroupMeta();
+  const submitting = create.isPending || join.isPending || updateMeta.isPending;
 
   const activeError = mode === 'create' ? create.error : join.error;
   const submitError = activeError instanceof Error ? activeError.message : null;
@@ -52,8 +56,29 @@ export function GroupCreateOrJoinForm({
         setFieldError(parsed.error.issues[0]?.message ?? 'Invalid group name');
         return;
       }
+      const descParsed = groupDescriptionSchema.safeParse(description);
+      if (!descParsed.success) {
+        setFieldError(descParsed.error.issues[0]?.message ?? 'Invalid description');
+        return;
+      }
       try {
         const group = await create.mutateAsync(parsed.data.name);
+        // Best-effort: avatar + description need W-030 + the bucket. The group exists either way.
+        try {
+          let avatarPath: string | null = null;
+          if (avatarUri) avatarPath = await uploadGroupAvatar(group.id, avatarUri);
+          const desc = descParsed.data.trim();
+          if (avatarPath || desc.length > 0) {
+            await updateMeta.mutateAsync({
+              groupId: group.id,
+              name: parsed.data.name,
+              description: desc || null,
+              avatarPath,
+            });
+          }
+        } catch (e) {
+          console.error('[basta] group avatar/description failed (group still created):', e);
+        }
         await onCreated(group.id);
       } catch {
         /* surfaced via submitError */
@@ -83,20 +108,31 @@ export function GroupCreateOrJoinForm({
       <ModeToggle mode={mode} onChange={setMode} />
 
       {mode === 'create' ? (
-        <Input
-          label="Group name"
-          value={name}
-          onChangeText={setName}
-          autoCapitalize="words"
-          placeholder="e.g. Morning runners"
-          error={fieldError ?? undefined}
-          editable={!submitting}
-        />
+        <>
+          <GroupAvatarPicker uri={avatarUri} onPick={setAvatarUri} />
+          <Input
+            label="Group name"
+            value={name}
+            onChangeText={setName}
+            autoCapitalize="words"
+            placeholder="e.g. Morning runners"
+            error={fieldError ?? undefined}
+            editable={!submitting}
+          />
+          <Input
+            label="Description (optional)"
+            value={description}
+            onChangeText={setDescription}
+            placeholder="What's this group about?"
+            multiline
+            maxLength={280}
+            editable={!submitting}
+          />
+        </>
       ) : (
         <Input
           label="Invite code"
           value={code}
-          // Strip anything outside [A-Za-z0-9]; keep case (codes are case-sensitive).
           onChangeText={(v) => setCode(v.replace(/[^A-Za-z0-9]/g, '').slice(0, INVITE_CODE_LENGTH))}
           autoCapitalize="none"
           autoCorrect={false}
