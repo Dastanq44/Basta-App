@@ -350,8 +350,8 @@ function MetaChip({ label }: { label: string }) {
 // theme's `success` / `warning` / `destructive` brights.
 const STATUS_RED_BORDER = '#D45656';
 const STATUS_RED_BG = 'rgba(212, 86, 86, 0.16)';
-const STATUS_AMBER_BORDER = '#EAB42E';
-const STATUS_AMBER_BG = 'rgba(234, 180, 46, 0.22)';
+const STATUS_AMBER_BORDER = '#ffc125';
+const STATUS_AMBER_BG = 'rgba(255, 183, 0, 0.39)';
 const STATUS_GREEN_BORDER = '#6FAE85';
 const STATUS_GREEN_BG = 'rgba(111, 174, 133, 0.18)';
 
