@@ -415,7 +415,9 @@ function ContestantsStreakRibbon({
 }) {
   const t = useTheme();
   // Self is shown by the Current/Best cards above — exclude from the table.
-  const others = useMemo(() => data.filter((d) => d.userId !== myUid), [data, myUid]);
+  // Changed by person (Dastan) so that streak leaderboards show all users including current.
+  // const others = useMemo(() => data.filter((d) => d.userId !== myUid), [data, myUid]); 
+  const others = useMemo(() => data.filter((d) => d.userId), [data, myUid]); 
   // Default: sort by Current, biggest streak first.
   const [sort, setSort] = useState<StreakSort>({ key: 'current', direction: 'desc' });
 
