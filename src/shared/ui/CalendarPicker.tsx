@@ -36,6 +36,14 @@ export function CalendarPicker({ value, onChange, minDate, maxDate }: CalendarPi
   const max = maxDate ? parseISO(maxDate) : null;
   const todayD = today();
 
+  // Hide the back arrow when the displayed view is at or before minDate's month —
+  // stepping back from there would land entirely in disabled days, so the affordance
+  // would only invite a dead end. Still shown on any month strictly after minDate.
+  const backHidden = !!min && (view.y < min.y || (view.y === min.y && view.m <= min.m));
+  // Symmetric guard for maxDate, for completeness — currently unused by the wizard but
+  // useful for future date pickers with a hard upper bound.
+  const forwardHidden = !!max && (view.y > max.y || (view.y === max.y && view.m >= max.m));
+
   return (
     <View
       style={{
@@ -47,13 +55,21 @@ export function CalendarPicker({ value, onChange, minDate, maxDate }: CalendarPi
         gap: t.spacing.sm,
       }}
     >
-      {/* Header: ‹  Month YYYY  › */}
+      {/* Header: ‹  Month YYYY  ›  (arrows hide individually at the min/max month edges) */}
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <ArrowButton direction="left" onPress={() => setView(addMonths(view, -1))} color={t.colors.foreground} />
+        {backHidden ? (
+          <View style={{ width: 36, height: 36 }} />
+        ) : (
+          <ArrowButton direction="left" onPress={() => setView(addMonths(view, -1))} color={t.colors.foreground} />
+        )}
         <Text variant="subtitle" style={{ color: t.colors.foreground, fontWeight: '600' }}>
           {monthLabel(view.y, view.m)}
         </Text>
-        <ArrowButton direction="right" onPress={() => setView(addMonths(view, 1))} color={t.colors.foreground} />
+        {forwardHidden ? (
+          <View style={{ width: 36, height: 36 }} />
+        ) : (
+          <ArrowButton direction="right" onPress={() => setView(addMonths(view, 1))} color={t.colors.foreground} />
+        )}
       </View>
 
       {/* Weekday header row */}

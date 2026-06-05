@@ -385,10 +385,13 @@ export default function CreateChallengeScreen() {
         return (
           <View style={{ gap: t.spacing.md }}>
             <Text variant="heading">Start date</Text>
-            <CalendarPicker value={startDate} onChange={setStartDate} />
+            {/* minDate=today disables past days; CalendarPicker also auto-hides the back
+                arrow when the displayed view is at or before today's month. */}
+            <CalendarPicker value={startDate} onChange={setStartDate} minDate={todayISO()} />
           </View>
         );
-      case 'end':
+      case 'end': {
+        const dayCount = diffDaysInclusive(startDate, endDate);
         return (
           <View style={{ gap: t.spacing.md }}>
             <Text variant="heading">End date</Text>
@@ -398,13 +401,33 @@ export default function CreateChallengeScreen() {
               minDate={startDate}
               maxDate={addDaysISO(startDate, 364)}
             />
-            {diffDaysInclusive(startDate, endDate) != null ? (
-              <Text variant="muted" style={{ textAlign: 'center' }}>
-                {diffDaysInclusive(startDate, endDate)} day challenge
-              </Text>
+            {dayCount != null ? (
+              <View style={{ alignItems: 'center' }}>
+                <View
+                  style={{
+                    paddingHorizontal: t.spacing.lg,
+                    paddingVertical: t.spacing.sm,
+                    borderRadius: t.radius.full,
+                    backgroundColor: t.colors.primarySoft,
+                    borderWidth: 1,
+                    borderColor: t.colors.primary,
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: t.colors.primary,
+                      fontWeight: '700',
+                      fontSize: t.fontSize.lg,
+                    }}
+                  >
+                    {dayCount} day challenge
+                  </Text>
+                </View>
+              </View>
             ) : null}
           </View>
         );
+      }
       case 'desc':
         return (
           <View style={{ gap: t.spacing.md }}>
@@ -475,13 +498,17 @@ export default function CreateChallengeScreen() {
 
         {/* Slide stage. During transitions, two absolutely-positioned layers overlap; the
             moving one carries the translateX animation, the stationary one sits at 0.
-            When no transition is in flight, only the current layer renders, in normal flow. */}
+            When no transition is in flight, only the current layer renders, in normal flow.
+            Each layer paints a solid `background` color so the incoming step fully obscures
+            the outgoing's text/inputs as it slides in (otherwise the two layers' text
+            visibly overlap during the ~280 ms animation — unpleasant on the eyes). */}
         <View style={{ flex: 1, overflow: 'hidden' }}>
           {transitioning && outgoingStep ? (
             <Animated.View
               pointerEvents="none"
               style={[
                 ABSOLUTE_LAYER,
+                { backgroundColor: t.colors.background },
                 { zIndex: direction === 'back' ? 2 : 1 },
                 direction === 'back' ? { transform: [{ translateX: movingTranslateX }] } : null,
               ]}
@@ -493,6 +520,7 @@ export default function CreateChallengeScreen() {
           <Animated.View
             style={[
               transitioning ? ABSOLUTE_LAYER : { flex: 1 },
+              { backgroundColor: t.colors.background },
               transitioning ? { zIndex: direction === 'forward' ? 2 : 1 } : null,
               transitioning && direction === 'forward'
                 ? { transform: [{ translateX: movingTranslateX }] }
