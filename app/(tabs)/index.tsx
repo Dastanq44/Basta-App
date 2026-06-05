@@ -51,8 +51,20 @@ export default function TodayScreen() {
         {/* This week */}
         <Card>
           <Text variant="label">THIS WEEK</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, marginTop: 4 }}>
-            <Text style={{ fontSize: t.fontSize.xxxl, fontWeight: '800', color: t.colors.foreground }}>
+          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, marginTop: t.spacing.xs }}>
+            <Text
+              style={{
+                fontSize: t.fontSize.xxxl,
+                fontWeight: '800',
+                color: t.colors.foreground,
+                // Extra-bold digits at xxxl (40) need an explicit line box: without it
+                // the ascender clips against the Card's top edge (the "0 / 7 …" looked
+                // half-cut). Padded ~15% above the font size; `includeFontPadding: false`
+                // also strips Android's default font-vertical padding.
+                lineHeight: t.fontSize.xxxl + 6,
+                includeFontPadding: false,
+              }}
+            >
               {o?.weekActiveDays ?? 0}
             </Text>
             <Text variant="muted">/ 7 days active</Text>
