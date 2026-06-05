@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Alert, FlatList, Image, Modal, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { type Href, Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Avatar, Card, CrownIcon, Screen, SegmentedControl, Text, useTheme } from '@/shared/ui';
+import { Avatar, Button, Card, CrownIcon, Icon, Screen, SegmentedControl, Text, useTheme } from '@/shared/ui';
 import { useSession } from '@/features/auth';
+import { useChallenges } from '@/features/challenges';
 import {
   useArchiveGroup,
   useGroupOverview,
@@ -12,7 +13,7 @@ import {
 } from '@/features/groups';
 import { useGroupLeaderboard } from '@/features/leaderboard';
 import { ReportSheet } from '@/features/moderation';
-import type { LeaderboardEntry } from '@/entities';
+import type { Challenge, LeaderboardEntry } from '@/entities';
 
 type Tab = 'main' | 'board' | 'global';
 
@@ -27,6 +28,7 @@ export default function GroupScreen() {
   const groups = useMyGroups();
   const overview = useGroupOverview(id);
   const board = useGroupLeaderboard(id);
+  const challenges = useChallenges();
   const leave = useLeaveGroup();
   const archive = useArchiveGroup();
   const transfer = useTransferGroupLeadership();
@@ -36,6 +38,13 @@ export default function GroupScreen() {
 
   const group = groups.data?.find((g) => g.id === id);
   const isOwner = !!myUid && group?.ownerId === myUid;
+
+  // Active challenges scoped to this group. `useChallenges` already excludes archived;
+  // we only need the group-scope filter.
+  const activeGroupChallenges = useMemo(
+    () => (challenges.data ?? []).filter((c) => c.groupId === id),
+    [challenges.data, id],
+  );
 
   const confirmTransfer = (entry: LeaderboardEntry) => {
     if (!id) return;
@@ -128,7 +137,8 @@ export default function GroupScreen() {
               onPress={() => setMenuOpen(true)}
               style={{ paddingHorizontal: 4 }}
             >
-              <Text style={{ fontSize: 20 }}>⚙️</Text>
+              {/* Simple monocolour three-dot glyph in place of the prior ⚙️ emoji. */}
+              <Icon name="settings" size={22} color={t.colors.foreground} />
             </Pressable>
           ),
         }}
@@ -138,7 +148,7 @@ export default function GroupScreen() {
         <SegmentedControl
           options={
             [
-              { label: 'Main info', value: 'main' },
+              { label: 'Main', value: 'main' },
               { label: 'Leaderboard', value: 'board' },
               { label: 'Global', value: 'global' },
             ] as const
@@ -179,27 +189,27 @@ export default function GroupScreen() {
             </View>
           </Card>
 
-          {group?.inviteCode ? (
-            <Card>
-              <Text variant="muted">Invite code</Text>
-              <View
-                style={{
-                  marginTop: t.spacing.xs,
-                  alignSelf: 'flex-start',
-                  backgroundColor: t.colors.primarySoft,
-                  borderRadius: t.radius.md,
-                  paddingHorizontal: t.spacing.md,
-                  paddingVertical: t.spacing.sm,
-                }}
-              >
-                <Text selectable style={{ fontSize: t.fontSize.lg, fontWeight: '700', color: t.colors.primary, letterSpacing: 1.5 }}>
-                  {group.inviteCode}
-                </Text>
+          {/* Below main info: create-in-group button → wizard pre-seeded with this group. */}
+          <Button
+            label="+ New challenge"
+            onPress={() => router.push(`/challenge/new?groupId=${id}` as Href)}
+          />
+
+          {/* Active challenges in this group. Skipped while the global list is loading so
+              we don't flash an empty state, and hidden entirely if the group has none. */}
+          {challenges.isPending ? null : activeGroupChallenges.length > 0 ? (
+            <View style={{ gap: t.spacing.sm }}>
+              <Text variant="subtitle">Active challenges</Text>
+              <View style={{ gap: t.spacing.xs }}>
+                {activeGroupChallenges.map((c) => (
+                  <GroupChallengeRow
+                    key={c.id}
+                    challenge={c}
+                    onPress={() => router.push(`/challenge/${c.id}` as Href)}
+                  />
+                ))}
               </View>
-              <Text variant="caption" style={{ marginTop: t.spacing.xs }}>
-                Share this so a friend can join. Tap &amp; hold to copy.
-              </Text>
-            </Card>
+            </View>
           ) : null}
         </ScrollView>
       ) : tab === 'board' ? (
@@ -256,6 +266,29 @@ export default function GroupScreen() {
             }}
           >
             <View style={{ alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: t.colors.border, marginBottom: t.spacing.sm }} />
+
+            {/* Invite code now lives here (moved out of Main) — share-only affordance,
+                so it belongs with the other group settings. */}
+            {group?.inviteCode ? (
+              <View style={{ paddingVertical: t.spacing.xs, paddingHorizontal: t.spacing.sm, marginBottom: t.spacing.xs, gap: t.spacing.xs }}>
+                <Text variant="muted">Invite code</Text>
+                <View
+                  style={{
+                    alignSelf: 'flex-start',
+                    backgroundColor: t.colors.primarySoft,
+                    borderRadius: t.radius.md,
+                    paddingHorizontal: t.spacing.md,
+                    paddingVertical: t.spacing.sm,
+                  }}
+                >
+                  <Text selectable style={{ fontSize: t.fontSize.lg, fontWeight: '700', color: t.colors.primary, letterSpacing: 1.5 }}>
+                    {group.inviteCode}
+                  </Text>
+                </View>
+                <Text variant="caption">Tap &amp; hold to copy.</Text>
+              </View>
+            ) : null}
+
             {isOwner ? (
               <>
                 <MenuItem
@@ -324,6 +357,40 @@ function MenuItem({ label, destructive, onPress }: { label: string; destructive?
       <Text variant="subtitle" style={{ color: destructive ? t.colors.destructive : t.colors.foreground, textAlign: 'center' }}>
         {label}
       </Text>
+    </Pressable>
+  );
+}
+
+function GroupChallengeRow({
+  challenge,
+  onPress,
+}: {
+  challenge: Challenge;
+  onPress: () => void;
+}) {
+  const t = useTheme();
+  return (
+    <Pressable accessibilityRole="button" onPress={onPress}>
+      <Card>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: t.spacing.md,
+            justifyContent: 'space-between',
+          }}
+        >
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text variant="subtitle" numberOfLines={1}>
+              {challenge.title}
+            </Text>
+            <Text variant="muted">
+              {challenge.category} · {challenge.durationDays} days
+            </Text>
+          </View>
+          <Text variant="muted">›</Text>
+        </View>
+      </Card>
     </Pressable>
   );
 }

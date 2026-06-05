@@ -21,6 +21,90 @@
 
 ---
 
+## 2026-06-05 — Claude 1 / Group Main polish + wizard restructure (UI-only, no migration)
+
+**Did:** Adjustments on top of Claude 2's Phase 3–4 from earlier today, per the user's spec.
+
+### Group detail (`app/group/[id].tsx`)
+- Tab label `Main info` → `Main`.
+- Header gear: the ⚙️ emoji is replaced by a new monocolour `Icon name="settings"` — three
+  vertical dots, dep-free. Added to `src/shared/ui/Icon.tsx` next to the existing glyphs.
+- Invite-code Card removed from the Main tab; moved into the gear/settings bottom sheet
+  as a small section above the menu items (the share-only affordance fits with
+  settings, not with the main info read).
+- Main tab now has, below the Members/Created card: a `+ New challenge` Button that
+  routes to `/challenge/new?groupId={id}` (the wizard already accepts the param and
+  skips the type/group steps when present), followed by an `Active challenges` list
+  scoped to the group via a client-side filter on `useChallenges`. Skipped while the
+  challenges query is pending; hidden when the group has zero active ones.
+- New `GroupChallengeRow` subcomponent in the same file.
+
+### Challenge wizard (`app/challenge/new.tsx`) — restructured
+- Removed the `STEP n OF n` label above the progress bar (per spec).
+- Progress bar now starts EMPTY (`stepIdx / (stepKeys.length - 1)`) and fills to full
+  on the last step. Previous implementation started at `1/N`.
+- Step list is dynamic:
+  - solo: `[type → category → name → icon → start → end → desc]` (7 steps)
+  - group: `[type → group → category → name → icon → start → end → desc]` (8 steps)
+  - presetGroupId (`?groupId=…`): `[category → name → icon → start → end → desc]`
+  Picking `group` on the type step rebuilds the step list to insert the `group` step.
+- `name` and `icon` are now separate steps (was one combined "Name & icon" screen).
+- The icon preview box uses larger lineHeight + `textAlignVertical: 'center'` so taller
+  emojis (🏋️, 🚭, 🎸) aren't clipped at the top.
+- `Start` and `End` use the new `CalendarPicker` component (HorizonCalendar-style,
+  dep-free month grid). End calendar gets `minDate={startDate}` +
+  `maxDate=start+364d` to match the 1–365 server constraint.
+- Description heading: `Description (optional)` → `Description` (bold) with `(optional)`
+  inline in muted color and `fontWeight: '400'` via nested `Text`.
+- Auto-advance on selection for: `type`, `group`, `category` (per spec — "only those").
+  Other steps still require the explicit Next button. Selecting `solo` skips the group
+  step; selecting `group` adds it.
+- Layout: the **Next / Create** button moved up — it now sits inside the ScrollView on
+  its OWN line below the step inputs. The bottom area keeps the Cancel/Back button as
+  before (single full-width button — Cancel on step 0, Back otherwise). Auto-advance
+  steps hide the in-scroll Next entirely.
+
+### New shared primitive — `CalendarPicker`
+- `src/shared/ui/CalendarPicker.tsx`. Dep-free month grid, controlled component
+  (`value: string` ISO, `onChange`). Header with prev/next month arrows + month label;
+  Sun–Sat weekday row; 6 × 7 day cells. Selected day highlighted with `primary`;
+  today gets a thin `primary` ring; out-of-month padding is dimmed; optional
+  `minDate` / `maxDate` props dim and disable out-of-range days. Tapping an
+  out-of-month padding day also jumps the view to that month (matches HorizonCalendar).
+- Exported from `src/shared/ui/index.ts` alongside the other primitives.
+
+**Files changed:**
+- New: `src/shared/ui/CalendarPicker.tsx`.
+- Modified: `src/shared/ui/Icon.tsx` (added `settings` glyph), `src/shared/ui/index.ts`
+  (re-export), `app/challenge/new.tsx` (full rewrite), `app/group/[id].tsx` (tab
+  label, gear icon, invite-code relocated to gear sheet, new-challenge button,
+  active-challenges list, new `GroupChallengeRow`).
+
+**Checks:** `npm run typecheck` ✅ · `npm run lint` ✅ · `npx expo-doctor` ✅
+(18/18). No new dependencies; `package.json` unchanged. The pre-existing eslint
+warning in `app/challenge/[id].tsx` (Claude 1's `useMemo`/`myUid` from a prior
+session that Claude 2 left alone) is still there — not touched.
+
+**Branch / commit:** `mvp` @ <see post-commit hash>
+
+**Next up:** still applies — pending USER actions for W-022..W-030 (minus W-018,
+superseded by W-026; and the `group-avatars` Storage bucket per W-030). No new
+migration this session.
+
+**Blockers / decisions needed:** None.
+
+**Notes for next session:**
+- The settings glyph is three vertical dots. If a "literal cogwheel silhouette" is
+  preferred later, the swap is local to `Icon.tsx` — keep the `'settings'` name.
+- `CalendarPicker` is reusable beyond the wizard — if the new edit-challenge screen
+  ever exposes start/end editing, point it here.
+- The Active challenges list on Group Main filters `useChallenges` client-side by
+  `groupId`. For groups with many challenges this is fine (MVP scale). If the global
+  challenge list grows large, swap to a dedicated `list_group_challenges(group_id)`
+  RPC.
+
+---
+
 ## 2026-06-05 — Claude 2 / UI overhaul phases 1–4 (indigo theme · Home · Groups · challenge wizard)
 
 **Did:** Phases 1–4 of a large UI overhaul from a user reference (the study-app mockups, recoloured

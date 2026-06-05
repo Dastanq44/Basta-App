@@ -25,5 +25,7 @@ export { StatTile } from './StatTile';
 export type { StatTileProps } from './StatTile';
 export { ListRow } from './ListRow';
 export type { ListRowProps } from './ListRow';
+export { CalendarPicker } from './CalendarPicker';
+export type { CalendarPickerProps } from './CalendarPicker';
 export { ThemeProvider, useTheme, useThemeMode, lightTheme, darkTheme } from './theme';
 export type { ThemeTokens, ColorTokens, ThemeMode } from './theme';

@@ -14,7 +14,8 @@ export type IconName =
   | 'search'
   | 'check'
   | 'copy'
-  | 'explore';
+  | 'explore'
+  | 'settings';
 
 export type IconProps = { name: IconName; size?: number; color?: string; strokeWidth?: number };
 
@@ -122,6 +123,22 @@ export function Icon({ name, size = 24, color, strokeWidth = 2 }: IconProps) {
           </View>
         </View>
       );
+    case 'settings': {
+      // Three vertical dots — the universal "more / settings" affordance. Simple, mono,
+      // 2D — fits the user's "monocolour, 2d shape, simple" brief better than a fiddly
+      // multi-tooth gear silhouette at small sizes.
+      const dot = size * 0.18;
+      const gap = size * 0.06;
+      return (
+        <View style={box}>
+          <View style={{ width: dot, height: dot, borderRadius: dot / 2, backgroundColor: c }} />
+          <View style={{ height: gap }} />
+          <View style={{ width: dot, height: dot, borderRadius: dot / 2, backgroundColor: c }} />
+          <View style={{ height: gap }} />
+          <View style={{ width: dot, height: dot, borderRadius: dot / 2, backgroundColor: c }} />
+        </View>
+      );
+    }
     default:
       return null;
   }
