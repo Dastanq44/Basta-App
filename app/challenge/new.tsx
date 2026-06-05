@@ -1,5 +1,14 @@
-import { useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Animated,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  TextInput,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   CHALLENGE_CATEGORIES,
@@ -73,6 +82,13 @@ export default function CreateChallengeScreen() {
   const [error, setError] = useState<string | null>(null);
   const [stepIdx, setStepIdx] = useState(0);
 
+  // Slide-transition state — see the renderer + useEffect below. `outgoingStep` holds the
+  // KEY of the step being animated off-screen; null when no transition is in flight.
+  const { width: screenWidth } = useWindowDimensions();
+  const [outgoingStep, setOutgoingStep] = useState<StepKey | null>(null);
+  const [direction, setDirection] = useState<'forward' | 'back'>('forward');
+  const slide = useRef(new Animated.Value(0)).current;
+
   // Step list rebuilds whenever mode / presetGroupId changes. The current step's KEY is
   // derived from this — we never index into a stale list because every render recomputes.
   const stepKeys: StepKey[] = useMemo(() => {
@@ -84,7 +100,8 @@ export default function CreateChallengeScreen() {
   const safeIdx = Math.min(stepIdx, stepKeys.length - 1);
   const step = stepKeys[safeIdx]!;
   const isLast = safeIdx === stepKeys.length - 1;
-  const isAutoAdvance = AUTO_ADVANCE.has(step);
+  // `isAutoAdvance` is computed per-step inside renderStepLayer, not here, since the
+  // outgoing layer needs the same calculation for the step it's rendering.
   const mutationError = create.error instanceof Error ? create.error.message : null;
 
   const validateStep = (target: StepKey): boolean => {
@@ -129,7 +146,10 @@ export default function CreateChallengeScreen() {
     }
   };
 
-  const advance = () => setStepIdx((i) => Math.min(i + 1, stepKeys.length - 1));
+  const advance = () => {
+    setDirection('forward');
+    setStepIdx((i) => Math.min(i + 1, stepKeys.length - 1));
+  };
 
   const onNext = async () => {
     if (!validateStep(step)) return;
@@ -164,8 +184,29 @@ export default function CreateChallengeScreen() {
   const onBack = () => {
     setError(null);
     if (safeIdx === 0) router.back();
-    else setStepIdx(safeIdx - 1);
+    else {
+      setDirection('back');
+      setStepIdx(safeIdx - 1);
+    }
   };
+
+  // Drive the slide animation whenever the step prop changes. The previous step's KEY
+  // gets parked in `outgoingStep` and we animate from 0→1; the layer style picks which
+  // direction the moving layer translates (see the JSX below).
+  const renderedStepRef = useRef<StepKey>(step);
+  useEffect(() => {
+    if (renderedStepRef.current === step) return;
+    setOutgoingStep(renderedStepRef.current);
+    renderedStepRef.current = step;
+    slide.setValue(0);
+    Animated.timing(slide, {
+      toValue: 1,
+      duration: 280,
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished) setOutgoingStep(null);
+    });
+  }, [step, slide]);
 
   // Auto-advance handlers — selection on these steps immediately moves to the next.
   const onPickMode = (m: 'solo' | 'group') => {
@@ -189,6 +230,241 @@ export default function CreateChallengeScreen() {
   // No "Step n of n" label per the spec.
   const progress = stepKeys.length > 1 ? safeIdx / (stepKeys.length - 1) : 0;
 
+  // ── Slide-transition setup. iOS-style mirror: forward = incoming slides in from the
+  // right covering the outgoing; back = outgoing slides off to the right revealing the
+  // incoming. The moving layer's translateX runs from off-screen to 0 (or 0 to off-screen),
+  // driven by a single Animated.Value `slide` from 0..1. zIndex makes sure the layer
+  // that should appear "on top" actually does, regardless of JSX order.
+  const transitioning = outgoingStep !== null;
+  const movingTranslateX = slide.interpolate({
+    inputRange: [0, 1],
+    outputRange: direction === 'forward' ? [screenWidth, 0] : [0, screenWidth],
+  });
+
+  const renderStepContent = (key: StepKey) => {
+    switch (key) {
+      case 'type':
+        return (
+          <View style={{ gap: t.spacing.md }}>
+            <Text variant="heading">Solo or group?</Text>
+            <View style={{ flexDirection: 'row', gap: t.spacing.sm }}>
+              <Chip label="Solo" selected={mode === 'solo'} onPress={() => onPickMode('solo')} />
+              <Chip label="Group" selected={mode === 'group'} onPress={() => onPickMode('group')} />
+            </View>
+          </View>
+        );
+      case 'group':
+        return (
+          <View style={{ gap: t.spacing.md }}>
+            <Text variant="heading">Which group?</Text>
+            {groups.isPending ? (
+              <Text variant="muted">Loading groups…</Text>
+            ) : !groups.data || groups.data.length === 0 ? (
+              <Text variant="muted">You&apos;re not in a group yet. Create or join one first.</Text>
+            ) : (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.spacing.sm }}>
+                {groups.data.map((g) => (
+                  <Chip
+                    key={g.id}
+                    label={g.name}
+                    selected={groupId === g.id}
+                    onPress={() => onPickGroup(g.id)}
+                  />
+                ))}
+              </View>
+            )}
+          </View>
+        );
+      case 'category':
+        return (
+          <View style={{ gap: t.spacing.md }}>
+            <Text variant="heading">Pick a category</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.spacing.sm }}>
+              {CHALLENGE_CATEGORIES.map((c) => (
+                <Chip key={c} label={c} selected={category === c} onPress={() => onPickCategory(c)} />
+              ))}
+            </View>
+          </View>
+        );
+      case 'name':
+        return (
+          <View style={{ gap: t.spacing.md }}>
+            <Text variant="heading">Name your challenge</Text>
+            <Input
+              label="Name"
+              value={name}
+              onChangeText={setName}
+              placeholder="e.g. Morning run"
+              autoCapitalize="sentences"
+              editable={!create.isPending}
+            />
+          </View>
+        );
+      case 'icon':
+        return (
+          <View style={{ gap: t.spacing.md }}>
+            <Text variant="heading">Pick an icon</Text>
+            <View style={{ alignItems: 'center', gap: t.spacing.xs }}>
+              <View
+                style={{
+                  width: 88,
+                  height: 88,
+                  borderRadius: 28,
+                  backgroundColor: t.colors.primarySoft,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text
+                  style={{
+                    // Larger lineHeight + textAlignVertical: 'center' prevent the top of
+                    // taller emojis (e.g. 🏋️, 🚭, 🎸) from being clipped by the box.
+                    fontSize: 44,
+                    lineHeight: 56,
+                    textAlign: 'center',
+                    textAlignVertical: 'center',
+                  }}
+                >
+                  {emoji || '🙂'}
+                </Text>
+              </View>
+            </View>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.spacing.sm, justifyContent: 'center' }}>
+              {EMOJIS.map((e) => (
+                <Pressable
+                  key={e}
+                  accessibilityRole="button"
+                  onPress={() => setEmoji(e)}
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: t.radius.md,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: emoji === e ? t.colors.primarySoft : t.colors.muted,
+                    borderWidth: emoji === e ? 1.5 : 0,
+                    borderColor: t.colors.primary,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 26,
+                      lineHeight: 34,
+                      textAlign: 'center',
+                      textAlignVertical: 'center',
+                    }}
+                  >
+                    {e}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm }}>
+              <Text variant="caption">Or type any emoji:</Text>
+              <TextInput
+                value={emoji}
+                onChangeText={setEmoji}
+                placeholder="🙂"
+                placeholderTextColor={t.colors.mutedForeground}
+                style={{
+                  minWidth: 56,
+                  textAlign: 'center',
+                  fontSize: 22,
+                  paddingVertical: 6,
+                  paddingHorizontal: 10,
+                  borderWidth: 1,
+                  borderColor: t.colors.border,
+                  borderRadius: t.radius.md,
+                  color: t.colors.foreground,
+                }}
+              />
+            </View>
+          </View>
+        );
+      case 'start':
+        return (
+          <View style={{ gap: t.spacing.md }}>
+            <Text variant="heading">Start date</Text>
+            <CalendarPicker value={startDate} onChange={setStartDate} />
+          </View>
+        );
+      case 'end':
+        return (
+          <View style={{ gap: t.spacing.md }}>
+            <Text variant="heading">End date</Text>
+            <CalendarPicker
+              value={endDate}
+              onChange={setEndDate}
+              minDate={startDate}
+              maxDate={addDaysISO(startDate, 364)}
+            />
+            {diffDaysInclusive(startDate, endDate) != null ? (
+              <Text variant="muted" style={{ textAlign: 'center' }}>
+                {diffDaysInclusive(startDate, endDate)} day challenge
+              </Text>
+            ) : null}
+          </View>
+        );
+      case 'desc':
+        return (
+          <View style={{ gap: t.spacing.md }}>
+            {/* "(optional)" rendered inline, non-bold, muted color to match the spec. */}
+            <Text variant="heading">
+              Description
+              <Text style={{ color: t.colors.mutedForeground, fontWeight: '400' }}>
+                {' '}(optional)
+              </Text>
+            </Text>
+            <Input
+              label="What's the challenge about? / what proof to submit"
+              value={description}
+              onChangeText={setDescription}
+              placeholder="e.g. a photo of your completed run"
+              multiline
+              maxLength={280}
+              editable={!create.isPending}
+            />
+          </View>
+        );
+    }
+  };
+
+  /** Each layer is the full step body inside its own ScrollView. The `isCurrent` layer
+   *  shows the live error + the working Next button; the outgoing layer renders the
+   *  step's content snapshot so the user sees what they're leaving behind. */
+  const renderStepLayer = (key: StepKey, isCurrent: boolean) => {
+    const lastForKey = stepKeys.indexOf(key) === stepKeys.length - 1;
+    const autoForKey = AUTO_ADVANCE.has(key);
+    return (
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.lg, paddingBottom: t.spacing.lg }}
+      >
+        {renderStepContent(key)}
+
+        {isCurrent && error ? (
+          <Text variant="caption" style={{ color: t.colors.destructive }}>
+            {error}
+          </Text>
+        ) : null}
+        {isCurrent && mutationError ? (
+          <Text variant="caption" style={{ color: t.colors.destructive }}>
+            {mutationError}
+          </Text>
+        ) : null}
+
+        {!autoForKey ? (
+          <Button
+            label={lastForKey ? (create.isPending ? 'Creating…' : 'Create') : 'Next'}
+            onPress={isCurrent ? onNext : () => {}}
+            loading={isCurrent && create.isPending}
+            disabled={create.isPending}
+          />
+        ) : null}
+      </ScrollView>
+    );
+  };
+
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <Screen padded={false} edges={['bottom']}>
@@ -197,204 +473,38 @@ export default function CreateChallengeScreen() {
           <ProgressBar value={progress} />
         </View>
 
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.lg, paddingBottom: t.spacing.lg }}
-        >
-          {step === 'type' ? (
-            <View style={{ gap: t.spacing.md }}>
-              <Text variant="heading">Solo or group?</Text>
-              <View style={{ flexDirection: 'row', gap: t.spacing.sm }}>
-                <Chip label="Solo" selected={mode === 'solo'} onPress={() => onPickMode('solo')} />
-                <Chip label="Group" selected={mode === 'group'} onPress={() => onPickMode('group')} />
-              </View>
-            </View>
-          ) : step === 'group' ? (
-            <View style={{ gap: t.spacing.md }}>
-              <Text variant="heading">Which group?</Text>
-              {groups.isPending ? (
-                <Text variant="muted">Loading groups…</Text>
-              ) : !groups.data || groups.data.length === 0 ? (
-                <Text variant="muted">You&apos;re not in a group yet. Create or join one first.</Text>
-              ) : (
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.spacing.sm }}>
-                  {groups.data.map((g) => (
-                    <Chip
-                      key={g.id}
-                      label={g.name}
-                      selected={groupId === g.id}
-                      onPress={() => onPickGroup(g.id)}
-                    />
-                  ))}
-                </View>
-              )}
-            </View>
-          ) : step === 'category' ? (
-            <View style={{ gap: t.spacing.md }}>
-              <Text variant="heading">Pick a category</Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.spacing.sm }}>
-                {CHALLENGE_CATEGORIES.map((c) => (
-                  <Chip key={c} label={c} selected={category === c} onPress={() => onPickCategory(c)} />
-                ))}
-              </View>
-            </View>
-          ) : step === 'name' ? (
-            <View style={{ gap: t.spacing.md }}>
-              <Text variant="heading">Name your challenge</Text>
-              <Input
-                label="Name"
-                value={name}
-                onChangeText={setName}
-                placeholder="e.g. Morning run"
-                autoCapitalize="sentences"
-                editable={!create.isPending}
-              />
-            </View>
-          ) : step === 'icon' ? (
-            <View style={{ gap: t.spacing.md }}>
-              <Text variant="heading">Pick an icon</Text>
-              <View style={{ alignItems: 'center', gap: t.spacing.xs }}>
-                <View
-                  style={{
-                    width: 88,
-                    height: 88,
-                    borderRadius: 28,
-                    backgroundColor: t.colors.primarySoft,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Text
-                    style={{
-                      // Larger lineHeight + textAlignVertical: 'center' prevent the top of
-                      // taller emojis (e.g. 🏋️, 🚭, 🎸) from being clipped by the box.
-                      fontSize: 44,
-                      lineHeight: 56,
-                      textAlign: 'center',
-                      textAlignVertical: 'center',
-                    }}
-                  >
-                    {emoji || '🙂'}
-                  </Text>
-                </View>
-              </View>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.spacing.sm, justifyContent: 'center' }}>
-                {EMOJIS.map((e) => (
-                  <Pressable
-                    key={e}
-                    accessibilityRole="button"
-                    onPress={() => setEmoji(e)}
-                    style={{
-                      width: 48,
-                      height: 48,
-                      borderRadius: t.radius.md,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor: emoji === e ? t.colors.primarySoft : t.colors.muted,
-                      borderWidth: emoji === e ? 1.5 : 0,
-                      borderColor: t.colors.primary,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontSize: 26,
-                        lineHeight: 34,
-                        textAlign: 'center',
-                        textAlignVertical: 'center',
-                      }}
-                    >
-                      {e}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm }}>
-                <Text variant="caption">Or type any emoji:</Text>
-                <TextInput
-                  value={emoji}
-                  onChangeText={setEmoji}
-                  placeholder="🙂"
-                  placeholderTextColor={t.colors.mutedForeground}
-                  style={{
-                    minWidth: 56,
-                    textAlign: 'center',
-                    fontSize: 22,
-                    paddingVertical: 6,
-                    paddingHorizontal: 10,
-                    borderWidth: 1,
-                    borderColor: t.colors.border,
-                    borderRadius: t.radius.md,
-                    color: t.colors.foreground,
-                  }}
-                />
-              </View>
-            </View>
-          ) : step === 'start' ? (
-            <View style={{ gap: t.spacing.md }}>
-              <Text variant="heading">Start date</Text>
-              <CalendarPicker value={startDate} onChange={setStartDate} />
-            </View>
-          ) : step === 'end' ? (
-            <View style={{ gap: t.spacing.md }}>
-              <Text variant="heading">End date</Text>
-              <CalendarPicker
-                value={endDate}
-                onChange={setEndDate}
-                minDate={startDate}
-                maxDate={addDaysISO(startDate, 364)}
-              />
-              {diffDaysInclusive(startDate, endDate) != null ? (
-                <Text variant="muted" style={{ textAlign: 'center' }}>
-                  {diffDaysInclusive(startDate, endDate)} day challenge
-                </Text>
-              ) : null}
-            </View>
-          ) : (
-            <View style={{ gap: t.spacing.md }}>
-              {/* "(optional)" rendered inline, non-bold, muted color to match the spec. */}
-              <Text variant="heading">
-                Description
-                <Text style={{ color: t.colors.mutedForeground, fontWeight: '400' }}>
-                  {' '}(optional)
-                </Text>
-              </Text>
-              <Input
-                label="What's the challenge about? / what proof to submit"
-                value={description}
-                onChangeText={setDescription}
-                placeholder="e.g. a photo of your completed run"
-                multiline
-                maxLength={280}
-                editable={!create.isPending}
-              />
-            </View>
-          )}
-
-          {error ? (
-            <Text variant="caption" style={{ color: t.colors.destructive }}>
-              {error}
-            </Text>
-          ) : null}
-          {mutationError ? (
-            <Text variant="caption" style={{ color: t.colors.destructive }}>
-              {mutationError}
-            </Text>
+        {/* Slide stage. During transitions, two absolutely-positioned layers overlap; the
+            moving one carries the translateX animation, the stationary one sits at 0.
+            When no transition is in flight, only the current layer renders, in normal flow. */}
+        <View style={{ flex: 1, overflow: 'hidden' }}>
+          {transitioning && outgoingStep ? (
+            <Animated.View
+              pointerEvents="none"
+              style={[
+                ABSOLUTE_LAYER,
+                { zIndex: direction === 'back' ? 2 : 1 },
+                direction === 'back' ? { transform: [{ translateX: movingTranslateX }] } : null,
+              ]}
+            >
+              {renderStepLayer(outgoingStep, false)}
+            </Animated.View>
           ) : null}
 
-          {/* Next / Create — full-width on its own line, INSIDE the ScrollView right below
-              the step inputs. Auto-advance steps don't render it (selection advances on tap). */}
-          {!isAutoAdvance ? (
-            <Button
-              label={isLast ? (create.isPending ? 'Creating…' : 'Create') : 'Next'}
-              onPress={onNext}
-              loading={create.isPending}
-              disabled={create.isPending}
-            />
-          ) : null}
-        </ScrollView>
+          <Animated.View
+            style={[
+              transitioning ? ABSOLUTE_LAYER : { flex: 1 },
+              transitioning ? { zIndex: direction === 'forward' ? 2 : 1 } : null,
+              transitioning && direction === 'forward'
+                ? { transform: [{ translateX: movingTranslateX }] }
+                : null,
+            ]}
+          >
+            {renderStepLayer(step, true)}
+          </Animated.View>
+        </View>
 
         {/* Cancel / Back stays as it was — at the bottom of the screen. Single slot:
-            Cancel on step 0, Back otherwise. */}
+            Cancel on step 0, Back otherwise. NOT animated. */}
         <View style={{ padding: t.spacing.lg, paddingTop: 0 }}>
           <Button
             label={safeIdx === 0 ? 'Cancel' : 'Back'}
@@ -407,3 +517,5 @@ export default function CreateChallengeScreen() {
     </KeyboardAvoidingView>
   );
 }
+
+const ABSOLUTE_LAYER = { position: 'absolute' as const, top: 0, left: 0, right: 0, bottom: 0 };

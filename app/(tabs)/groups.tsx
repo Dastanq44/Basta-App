@@ -60,12 +60,6 @@ export default function GroupsScreen() {
                 />
               </View>
             </View>
-            <Button
-              label="New challenge"
-              size="sm"
-              icon={<Icon name="plus" size={15} color={t.colors.primaryForeground} />}
-              onPress={() => router.push('/challenge/new')}
-            />
           </View>
         }
         ListEmptyComponent={
