@@ -27,5 +27,7 @@ export { ListRow } from './ListRow';
 export type { ListRowProps } from './ListRow';
 export { CalendarPicker } from './CalendarPicker';
 export type { CalendarPickerProps } from './CalendarPicker';
+export { BottomSheet, BottomSheetMenuItem } from './BottomSheet';
+export type { BottomSheetProps, BottomSheetMenuItemProps } from './BottomSheet';
 export { ThemeProvider, useTheme, useThemeMode, lightTheme, darkTheme } from './theme';
 export type { ThemeTokens, ColorTokens, ThemeMode } from './theme';

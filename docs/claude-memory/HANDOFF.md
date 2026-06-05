@@ -105,6 +105,134 @@ migration this session.
 
 ---
 
+## 2026-06-05 — Claude 1 / Profile redesign + settings sheets + Bug E fix (T-032)
+
+**Did:** Big personality pass on Profile + restructure of the settings UX across Profile,
+Group, and Challenge to a unified slide-up BottomSheet primitive. Plus Bug E fix and
+several header polish items.
+
+### Server
+- **W-031** migration `20260605000000_profile_description_and_avatars.sql`:
+  - Adds `profiles.description` (≤280 chars).
+  - Storage RLS for the public `user-avatars` bucket — user can read all avatars,
+    only write under their own uid prefix.
+  - Widens `profiles_select` to allow authenticated users to read all profile rows
+    (so the new Submissions tab + future surfaces can read other users without
+    going through a SECURITY DEFINER detour). `profiles_select_own` is still in
+    effect via OR'd RLS, so unauthenticated callers see nothing.
+- **USER step**: create a public Storage bucket named `user-avatars` (Dashboard →
+  Storage → New bucket → Name `user-avatars` → Public ON).
+
+### Shared primitives
+- `src/shared/ui/BottomSheet.tsx` — slide-up modal (RN `<Modal animationType="slide">`
+  with the dark backdrop INSIDE the modal so it rides up with the sheet as one body,
+  not the prior transparent-fade where the backdrop appeared first and the buttons
+  showed up second). Includes `<BottomSheetMenuItem>` for the standard centered
+  menu rows so Profile/Group/Challenge sheets all use the same component.
+- `src/shared/lib/pickAvatar.ts` — shared "Take photo / Choose from library / Remove
+  photo / Cancel" action sheet. Returns a tagged union (`picked` | `removed` |
+  `cancelled`). Uses the new-API `mediaTypes: ['images']` literal so the
+  `MediaTypeOptions` deprecation warning is gone on SDK 54.
+
+### Profile feature
+- New `entities/user.ts` field: `description?: string`.
+- New onboarding-feature exports:
+  - `useUpdateMyProfile()` — invalidates `profileQueryKey` on success.
+  - `uploadMyAvatar(localUri)` / `deleteMyAvatar()` — Storage helpers, path
+    `<uid>/avatar.jpg`.
+  - `userAvatarUrl(path)` — composes the public URL.
+  - `profileDescriptionSchema` (≤280 chars).
+- New proofs hook: `useMyRecentSubmissions()` — backs the Submissions tab on
+  Profile. Direct query on `submissions` filtered by `author_id = me` (works
+  under the existing RLS since the author is always a participant).
+
+### Profile screen (`app/(tabs)/profile.tsx`) — full rewrite
+- Header now shows the user's display name (or username, or email-local-part as
+  fallback). No more "Profile" title.
+- The Appearance / Account / Danger zone sections that lived inline are GONE.
+  They moved behind the 3-dot button in the in-screen header.
+- 3-dot button opens the new `BottomSheet`. Menu: Edit profile / Appearance /
+  Blocked users / Request account deletion / Sign out / Cancel.
+- Body: big circular avatar (96×96, falls back to `<Avatar />` initials),
+  display name, `@username`, description. Below that a `SegmentedControl` with
+  two tabs:
+  - **Submissions** — list of the user's recent submissions (`useMyRecentSubmissions`),
+    each row Pressable → `submission/[id]`.
+  - **World ranking** — placeholder Card ("Coming soon. Global ranking across
+    all groups will live here.") — to be implemented later.
+
+### New routes
+- `app/profile/edit.tsx` (modal) — avatar picker (camera + library + remove),
+  display name, username, description. Uses zod schemas for client-side
+  validation; surfaces upload errors INLINE so a failure (e.g. missing
+  `user-avatars` bucket) doesn't trap the user in the form.
+- `app/profile/appearance.tsx` — the Light/Dark/System SegmentedControl that
+  used to be inline on Profile.
+
+### Group detail (`app/group/[id].tsx`)
+- Settings sheet now uses the shared `BottomSheet` instead of the prior
+  transparent-fade Modal. Slides up as one body (animation fix per spec).
+- The inline `MenuItem` component was removed (replaced by the shared
+  `BottomSheetMenuItem`).
+- Gear button proportions unified with the Profile/Challenge ones — 40×40
+  circle, opacity dip on press (no native color flicker — polish A + C).
+
+### Group avatar (`GroupAvatarPicker` + `app/group/[id]/edit.tsx`)
+- Picker now uses the shared `pickAvatar()` helper, so:
+  - Camera support added (D — was library-only before).
+  - Remove-photo affordance added (only offered when an avatar is present).
+  - `MediaTypeOptions` deprecation warning gone.
+- **Bug E fix**: the previous edit flow swallowed `uploadGroupAvatar` errors
+  silently — when the upload failed (often because the `group-avatars` bucket
+  doesn't exist), the user saw nothing and was stuck in the form. Now any
+  upload error surfaces as a dedicated inline message that explicitly mentions
+  the bucket creation prerequisite (W-030). The form also threads a
+  `removeAvatar` flag so users can clear an existing avatar — not just replace.
+
+### Challenge detail (`app/challenge/[id].tsx`)
+- Edit / Archive / Report buttons removed from the footer.
+- 3-dot button added to `Stack.Screen` `headerRight` — opens a `BottomSheet`
+  with the same actions, plus Cancel. Creator sees Edit + Archive; non-creator
+  sees Report. Archived challenges still hide creator actions.
+
+### Header polish (A / B / C)
+- A) The 3-dot button is now 40×40 with the icon centered, identical across
+  Profile / Group / Challenge. The prior `paddingHorizontal: 4` made it look
+  off-centered relative to the back chevron.
+- B) The "(tabs)" back-text on iOS is gone. `screenOptions` on the root Stack
+  sets `headerBackTitle: ''` AND the newer `headerBackButtonDisplayMode:
+  'minimal'` so the back affordance is the chevron alone.
+- C) All 3-dot buttons use a custom Pressable with `opacity: pressed ? 0.5 : 1`,
+  not the native color highlight. The native back-chevron still uses the
+  system press behavior (no per-button color flicker now that the text is
+  gone — opacity dim is acceptable).
+
+### Routes registered in `app/_layout.tsx`
+- `profile/edit` — `presentation: 'modal'`, title `Edit profile`.
+- `profile/appearance` — title `Appearance`.
+
+**USER actions added this session:**
+- **Apply W-031** (`20260605000000_profile_description_and_avatars.sql`).
+- **Create public Storage bucket `user-avatars`** in Supabase Dashboard.
+- All prior pending actions still stand (W-014..W-030; W-018 skipped; W-020/W-008).
+
+**Checks:** `npm run typecheck` ✅ · `npm run lint` ✅ (only the pre-existing
+`useMemo`/`myUid` warning in `challenge/[id].tsx`). No new deps.
+
+**Branch / commit:** `mvp` @ <see post-commit hash>
+
+**Notes for next session:**
+- Native iOS back chevron still has the system tap-highlight (a brief tint). To
+  fully kill it: replace `headerLeft` globally with a custom `<Pressable>` that
+  calls `router.back()`. Skipped this turn since the back-text removal is the
+  big visible win and a custom headerLeft is a footgun if not done carefully.
+- World ranking tab is a placeholder. Needs a server-side `world_ranking()` RPC
+  + paginated list to actually work.
+- The Submissions tab loads up to 50 of the user's recent submissions in one
+  shot. If a user has thousands, swap to a paginated `FlatList` later.
+
+---
+
 ## 2026-06-05 — Claude 2 / UI overhaul phases 1–4 (indigo theme · Home · Groups · challenge wizard)
 
 **Did:** Phases 1–4 of a large UI overhaul from a user reference (the study-app mockups, recoloured

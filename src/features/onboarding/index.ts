@@ -6,15 +6,23 @@ export {
   useProfile,
   useUpsertProfile,
   useCompleteOnboarding,
+  useUpdateMyProfile,
   profileQueryKey,
 } from './hooks';
 
 export {
   CURRENT_TERMS_VERSION,
   profileSetupInput,
+  profileDescriptionSchema,
   usernameSchema,
   displayNameSchema,
 } from './model';
 export type { ProfileSetupInput } from './model';
 
-export { hasAcceptedCurrentTerms } from './api';
+export {
+  hasAcceptedCurrentTerms,
+  uploadMyAvatar,
+  deleteMyAvatar,
+  userAvatarUrl,
+} from './api';
+export type { UpdateMyProfilePayload } from './api';

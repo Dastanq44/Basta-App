@@ -1,7 +1,19 @@
 import { useMemo, useState } from 'react';
-import { Alert, FlatList, Image, Modal, Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { Alert, FlatList, Image, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { type Href, Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Avatar, Button, Card, CrownIcon, Icon, Screen, SegmentedControl, Text, useTheme } from '@/shared/ui';
+import {
+  Avatar,
+  BottomSheet,
+  BottomSheetMenuItem,
+  Button,
+  Card,
+  CrownIcon,
+  Icon,
+  Screen,
+  SegmentedControl,
+  Text,
+  useTheme,
+} from '@/shared/ui';
 import { useSession } from '@/features/auth';
 import { useChallenges } from '@/features/challenges';
 import {
@@ -135,9 +147,18 @@ export default function GroupScreen() {
               accessibilityLabel="Group settings"
               hitSlop={8}
               onPress={() => setMenuOpen(true)}
-              style={{ paddingHorizontal: 4 }}
+              // Match the Profile/Challenge 3-dot button: 40×40 circle with opacity dip
+              // on press (no native highlight color flicker — polish A + C).
+              style={({ pressed }) => ({
+                width: 40,
+                height: 40,
+                marginRight: 4,
+                borderRadius: 20,
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: pressed ? 0.5 : 1,
+              })}
             >
-              {/* Simple monocolour three-dot glyph in place of the prior ⚙️ emoji. */}
               <Icon name="settings" size={22} color={t.colors.foreground} />
             </Pressable>
           ),
@@ -251,82 +272,66 @@ export default function GroupScreen() {
         </View>
       )}
 
-      {/* Gear action menu */}
-      <Modal visible={menuOpen} transparent animationType="fade" onRequestClose={() => setMenuOpen(false)}>
-        <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }} onPress={() => setMenuOpen(false)}>
-          <Pressable
-            onPress={() => {}}
-            style={{
-              backgroundColor: t.colors.card,
-              borderTopLeftRadius: t.radius.xl,
-              borderTopRightRadius: t.radius.xl,
-              padding: t.spacing.lg,
-              paddingBottom: t.spacing.xl,
-              gap: t.spacing.xs,
-            }}
-          >
-            <View style={{ alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: t.colors.border, marginBottom: t.spacing.sm }} />
+      {/* Settings sheet — slides up from bottom as one body (was a transparent fade). */}
+      <BottomSheet visible={menuOpen} onClose={() => setMenuOpen(false)}>
+        {/* Invite code lives at the top of the sheet — share-only affordance, fits with
+            the other group settings. */}
+        {group?.inviteCode ? (
+          <View style={{ paddingVertical: t.spacing.xs, paddingHorizontal: t.spacing.sm, marginBottom: t.spacing.xs, gap: t.spacing.xs }}>
+            <Text variant="muted">Invite code</Text>
+            <View
+              style={{
+                alignSelf: 'flex-start',
+                backgroundColor: t.colors.primarySoft,
+                borderRadius: t.radius.md,
+                paddingHorizontal: t.spacing.md,
+                paddingVertical: t.spacing.sm,
+              }}
+            >
+              <Text selectable style={{ fontSize: t.fontSize.lg, fontWeight: '700', color: t.colors.primary, letterSpacing: 1.5 }}>
+                {group.inviteCode}
+              </Text>
+            </View>
+            <Text variant="caption">Tap &amp; hold to copy.</Text>
+          </View>
+        ) : null}
 
-            {/* Invite code now lives here (moved out of Main) — share-only affordance,
-                so it belongs with the other group settings. */}
-            {group?.inviteCode ? (
-              <View style={{ paddingVertical: t.spacing.xs, paddingHorizontal: t.spacing.sm, marginBottom: t.spacing.xs, gap: t.spacing.xs }}>
-                <Text variant="muted">Invite code</Text>
-                <View
-                  style={{
-                    alignSelf: 'flex-start',
-                    backgroundColor: t.colors.primarySoft,
-                    borderRadius: t.radius.md,
-                    paddingHorizontal: t.spacing.md,
-                    paddingVertical: t.spacing.sm,
-                  }}
-                >
-                  <Text selectable style={{ fontSize: t.fontSize.lg, fontWeight: '700', color: t.colors.primary, letterSpacing: 1.5 }}>
-                    {group.inviteCode}
-                  </Text>
-                </View>
-                <Text variant="caption">Tap &amp; hold to copy.</Text>
-              </View>
-            ) : null}
-
-            {isOwner ? (
-              <>
-                <MenuItem
-                  label="Edit group"
-                  onPress={() => {
-                    setMenuOpen(false);
-                    router.push(`/group/${id}/edit` as Href);
-                  }}
-                />
-                <MenuItem
-                  label={archive.isPending ? 'Archiving…' : 'Archive group'}
-                  destructive
-                  onPress={() => {
-                    setMenuOpen(false);
-                    confirmArchive();
-                  }}
-                />
-              </>
-            ) : null}
-            <MenuItem
-              label={leave.isPending ? 'Leaving…' : 'Leave group'}
+        {isOwner ? (
+          <>
+            <BottomSheetMenuItem
+              label="Edit group"
+              onPress={() => {
+                setMenuOpen(false);
+                router.push(`/group/${id}/edit` as Href);
+              }}
+            />
+            <BottomSheetMenuItem
+              label={archive.isPending ? 'Archiving…' : 'Archive group'}
               destructive
               onPress={() => {
                 setMenuOpen(false);
-                confirmLeave();
+                confirmArchive();
               }}
             />
-            <MenuItem
-              label="Report group"
-              onPress={() => {
-                setMenuOpen(false);
-                setReportOpen(true);
-              }}
-            />
-            <MenuItem label="Cancel" onPress={() => setMenuOpen(false)} />
-          </Pressable>
-        </Pressable>
-      </Modal>
+          </>
+        ) : null}
+        <BottomSheetMenuItem
+          label={leave.isPending ? 'Leaving…' : 'Leave group'}
+          destructive
+          onPress={() => {
+            setMenuOpen(false);
+            confirmLeave();
+          }}
+        />
+        <BottomSheetMenuItem
+          label="Report group"
+          onPress={() => {
+            setMenuOpen(false);
+            setReportOpen(true);
+          }}
+        />
+        <BottomSheetMenuItem label="Cancel" onPress={() => setMenuOpen(false)} />
+      </BottomSheet>
 
       {id ? (
         <ReportSheet
@@ -338,26 +343,6 @@ export default function GroupScreen() {
         />
       ) : null}
     </Screen>
-  );
-}
-
-function MenuItem({ label, destructive, onPress }: { label: string; destructive?: boolean; onPress: () => void }) {
-  const t = useTheme();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={({ pressed }) => ({
-        paddingVertical: 14,
-        paddingHorizontal: t.spacing.sm,
-        borderRadius: t.radius.md,
-        opacity: pressed ? 0.6 : 1,
-      })}
-    >
-      <Text variant="subtitle" style={{ color: destructive ? t.colors.destructive : t.colors.foreground, textAlign: 'center' }}>
-        {label}
-      </Text>
-    </Pressable>
   );
 }
 

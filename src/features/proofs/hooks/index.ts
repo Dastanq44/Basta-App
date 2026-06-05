@@ -10,3 +10,4 @@ export { useQueueForChallenge } from './useQueueForChallenge';
 export { useSubmitProof } from './useSubmitProof';
 export { useChallengeStreaks, challengeStreaksQueryKey } from './useChallengeStreaks';
 export { useRedactMySubmission } from './useRedactMySubmission';
+export { useMyRecentSubmissions, myRecentSubmissionsQueryKey } from './useMyRecentSubmissions';

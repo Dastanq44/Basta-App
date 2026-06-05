@@ -16,6 +16,11 @@ export const displayNameSchema = z
   .min(1, 'Display name is required')
   .max(50, 'Display name must be at most 50 characters');
 
+/** Bio shown on the Profile tab — capped at 280 chars to match the server constraint. */
+export const profileDescriptionSchema = z
+  .string()
+  .max(280, 'Description must be at most 280 characters');
+
 export const profileSetupInput = z.object({
   username: usernameSchema,
   displayName: displayNameSchema,

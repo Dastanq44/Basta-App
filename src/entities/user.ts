@@ -7,7 +7,11 @@ export type User = {
   id: UserId;
   username: string;
   displayName: string;
+  /** Stored as a storage path in `profiles.avatar_url` (the `user-avatars` bucket is public,
+   *  so the client can compute the public URL on read). */
   avatarUrl?: string;
+  /** Free-text profile bio shown on the Profile tab (T-032). Capped server-side at 280. */
+  description?: string;
   /** Drives day-boundary math server-side (D-003). */
   timezone: string;
   onboarded: boolean;

@@ -74,7 +74,17 @@ function RootNav() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        // Drop the iOS back-button TEXT (was showing "(tabs)" / previous route name).
+        // Per-screen `Stack.Screen` titles still set the centered header title.
+        // `headerBackButtonDisplayMode: 'minimal'` is the supported newer API for
+        // hiding the back-text on RN-screens stack headers.
+        headerBackTitle: '',
+        headerBackButtonDisplayMode: 'minimal',
+      }}
+    >
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="(onboarding)" />
@@ -106,6 +116,8 @@ function RootNav() {
       <Stack.Screen name="submission/[id]" options={{ headerShown: true, title: 'Proof' }} />
       <Stack.Screen name="blocked-users" options={{ headerShown: true, title: 'Blocked users' }} />
       <Stack.Screen name="verifications" options={{ headerShown: true, title: 'Verify proofs' }} />
+      <Stack.Screen name="profile/edit" options={{ headerShown: true, presentation: 'modal', title: 'Edit profile' }} />
+      <Stack.Screen name="profile/appearance" options={{ headerShown: true, title: 'Appearance' }} />
     </Stack>
   );
 }

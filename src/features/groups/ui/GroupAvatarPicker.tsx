@@ -1,31 +1,37 @@
-import * as ImagePicker from 'expo-image-picker';
 import { Image, Pressable, View } from 'react-native';
 import { Text, useTheme } from '@/shared/ui';
+import { pickAvatar } from '@/shared/lib/pickAvatar';
 
 export type GroupAvatarPickerProps = {
   /** Local URI (just picked) or remote URL (existing avatar) to preview. */
   uri?: string | null;
+  /** Called when the user picks a new image (camera or library). */
   onPick: (localUri: string) => void;
+  /** Called when the user taps "Remove photo" — only available when `uri` is set. */
+  onRemove?: () => void;
   size?: number;
 };
 
-/** Circular avatar picker — taps open the photo library, square-cropped. Used by create + edit. */
-export function GroupAvatarPicker({ uri, onPick, size = 88 }: GroupAvatarPickerProps) {
+/**
+ * Circular avatar picker — taps open a Take photo / From library / (Remove) action sheet
+ * via the shared `pickAvatar` helper. The picker can both upload from library AND take a
+ * new photo (per the user's D fix). Remove is offered only when an avatar already exists.
+ */
+export function GroupAvatarPicker({ uri, onPick, onRemove, size = 88 }: GroupAvatarPickerProps) {
   const t = useTheme();
-  const pick = async () => {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) return;
-    const res = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.8,
-      allowsEditing: true,
-      aspect: [1, 1],
+  const hasAvatar = !!uri;
+
+  const onPress = async () => {
+    const res = await pickAvatar({
+      allowRemove: hasAvatar && !!onRemove,
+      title: hasAvatar ? 'Change group photo' : 'Add group photo',
     });
-    const asset = res.canceled ? undefined : res.assets?.[0];
-    if (asset?.uri) onPick(asset.uri);
+    if (res.kind === 'picked') onPick(res.uri);
+    else if (res.kind === 'removed' && onRemove) onRemove();
   };
+
   return (
-    <Pressable accessibilityRole="button" onPress={pick} style={{ alignSelf: 'center' }}>
+    <Pressable accessibilityRole="button" onPress={onPress} style={{ alignSelf: 'center' }}>
       <View
         style={{
           width: size,
@@ -39,10 +45,14 @@ export function GroupAvatarPicker({ uri, onPick, size = 88 }: GroupAvatarPickerP
           borderColor: t.colors.border,
         }}
       >
-        {uri ? <Image source={{ uri }} style={{ width: size, height: size }} /> : <Text style={{ fontSize: size * 0.4 }}>📷</Text>}
+        {uri ? (
+          <Image source={{ uri }} style={{ width: size, height: size }} />
+        ) : (
+          <Text style={{ fontSize: size * 0.4 }}>📷</Text>
+        )}
       </View>
       <Text variant="caption" style={{ textAlign: 'center', marginTop: 6, color: t.colors.primary }}>
-        {uri ? 'Change photo' : 'Add photo'}
+        {hasAvatar ? 'Change photo' : 'Add photo'}
       </Text>
     </Pressable>
   );

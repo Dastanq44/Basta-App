@@ -116,6 +116,30 @@ export async function getProofSignedUrl(mediaPath: string | undefined, expiresIn
   }
 }
 
+/** All of the current user's recent submissions across every challenge they participate in.
+ *  Used by the Profile tab's Submissions section. `is_challenge_participant`-gated via
+ *  the standard `submissions_select_participant` RLS — the author IS always a participant. */
+export async function listMyRecentSubmissions(limit = 50): Promise<Submission[]> {
+  const c = ctrl();
+  try {
+    const { data: auth } = await supabase.auth.getUser();
+    const uid = auth.user?.id;
+    if (!uid) return [];
+    const { data, error } = await supabase
+      .from('submissions')
+      .select('id, challenge_id, author_id, challenge_day, comment, media_path, status, verified_at, rejected_at, created_at')
+      .eq('author_id', uid)
+      .order('created_at', { ascending: false })
+      .limit(limit)
+      .abortSignal(c.signal);
+    if (error) throw error;
+    return (data ?? []).map((r) => toSubmission(r as SubmissionRow));
+  } catch (e) {
+    console.error('[basta] listMyRecentSubmissions failed:', e);
+    throw e;
+  }
+}
+
 /**
  * The current user's submission for today on this challenge (if any). Calls the
  * `get_my_today_submission` SECURITY DEFINER RPC, which computes today's challenge_day

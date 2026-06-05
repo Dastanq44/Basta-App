@@ -9,11 +9,13 @@ export {
   useSubmitProof,
   useChallengeStreaks,
   useRedactMySubmission,
+  useMyRecentSubmissions,
   submissionsQueryKey,
   todaySubmissionQueryKey,
   submissionQueryKey,
   proofSignedUrlQueryKey,
   challengeStreaksQueryKey,
+  myRecentSubmissionsQueryKey,
 } from './hooks';
 export { proofInput } from './model';
 export type { ProofInput } from './model';

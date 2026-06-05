@@ -10,6 +10,7 @@ type ProfileRow = {
   username: string | null;
   display_name: string | null;
   avatar_url: string | null;
+  description: string | null;
   timezone: string;
   onboarded: boolean;
   terms_version: string | null;
@@ -21,11 +22,15 @@ function toUser(row: ProfileRow): User {
     username: row.username ?? '',
     displayName: row.display_name ?? '',
     avatarUrl: row.avatar_url ?? undefined,
+    description: row.description ?? undefined,
     timezone: row.timezone,
     onboarded: row.onboarded,
     termsVersion: row.terms_version ?? undefined,
   };
 }
+
+const PROFILE_SELECT = 'id, username, display_name, avatar_url, description, timezone, onboarded, terms_version';
+const USER_AVATAR_BUCKET = 'user-avatars';
 
 /** Hard ceiling on a single profile fetch (network or RLS hang). */
 const PROFILE_FETCH_TIMEOUT_MS = 10_000;
@@ -44,7 +49,7 @@ export async function fetchProfile(): Promise<User | null> {
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, username, display_name, avatar_url, timezone, onboarded, terms_version')
+      .select(PROFILE_SELECT)
       .abortSignal(ctrl.signal)
       .maybeSingle();
     if (error) throw error;
@@ -91,7 +96,7 @@ export async function upsertProfile(payload: UpsertProfilePayload): Promise<User
         },
         { onConflict: 'id' },
       )
-      .select('id, username, display_name, avatar_url, timezone, onboarded, terms_version')
+      .select(PROFILE_SELECT)
       .abortSignal(ctrl.signal)
       .single();
     if (error) throw error;
@@ -117,7 +122,7 @@ export async function completeOnboarding(): Promise<User> {
       .from('profiles')
       .update({ onboarded: true })
       .eq('id', uid)
-      .select('id, username, display_name, avatar_url, timezone, onboarded, terms_version')
+      .select(PROFILE_SELECT)
       .abortSignal(ctrl.signal)
       .single();
     if (error) throw error;
@@ -133,4 +138,84 @@ export async function completeOnboarding(): Promise<User> {
 /** Pure check exposed for the navigation gate. */
 export function hasAcceptedCurrentTerms(user: User | null): boolean {
   return !!user && user.termsVersion === CURRENT_TERMS_VERSION;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Profile editing — T-032 / W-031.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Public URL for a user avatar (the bucket is public; supabase composes the URL). */
+export function userAvatarUrl(path: string | null | undefined): string | null {
+  if (!path) return null;
+  return supabase.storage.from(USER_AVATAR_BUCKET).getPublicUrl(path).data.publicUrl ?? null;
+}
+
+export type UpdateMyProfilePayload = {
+  username: string;
+  displayName: string;
+  description?: string | null;
+  /** `undefined` = leave avatar untouched; `null` = explicit removal; `string` = new path. */
+  avatarPath?: string | null;
+};
+
+/** Update the editable fields on the current user's profile row. RLS allows the user to
+ *  update their own row (the existing profiles_update_own policy). */
+export async function updateMyProfile(payload: UpdateMyProfilePayload): Promise<User> {
+  const ctrl = new AbortController();
+  const tid = setTimeout(() => ctrl.abort(new Error('updateMyProfile timed out')), PROFILE_FETCH_TIMEOUT_MS);
+  try {
+    const { data: auth } = await supabase.auth.getUser();
+    const uid = auth.user?.id;
+    if (!uid) throw new Error('Not signed in');
+
+    const patch: Record<string, string | null> = {
+      username: payload.username,
+      display_name: payload.displayName,
+      description: payload.description ?? null,
+    };
+    if (payload.avatarPath !== undefined) {
+      patch.avatar_url = payload.avatarPath; // string path, or null to remove
+    }
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .update(patch)
+      .eq('id', uid)
+      .select(PROFILE_SELECT)
+      .abortSignal(ctrl.signal)
+      .single();
+    if (error) throw error;
+    return toUser(data as ProfileRow);
+  } catch (e) {
+    console.error('[basta] updateMyProfile failed:', e);
+    throw e;
+  } finally {
+    clearTimeout(tid);
+  }
+}
+
+/** Uploads a user avatar image to the public `user-avatars` bucket; returns the storage path.
+ *  Path convention enforced server-side (RLS): `<uid>/avatar.jpg`. */
+export async function uploadMyAvatar(localUri: string): Promise<string> {
+  const { data: auth } = await supabase.auth.getUser();
+  const uid = auth.user?.id;
+  if (!uid) throw new Error('Not signed in');
+  const remotePath = `${uid}/avatar.jpg`;
+  const res = await fetch(localUri);
+  if (!res.ok) throw new Error(`Could not read image (${res.status})`);
+  const buf = await res.arrayBuffer();
+  const { error } = await supabase.storage
+    .from(USER_AVATAR_BUCKET)
+    .upload(remotePath, buf, { contentType: 'image/jpeg', upsert: true, cacheControl: '3600' });
+  if (error) throw error;
+  return remotePath;
+}
+
+/** Removes the current user's avatar object from Storage. Idempotent. */
+export async function deleteMyAvatar(): Promise<void> {
+  const { data: auth } = await supabase.auth.getUser();
+  const uid = auth.user?.id;
+  if (!uid) throw new Error('Not signed in');
+  const { error } = await supabase.storage.from(USER_AVATAR_BUCKET).remove([`${uid}/avatar.jpg`]);
+  if (error) throw error;
 }

@@ -14,7 +14,7 @@ import {
   useRouter,
 } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
-import { Button, Card, Screen, Text, useTheme } from '@/shared/ui';
+import { BottomSheet, BottomSheetMenuItem, Button, Card, Icon, Screen, Text, useTheme } from '@/shared/ui';
 import { useArchiveChallenge, useChallenge, useChallengeStreak } from '@/features/challenges';
 import { useSession } from '@/features/auth';
 import { useMyGroups } from '@/features/groups';
@@ -54,6 +54,7 @@ export default function ChallengeDetailScreen() {
   const archive = useArchiveChallenge();
   const blockedIds = useBlockedUserIds();
   const [reportOpen, setReportOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   // Day-rollover refresh: each time the screen comes back into focus, re-fetch the
   // today-keyed queries. Server still owns the truth (computes today_day per the user's
@@ -137,7 +138,32 @@ export default function ChallengeDetailScreen() {
     // we included 'top' here too, SafeAreaView would add a background-colored stripe under
     // the header that the FlatList scrolls behind.
     <Screen padded={false} edges={['bottom']}>
-      <Stack.Screen options={{ title: c.title }} />
+      <Stack.Screen
+        options={{
+          title: c.title,
+          // 3-dot button — only shown when there's anything to do (creator OR can report).
+          // No press color flicker: opacity dip instead.
+          headerRight: () => (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Challenge settings"
+              onPress={() => setMenuOpen(true)}
+              hitSlop={8}
+              style={({ pressed }) => ({
+                width: 40,
+                height: 40,
+                marginRight: 4,
+                borderRadius: 20,
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: pressed ? 0.5 : 1,
+              })}
+            >
+              <Icon name="settings" size={22} color={t.colors.foreground} />
+            </Pressable>
+          ),
+        }}
+      />
       <FlatList
         data={filteredSubmissions}
         keyExtractor={(s) => s.id}
@@ -249,34 +275,43 @@ export default function ChallengeDetailScreen() {
           />
         }
         renderItem={({ item }) => <SubmissionRow submission={item} currentUserId={myUid} />}
-        ListFooterComponent={
-          <View style={{ marginTop: t.spacing.lg, gap: t.spacing.sm }}>
-            {isCreator && !isArchived ? (
-              <>
-                <Text variant="heading">Settings</Text>
-                <Button
-                  label="Edit challenge"
-                  variant="secondary"
-                  onPress={() => router.push(`/challenge/${c.id}/edit` as Href)}
-                  disabled={archive.isPending}
-                />
-                <Button
-                  label={archive.isPending ? 'Archiving…' : 'Archive challenge'}
-                  variant="destructive"
-                  onPress={confirmArchive}
-                  loading={archive.isPending}
-                  disabled={archive.isPending}
-                />
-              </>
-            ) : null}
-            {!isCreator ? (
-              <Pressable accessibilityRole="button" onPress={() => setReportOpen(true)} hitSlop={4}>
-                <Text variant="muted" style={{ textAlign: 'center' }}>Report this challenge</Text>
-              </Pressable>
-            ) : null}
-          </View>
-        }
+        // Footer Edit/Archive/Report block removed — all of those affordances moved
+        // behind the headerRight 3-dot button + BottomSheet below.
       />
+
+      {/* Challenge settings sheet (Edit / Archive for creator; Report for others). */}
+      <BottomSheet visible={menuOpen} onClose={() => setMenuOpen(false)}>
+        {isCreator && !isArchived ? (
+          <>
+            <BottomSheetMenuItem
+              label="Edit challenge"
+              onPress={() => {
+                setMenuOpen(false);
+                router.push(`/challenge/${c.id}/edit` as Href);
+              }}
+            />
+            <BottomSheetMenuItem
+              label={archive.isPending ? 'Archiving…' : 'Archive challenge'}
+              destructive
+              onPress={() => {
+                setMenuOpen(false);
+                confirmArchive();
+              }}
+            />
+          </>
+        ) : null}
+        {!isCreator ? (
+          <BottomSheetMenuItem
+            label="Report challenge"
+            onPress={() => {
+              setMenuOpen(false);
+              setReportOpen(true);
+            }}
+          />
+        ) : null}
+        <BottomSheetMenuItem label="Cancel" onPress={() => setMenuOpen(false)} />
+      </BottomSheet>
+
       <ReportSheet
         visible={reportOpen}
         onClose={() => setReportOpen(false)}

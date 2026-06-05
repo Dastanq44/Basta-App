@@ -30,7 +30,12 @@ export default function EditGroupScreen() {
   const [name, setName] = useState(group?.name ?? '');
   const [description, setDescription] = useState('');
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
+  /** When the user taps "Remove photo": forces avatarPath=null on save (clearing the
+   *  existing remote avatar) — separate from the local preview, which is `null` both for
+   *  "no change" and "explicit remove". */
+  const [removeAvatar, setRemoveAvatar] = useState(false);
   const [fieldError, setFieldError] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [descHydrated, setDescHydrated] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -52,6 +57,7 @@ export default function EditGroupScreen() {
   const onSubmit = async () => {
     if (!id) return;
     setFieldError(null);
+    setUploadError(null);
     const parsedName = groupNameSchema.safeParse(name);
     if (!parsedName.success) {
       setFieldError(parsedName.error.issues[0]?.message ?? 'Invalid name');
@@ -63,14 +69,33 @@ export default function EditGroupScreen() {
       return;
     }
     setBusy(true);
+    // avatarPath:
+    //   undefined → not set, keep existing (default on the RPC)
+    //   null      → explicit removal
+    //   string    → new uploaded path
+    let avatarPath: string | null | undefined = undefined;
     try {
-      let avatarPath: string | null = null; // null = keep the existing avatar
-      if (avatarUri) avatarPath = await uploadGroupAvatar(id, avatarUri);
+      if (avatarUri) {
+        // Upload phase — bug E: previously the catch swallowed this silently and the
+        // user saw no feedback. Now surfaced via the dedicated uploadError state.
+        try {
+          avatarPath = await uploadGroupAvatar(id, avatarUri);
+        } catch (e) {
+          setUploadError(
+            e instanceof Error
+              ? `Could not upload photo: ${e.message}. Did the user-avatars / group-avatars bucket get created in Supabase Storage (W-030)?`
+              : 'Could not upload photo. Try again.',
+          );
+          return;
+        }
+      } else if (removeAvatar) {
+        avatarPath = null;
+      }
       await update.mutateAsync({
         groupId: id,
         name: parsedName.data,
         description: parsedDesc.data.trim() || null,
-        avatarPath,
+        avatarPath: avatarPath ?? undefined,
       });
       router.back();
     } catch {
@@ -106,17 +131,32 @@ export default function EditGroupScreen() {
     );
   }
 
-  const previewUri = avatarUri ?? overview.data?.avatarUrl ?? null;
+  const previewUri = removeAvatar ? null : (avatarUri ?? overview.data?.avatarUrl ?? null);
+  const hasExistingAvatar = !!overview.data?.avatarUrl;
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-      <Screen padded={false}>
+      <Screen padded={false} edges={['bottom']}>
         <Stack.Screen options={{ title: 'Edit group' }} />
         <ScrollView
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.lg, paddingBottom: t.spacing.xl }}
         >
-          <GroupAvatarPicker uri={previewUri} onPick={setAvatarUri} />
+          <GroupAvatarPicker
+            uri={previewUri}
+            onPick={(uri) => {
+              setAvatarUri(uri);
+              setRemoveAvatar(false);
+            }}
+            onRemove={
+              hasExistingAvatar || avatarUri
+                ? () => {
+                    setAvatarUri(null);
+                    setRemoveAvatar(true);
+                  }
+                : undefined
+            }
+          />
           <Input
             label="Group name"
             value={name}
@@ -135,6 +175,11 @@ export default function EditGroupScreen() {
             maxLength={280}
             editable={!busy}
           />
+          {uploadError ? (
+            <Text variant="caption" style={{ color: t.colors.destructive }}>
+              {uploadError}
+            </Text>
+          ) : null}
           {submitError ? (
             <Text variant="caption" style={{ color: t.colors.destructive }}>
               {submitError}
