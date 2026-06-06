@@ -47,17 +47,41 @@ export default function TodayScreen() {
   return (
     <Screen padded={false} edges={['top']}>
       <ScrollView contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.lg, paddingBottom: t.spacing.xl }}>
-        {/* Greeting */}
+        {/* Greeting — avatar is tappable, redirects to Profile. Avatar + text both
+            bigger than before (46 → 64; heading variant → explicit larger size) so the
+            greeting reads as the page header rather than an afterthought. */}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm }}>
-            {avatarRemoteUrl ? (
-              <Image source={{ uri: avatarRemoteUrl }} style={{ width: 46, height: 46, borderRadius: 23 }} />
-            ) : (
-              <Avatar name={name} size={46} />
-            )}
-            <View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.md, flex: 1 }}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Go to profile"
+              onPress={() => router.push('/(tabs)/profile' as Href)}
+              hitSlop={6}
+              style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+            >
+              {avatarRemoteUrl ? (
+                <Image
+                  source={{ uri: avatarRemoteUrl }}
+                  style={{ width: 64, height: 64, borderRadius: 32 }}
+                />
+              ) : (
+                <Avatar name={name} size={64} />
+              )}
+            </Pressable>
+            <View style={{ flex: 1 }}>
               <Text variant="caption">Welcome back</Text>
-              <Text variant="heading">Hi, {name} 👋</Text>
+              <Text
+                numberOfLines={1}
+                style={{
+                  fontSize: t.fontSize.xl,
+                  fontWeight: '700',
+                  color: t.colors.foreground,
+                  lineHeight: t.fontSize.xl * 1.2,
+                  marginTop: 2,
+                }}
+              >
+                Hi, {name} 👋
+              </Text>
             </View>
           </View>
           {/* Bell icon — no longer wrapped in a circular card-bg button (the prior styles.iconBtn
