@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -45,6 +45,39 @@ function ThemedStatusBar() {
   return <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />;
 }
 
+// Custom back chevron — no background, no system tap-tint flash. Opacity dip on press.
+// The arrow is drawn from a single rotated View so the icon set doesn't have to grow.
+function HeaderBackButton({ onPress }: { onPress: () => void }) {
+  const t = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Back"
+      onPress={onPress}
+      hitSlop={8}
+      style={({ pressed }) => ({
+        width: 40,
+        height: 40,
+        marginLeft: 4,
+        alignItems: 'center',
+        justifyContent: 'center',
+        opacity: pressed ? 0.5 : 1,
+      })}
+    >
+      <View
+        style={{
+          width: 11,
+          height: 11,
+          borderTopWidth: 2.2,
+          borderLeftWidth: 2.2,
+          borderColor: t.colors.foreground,
+          transform: [{ rotate: '-45deg' }],
+        }}
+      />
+    </Pressable>
+  );
+}
+
 function RootNav() {
   const t = useTheme();
   const gate = useOnboardingGate();
@@ -77,12 +110,15 @@ function RootNav() {
     <Stack
       screenOptions={{
         headerShown: false,
-        // Drop the iOS back-button TEXT (was showing "(tabs)" / previous route name).
-        // Per-screen `Stack.Screen` titles still set the centered header title.
-        // `headerBackButtonDisplayMode: 'minimal'` is the supported newer API for
-        // hiding the back-text on RN-screens stack headers.
+        // Replace the native back chevron + tap-tint with a custom Pressable that
+        // dims via opacity (no system color flash / white-circle tap highlight).
+        // Both options below keep the back-text invisible: headerBackTitle: '' is the
+        // older API, headerBackButtonDisplayMode: 'minimal' is the newer one. They're
+        // belt-and-suspenders against version differences.
         headerBackTitle: '',
         headerBackButtonDisplayMode: 'minimal',
+        headerLeft: ({ canGoBack }) =>
+          canGoBack ? <HeaderBackButton onPress={() => router.back()} /> : null,
       }}
     >
       <Stack.Screen name="(tabs)" />

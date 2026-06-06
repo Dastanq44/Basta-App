@@ -100,7 +100,7 @@ export default function ProfileScreen() {
         }}
       >
         <Text variant="title" numberOfLines={1} style={{ flex: 1, marginRight: t.spacing.sm }}>
-          {displayName}
+          Profile
         </Text>
         <Pressable
           accessibilityRole="button"
@@ -136,6 +136,7 @@ export default function ProfileScreen() {
                 description={user?.description ?? undefined}
                 email={email}
               />
+              <ActivityHeatmap submissions={submissions.data ?? []} />
               <SegmentedControl
                 options={
                   [
@@ -169,6 +170,7 @@ export default function ProfileScreen() {
             description={user?.description ?? undefined}
             email={email}
           />
+          <ActivityHeatmap submissions={submissions.data ?? []} />
           <SegmentedControl
             options={
               [
@@ -248,9 +250,9 @@ function ProfileHeader({
   return (
     <View style={{ alignItems: 'center', gap: t.spacing.sm, paddingVertical: t.spacing.md }}>
       {avatarUrl ? (
-        <Image source={{ uri: avatarUrl }} style={{ width: 96, height: 96, borderRadius: 48 }} />
+        <Image source={{ uri: avatarUrl }} style={{ width: 128, height: 128, borderRadius: 64 }} />
       ) : (
-        <Avatar name={displayName} size={96} />
+        <Avatar name={displayName} size={128} />
       )}
       <Text variant="heading" style={{ textAlign: 'center' }}>
         {displayName}
@@ -274,22 +276,185 @@ function ProfileHeader({
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// ActivityHeatmap — GitHub-style daily activity calendar, last 90 days.
+//
+// Grid: 13 columns (weeks) × 7 rows (days, Sun..Sat). Newest week on the right.
+// Each cell is colored by the count of submissions on that local-date. Counting is
+// "any submission" — verified, pending, and rejected all count toward the heat.
+// Tradeoff: the strictest variant (verified only) would mirror streak math, but the
+// user picked the inclusive version so even a still-pending day visually registers.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const HEATMAP_WEEKS = 13;
+const HEATMAP_DAYS = 7;
+const HEATMAP_CELL = 14; // px
+const HEATMAP_GAP = 3; // px
+
+function ActivityHeatmap({ submissions }: { submissions: Submission[] }) {
+  const t = useTheme();
+
+  // Compute cell dates + per-day counts.
+  const { cells, counts, maxCount } = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    // Start grid on the Sunday (HEATMAP_WEEKS - 1) weeks before this week's Sunday so the
+    // rightmost column is the current week.
+    const startSunday = new Date(today);
+    startSunday.setDate(today.getDate() - today.getDay() - (HEATMAP_WEEKS - 1) * 7);
+
+    const cellArr: { date: Date; key: string; inRange: boolean }[] = [];
+    for (let w = 0; w < HEATMAP_WEEKS; w++) {
+      for (let d = 0; d < HEATMAP_DAYS; d++) {
+        const date = new Date(startSunday);
+        date.setDate(startSunday.getDate() + w * 7 + d);
+        const key = toLocalYMD(date);
+        // inRange: not in the future relative to today.
+        cellArr.push({ date, key, inRange: date.getTime() <= today.getTime() });
+      }
+    }
+
+    const countMap = new Map<string, number>();
+    for (const s of submissions) {
+      const key = toLocalYMD(new Date(s.createdAt));
+      countMap.set(key, (countMap.get(key) ?? 0) + 1);
+    }
+
+    let mx = 0;
+    for (const v of countMap.values()) if (v > mx) mx = v;
+    return { cells: cellArr, counts: countMap, maxCount: mx };
+  }, [submissions]);
+
+  const colorFor = (count: number, inRange: boolean): string => {
+    if (!inRange) return t.colors.muted; // future days: blank tone
+    if (count <= 0) return t.colors.muted;
+    if (count === 1) return t.colors.primarySoft;
+    // Two more steps between primarySoft and primary based on relative intensity.
+    const ratio = maxCount > 1 ? count / maxCount : 1;
+    if (ratio < 0.5) return blendPrimary(t.colors.primarySoft, t.colors.primary, 0.4);
+    if (ratio < 0.85) return blendPrimary(t.colors.primarySoft, t.colors.primary, 0.7);
+    return t.colors.primary;
+  };
+
+  return (
+    <View style={{ gap: t.spacing.xs }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <Text variant="label" style={{ color: t.colors.mutedForeground }}>
+          ACTIVITY · LAST 90 DAYS
+        </Text>
+        <Text variant="caption" style={{ color: t.colors.mutedForeground }}>
+          {submissions.length} submissions
+        </Text>
+      </View>
+      <View
+        style={{
+          flexDirection: 'row',
+          gap: HEATMAP_GAP,
+          padding: t.spacing.sm,
+          backgroundColor: t.colors.card,
+          borderRadius: t.radius.md,
+          borderWidth: 1,
+          borderColor: t.colors.border,
+          alignSelf: 'flex-start',
+        }}
+      >
+        {Array.from({ length: HEATMAP_WEEKS }, (_, col) => (
+          <View key={col} style={{ gap: HEATMAP_GAP }}>
+            {Array.from({ length: HEATMAP_DAYS }, (_, row) => {
+              const cell = cells[col * HEATMAP_DAYS + row];
+              if (!cell) return null;
+              const count = counts.get(cell.key) ?? 0;
+              return (
+                <View
+                  key={row}
+                  style={{
+                    width: HEATMAP_CELL,
+                    height: HEATMAP_CELL,
+                    borderRadius: 3,
+                    backgroundColor: colorFor(count, cell.inRange),
+                  }}
+                />
+              );
+            })}
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function toLocalYMD(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// Linear blend two hex colors (#RRGGBB) by ratio 0..1. Used to build the two mid-intensity
+// shades of the heatmap from the existing primarySoft and primary tokens without adding
+// new theme entries.
+function blendPrimary(aHex: string, bHex: string, ratio: number): string {
+  const a = parseHex(aHex);
+  const b = parseHex(bHex);
+  if (!a || !b) return aHex;
+  const r = Math.round(a.r + (b.r - a.r) * ratio);
+  const g = Math.round(a.g + (b.g - a.g) * ratio);
+  const bb = Math.round(a.b + (b.b - a.b) * ratio);
+  return `#${[r, g, bb].map((n) => n.toString(16).padStart(2, '0')).join('')}`;
+}
+function parseHex(hex: string): { r: number; g: number; b: number } | null {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return null;
+  const v = parseInt(m[1]!, 16);
+  return { r: (v >> 16) & 0xff, g: (v >> 8) & 0xff, b: v & 0xff };
+}
+
+// "Jun 5, 2026, 9:25 AM" — explicitly no seconds (user's request). `toLocaleString()`
+// without options shows ":SS" on some locales, so we pass an explicit minutes-resolution
+// format.
+const DATE_FMT: Intl.DateTimeFormatOptions = {
+  year: 'numeric',
+  month: 'short',
+  day: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+};
+
 function SubmissionListRow({ submission, onPress }: { submission: Submission; onPress: () => void }) {
   const t = useTheme();
+  const title = submission.challengeTitle?.trim() || 'Challenge';
+  const dateLabel = new Date(submission.createdAt).toLocaleString(undefined, DATE_FMT);
+  const subline = submission.challengeGroupName
+    ? `${dateLabel} · ${submission.challengeGroupName}`
+    : dateLabel;
   return (
     <Pressable accessibilityRole="button" onPress={onPress}>
       <Card>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: t.spacing.md }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            gap: t.spacing.md,
+          }}
+        >
           <View style={{ flex: 1, gap: 2 }}>
-            <Text variant="subtitle">Day {submission.challengeDay + 1}</Text>
-            <Text variant="muted">{new Date(submission.createdAt).toLocaleString()}</Text>
+            <Text variant="subtitle" numberOfLines={1}>
+              {title}
+            </Text>
+            <Text variant="muted" numberOfLines={1}>
+              {subline}
+            </Text>
             {submission.comment ? (
               <Text variant="caption" numberOfLines={2}>
                 {submission.comment}
               </Text>
             ) : null}
           </View>
-          <SyncBadge status={submission.status} />
+          {/* Right column: gray (Day N) above the verification badge. */}
+          <View style={{ alignItems: 'flex-end', gap: 4 }}>
+            <Text variant="caption" style={{ color: t.colors.mutedForeground }}>
+              (Day {submission.challengeDay + 1})
+            </Text>
+            <SyncBadge status={submission.status} />
+          </View>
         </View>
       </Card>
     </Pressable>

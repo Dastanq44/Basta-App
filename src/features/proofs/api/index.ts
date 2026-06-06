@@ -116,9 +116,21 @@ export async function getProofSignedUrl(mediaPath: string | undefined, expiresIn
   }
 }
 
+type SubmissionWithContextRow = SubmissionRow & {
+  // PostgREST returns embedded relations as ARRAYS by default (even for many-to-one
+  // FKs). We grab `[0]` when present. `groups` is similarly an array because the
+  // challenges → groups relationship is many-to-one.
+  challenges: {
+    title: string | null;
+    groups: { name: string | null }[] | null;
+  }[] | null;
+};
+
 /** All of the current user's recent submissions across every challenge they participate in.
  *  Used by the Profile tab's Submissions section. `is_challenge_participant`-gated via
- *  the standard `submissions_select_participant` RLS — the author IS always a participant. */
+ *  the standard `submissions_select_participant` RLS — the author IS always a participant.
+ *  Joins the parent challenge's title + (for group challenges) the host group name via
+ *  PostgREST resource expansion so the list row can render both without a second fetch. */
 export async function listMyRecentSubmissions(limit = 50): Promise<Submission[]> {
   const c = ctrl();
   try {
@@ -127,13 +139,25 @@ export async function listMyRecentSubmissions(limit = 50): Promise<Submission[]>
     if (!uid) return [];
     const { data, error } = await supabase
       .from('submissions')
-      .select('id, challenge_id, author_id, challenge_day, comment, media_path, status, verified_at, rejected_at, created_at')
+      .select(
+        'id, challenge_id, author_id, challenge_day, comment, media_path, status, verified_at, rejected_at, created_at, challenges ( title, groups ( name ) )',
+      )
       .eq('author_id', uid)
       .order('created_at', { ascending: false })
       .limit(limit)
       .abortSignal(c.signal);
     if (error) throw error;
-    return (data ?? []).map((r) => toSubmission(r as SubmissionRow));
+    return (data ?? []).map((raw) => {
+      const r = raw as unknown as SubmissionWithContextRow;
+      const base = toSubmission(r);
+      const challenge = r.challenges?.[0];
+      const group = challenge?.groups?.[0];
+      return {
+        ...base,
+        challengeTitle: challenge?.title ?? undefined,
+        challengeGroupName: group?.name ?? undefined,
+      };
+    });
   } catch (e) {
     console.error('[basta] listMyRecentSubmissions failed:', e);
     throw e;

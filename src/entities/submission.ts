@@ -47,4 +47,12 @@ export type Submission = {
    */
   authorUsername?: string;
   authorDisplayName?: string;
+  /**
+   * Joined challenge / group context. Present when the submission was read via a path
+   * that joins the parent challenge (`listMyRecentSubmissions` does PostgREST resource
+   * expansion). `challengeGroupName` is only set when the parent challenge is a group
+   * challenge (otherwise the challenge has no host group).
+   */
+  challengeTitle?: string;
+  challengeGroupName?: string;
 };

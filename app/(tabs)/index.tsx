@@ -1,10 +1,11 @@
-import { useCallback } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useCallback, useMemo } from 'react';
+import { Image, Pressable, ScrollView, View } from 'react-native';
 import { type Href, useFocusEffect, useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { Avatar, Button, Card, Icon, ProgressBar, Screen, StatTile, Text, useTheme } from '@/shared/ui';
 import { useSession } from '@/features/auth';
 import { homeOverviewQueryKey, pendingVerificationsQueryKey, useHomeOverview } from '@/features/home';
+import { useProfile, userAvatarUrl } from '@/features/onboarding';
 
 // Today / Home tab: weekly progress + streak + today's task + a conditional "Verify a friend"
 // button (only when group proofs await the caller). All numbers are server-authoritative (D-003);
@@ -15,6 +16,7 @@ export default function TodayScreen() {
   const qc = useQueryClient();
   const session = useSession();
   const overview = useHomeOverview();
+  const profile = useProfile();
 
   // Recompute on focus so midnight rollover / a just-cleared verification reflect immediately.
   useFocusEffect(
@@ -24,8 +26,19 @@ export default function TodayScreen() {
     }, [qc]),
   );
 
+  // Greeting reads from the real profile. Display name first, then username, then the
+  // email local-part as a fallback for a freshly-signed-in user whose profile hasn't
+  // synced yet. Avatar uses the uploaded image when present, otherwise initials.
   const email = session.session?.user.email ?? '';
-  const name = (email ? email.split('@')[0] : '') || 'there';
+  const name =
+    profile.data?.displayName?.trim() ||
+    profile.data?.username ||
+    (email ? email.split('@')[0] : '') ||
+    'there';
+  const avatarRemoteUrl = useMemo(
+    () => userAvatarUrl(profile.data?.avatarUrl ?? null),
+    [profile.data?.avatarUrl],
+  );
   const o = overview.data;
   const weekPct = o ? Math.min(1, o.weekActiveDays / 7) : 0;
   const pending = o?.pendingVerifications ?? 0;
@@ -37,15 +50,32 @@ export default function TodayScreen() {
         {/* Greeting */}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm }}>
-            <Avatar name={name} size={46} />
+            {avatarRemoteUrl ? (
+              <Image source={{ uri: avatarRemoteUrl }} style={{ width: 46, height: 46, borderRadius: 23 }} />
+            ) : (
+              <Avatar name={name} size={46} />
+            )}
             <View>
               <Text variant="caption">Welcome back</Text>
               <Text variant="heading">Hi, {name} 👋</Text>
             </View>
           </View>
-          <View style={styles.iconBtn(t.colors.card, t.colors.border)}>
+          {/* Bell icon — no longer wrapped in a circular card-bg button (the prior styles.iconBtn
+              made a small white circle). Just the glyph with a tap dim. */}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Notifications"
+            hitSlop={8}
+            style={({ pressed }) => ({
+              width: 40,
+              height: 40,
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: pressed ? 0.5 : 1,
+            })}
+          >
             <Icon name="bell" size={22} color={t.colors.foreground} />
-          </View>
+          </Pressable>
         </View>
 
         {/* This week */}
@@ -132,15 +162,3 @@ export default function TodayScreen() {
   );
 }
 
-const styles = {
-  iconBtn: (bg: string, border: string) => ({
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: bg,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: border,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-  }),
-};
