@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Alert, FlatList, Image, Pressable, RefreshControl, ScrollView, View } from 'react-native';
-import { type Href, Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   Avatar,
   BottomSheet,
@@ -10,6 +10,7 @@ import {
   CrownIcon,
   Icon,
   Screen,
+  ScreenHeader,
   SegmentedControl,
   Text,
   useTheme,
@@ -124,8 +125,8 @@ export default function GroupScreen() {
 
   if (!groups.isPending && !group) {
     return (
-      <Screen>
-        <Stack.Screen options={{ title: 'Group' }} />
+      <Screen edges={['top', 'bottom']}>
+        <ScreenHeader title="Group" onBack={() => router.back()} />
         <View style={{ gap: t.spacing.md }}>
           <Text variant="title">Group unavailable</Text>
           <Text variant="muted">
@@ -137,31 +138,16 @@ export default function GroupScreen() {
   }
 
   return (
-    <Screen padded={false} edges={['bottom']}>
-      <Stack.Screen
-        options={{
-          title: group?.name ?? 'Group',
-          headerRight: () => (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Group settings"
-              hitSlop={8}
-              onPress={() => setMenuOpen(true)}
-              // Match the Profile/Challenge 3-dot button: 40×40 circle with opacity dip
-              // on press (no native highlight color flicker — polish A + C).
-              style={({ pressed }) => ({
-                width: 40,
-                height: 40,
-                marginRight: 4,
-                borderRadius: 20,
-                alignItems: 'center',
-                justifyContent: 'center',
-                opacity: pressed ? 0.5 : 1,
-              })}
-            >
-              <Icon name="settings" size={22} color={t.colors.foreground} />
-            </Pressable>
-          ),
+    <Screen padded={false} edges={['top', 'bottom']}>
+      {/* Custom in-body header — replaces the native UINavigationBar so the bar-button
+          system tap-highlight ("white circle behind the icons") never renders. */}
+      <ScreenHeader
+        title={group?.name ?? 'Group'}
+        onBack={() => router.back()}
+        rightAction={{
+          icon: <Icon name="settings" size={22} color={t.colors.foreground} />,
+          onPress: () => setMenuOpen(true),
+          accessibilityLabel: 'Group settings',
         }}
       />
 

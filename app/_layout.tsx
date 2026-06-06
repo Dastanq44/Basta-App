@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
-import { ActivityIndicator, Pressable, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { queryClient } from '@/shared/lib/queryClient';
-import { ThemeProvider, useTheme, useThemeMode } from '@/shared/ui';
+import { HeaderBackButton, ThemeProvider, useTheme, useThemeMode } from '@/shared/ui';
 import { isAtTarget, useOnboardingGate } from '@/navigation/guards';
 import { initOffline } from '@/offline';
 
@@ -45,38 +45,9 @@ function ThemedStatusBar() {
   return <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />;
 }
 
-// Custom back chevron — no background, no system tap-tint flash. Opacity dip on press.
-// The arrow is drawn from a single rotated View so the icon set doesn't have to grow.
-function HeaderBackButton({ onPress }: { onPress: () => void }) {
-  const t = useTheme();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel="Back"
-      onPress={onPress}
-      hitSlop={8}
-      style={({ pressed }) => ({
-        width: 40,
-        height: 40,
-        marginLeft: 4,
-        alignItems: 'center',
-        justifyContent: 'center',
-        opacity: pressed ? 0.5 : 1,
-      })}
-    >
-      <View
-        style={{
-          width: 11,
-          height: 11,
-          borderTopWidth: 2.2,
-          borderLeftWidth: 2.2,
-          borderColor: t.colors.foreground,
-          transform: [{ rotate: '-45deg' }],
-        }}
-      />
-    </Pressable>
-  );
-}
+// HeaderBackButton lives in src/shared/ui/ScreenHeader.tsx — same component is used
+// both as the native-stack `headerLeft` here AND inside the custom in-body ScreenHeader
+// on screens where the native UINavigationBar's bar-button highlight is undesirable.
 
 function RootNav() {
   const t = useTheme();
@@ -129,7 +100,11 @@ function RootNav() {
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="(onboarding)" />
-      <Stack.Screen name="challenge/[id]" options={{ headerShown: true, title: 'Challenge' }} />
+      {/* challenge/[id] + group/[id] render their OWN in-screen header (ScreenHeader)
+          because the native UINavigationBar's bar-button system tap-highlight (a small
+          circular tint behind the back / 3-dot icons that fades during transitions)
+          can't be disabled through React Navigation options. */}
+      <Stack.Screen name="challenge/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="challenge/new" options={{ headerShown: true, title: 'New challenge' }} />
       <Stack.Screen
         name="challenge/[id]/submit-proof"
@@ -144,7 +119,7 @@ function RootNav() {
         options={{ headerShown: true, presentation: 'modal', title: 'Edit challenge' }}
       />
       <Stack.Screen name="verify/[submissionId]" options={{ headerShown: true, title: 'Verify proof' }} />
-      <Stack.Screen name="group/[id]" options={{ headerShown: true, title: 'Group' }} />
+      <Stack.Screen name="group/[id]" options={{ headerShown: false }} />
       <Stack.Screen
         name="group/[id]/edit"
         options={{ headerShown: true, presentation: 'modal', title: 'Edit group' }}

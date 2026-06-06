@@ -8,13 +8,22 @@ import {
 } from 'react-native';
 import {
   type Href,
-  Stack,
   useFocusEffect,
   useLocalSearchParams,
   useRouter,
 } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
-import { BottomSheet, BottomSheetMenuItem, Button, Card, Icon, Screen, Text, useTheme } from '@/shared/ui';
+import {
+  BottomSheet,
+  BottomSheetMenuItem,
+  Button,
+  Card,
+  Icon,
+  Screen,
+  ScreenHeader,
+  Text,
+  useTheme,
+} from '@/shared/ui';
 import { useArchiveChallenge, useChallenge, useChallengeStreak } from '@/features/challenges';
 import { useSession } from '@/features/auth';
 import { useMyGroups } from '@/features/groups';
@@ -134,34 +143,16 @@ export default function ChallengeDetailScreen() {
   };
 
   return (
-    // edges={['bottom']}: the native Stack header already handles top safe-area inset; if
-    // we included 'top' here too, SafeAreaView would add a background-colored stripe under
-    // the header that the FlatList scrolls behind.
-    <Screen padded={false} edges={['bottom']}>
-      <Stack.Screen
-        options={{
-          title: c.title,
-          // 3-dot button — only shown when there's anything to do (creator OR can report).
-          // No press color flicker: opacity dip instead.
-          headerRight: () => (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Challenge settings"
-              onPress={() => setMenuOpen(true)}
-              hitSlop={8}
-              style={({ pressed }) => ({
-                width: 40,
-                height: 40,
-                marginRight: 4,
-                borderRadius: 20,
-                alignItems: 'center',
-                justifyContent: 'center',
-                opacity: pressed ? 0.5 : 1,
-              })}
-            >
-              <Icon name="settings" size={22} color={t.colors.foreground} />
-            </Pressable>
-          ),
+    <Screen padded={false} edges={['top', 'bottom']}>
+      {/* Custom in-body header — replaces the native UINavigationBar so the bar-button
+          system tap-highlight ("white circle behind the icons") never renders. */}
+      <ScreenHeader
+        title={c.title}
+        onBack={() => router.back()}
+        rightAction={{
+          icon: <Icon name="settings" size={22} color={t.colors.foreground} />,
+          onPress: () => setMenuOpen(true),
+          accessibilityLabel: 'Challenge settings',
         }}
       />
       <FlatList
