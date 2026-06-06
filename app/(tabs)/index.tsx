@@ -4,8 +4,11 @@ import { type Href, useFocusEffect, useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { Avatar, Button, Card, Icon, ProgressBar, Screen, StatTile, Text, useTheme } from '@/shared/ui';
 import { useSession } from '@/features/auth';
+import { ChallengeRow, useChallenges } from '@/features/challenges';
+import { useMyRecentSubmissions } from '@/features/proofs';
 import { homeOverviewQueryKey, pendingVerificationsQueryKey, useHomeOverview } from '@/features/home';
 import { useProfile, userAvatarUrl } from '@/features/onboarding';
+import type { Challenge } from '@/entities';
 
 // Today / Home tab: weekly progress + streak + today's task + a conditional "Verify a friend"
 // button (only when group proofs await the caller). All numbers are server-authoritative (D-003);
@@ -42,7 +45,32 @@ export default function TodayScreen() {
   const o = overview.data;
   const weekPct = o ? Math.min(1, o.weekActiveDays / 7) : 0;
   const pending = o?.pendingVerifications ?? 0;
-  const todayLeft = o ? Math.max(0, o.todayTotal - o.todayDone) : 0;
+
+  // Today section — the actual challenges with no proof submitted yet for the user's
+  // current challenge_day. Pulled client-side from useChallenges + useMyRecentSubmissions
+  // to avoid a new RPC. challenge_day is computed locally per challenge (today's date
+  // minus the challenge's start_date, in local midnight ms). Slight tz drift vs the
+  // server's day-boundary math is acceptable here — only used for display, not scoring.
+  const challenges = useChallenges();
+  const recentSubmissions = useMyRecentSubmissions();
+  const openToday: Challenge[] = useMemo(() => {
+    if (!challenges.data || !recentSubmissions.data) return [];
+    const todayTs = localMidnightTs(new Date());
+    // (challenge_id : challenge_day) keys covered by some submission.
+    const submitted = new Set<string>();
+    for (const s of recentSubmissions.data) submitted.add(`${s.challengeId}:${s.challengeDay}`);
+    const out: Challenge[] = [];
+    for (const c of challenges.data) {
+      const startTs = parseLocalMidnight(c.startDate);
+      if (startTs == null) continue;
+      const todayDay = Math.round((todayTs - startTs) / 86_400_000);
+      // In-range: started, not finished.
+      if (todayDay < 0 || todayDay >= c.durationDays) continue;
+      if (submitted.has(`${c.id}:${todayDay}`)) continue;
+      out.push(c);
+    }
+    return out;
+  }, [challenges.data, recentSubmissions.data]);
 
   return (
     <Screen padded={false} edges={['top']}>
@@ -156,33 +184,48 @@ export default function TodayScreen() {
           </Pressable>
         ) : null}
 
-        {/* Today's task */}
+        {/* Today — list of active challenges where today's proof is still missing.
+            Same row format as the Challenges tab so the two surfaces match. Empty
+            states differentiate "nothing pending" from "no challenges at all". */}
         <View style={{ gap: t.spacing.sm }}>
           <Text variant="heading">Today</Text>
-          <Card>
-            {overview.isPending ? (
+          {challenges.isPending || recentSubmissions.isPending ? (
+            <Card>
               <Text variant="muted">Loading…</Text>
-            ) : todayLeft > 0 ? (
-              <View style={{ gap: t.spacing.sm }}>
-                <Text variant="subtitle">
-                  {todayLeft} task{todayLeft > 1 ? 's' : ''} left today
-                </Text>
-                <Text variant="caption">Submit today&apos;s proof to keep your streak alive.</Text>
-                <Button label="Go to challenges" onPress={() => router.navigate('/challenges' as Href)} />
-              </View>
-            ) : (o?.todayTotal ?? 0) > 0 ? (
+            </Card>
+          ) : openToday.length > 0 ? (
+            <View style={{ gap: t.spacing.md }}>
+              {openToday.map((c) => (
+                <ChallengeRow key={c.id} challenge={c} />
+              ))}
+            </View>
+          ) : (challenges.data?.length ?? 0) > 0 ? (
+            <Card>
               <Text variant="subtitle">All done for today 🎉</Text>
-            ) : (
-              <View style={{ gap: t.spacing.sm }}>
-                <Text variant="subtitle">No active challenges</Text>
-                <Text variant="caption">Start a challenge to begin building a streak.</Text>
-                <Button label="New challenge" onPress={() => router.push('/challenge/new')} />
-              </View>
-            )}
-          </Card>
+              <Text variant="caption">Submit-the-day check: nothing left to log.</Text>
+            </Card>
+          ) : (
+            <Card>
+              <Text variant="subtitle">No active challenges</Text>
+              <Text variant="caption">Start a challenge to begin building a streak.</Text>
+              <Button label="New challenge" onPress={() => router.push('/challenge/new')} />
+            </Card>
+          )}
         </View>
       </ScrollView>
     </Screen>
   );
 }
 
+// Day math — same approach as (tabs)/challenges.tsx. Compare timestamps of local
+// midnight; both values use the same tz offset so subtraction gives a tz-correct delta.
+// Slight server / client drift on the day-boundary doesn't matter here — we only use it
+// for "is the challenge currently active" and "did I submit today's day index".
+function parseLocalMidnight(iso: string): number | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!m) return null;
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).getTime();
+}
+function localMidnightTs(d: Date): number {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+}
