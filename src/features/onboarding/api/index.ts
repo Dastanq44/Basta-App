@@ -39,6 +39,13 @@ const PROFILE_FETCH_TIMEOUT_MS = 10_000;
  * Read the current user's profile. Returns null when no profile row exists yet.
  * Bounded by an AbortSignal timeout so the gate never hangs on a slow/dead request.
  * Errors are logged to the JS console so they appear in the Expo terminal during dev.
+ *
+ * Note on the explicit `.eq('id', uid)`: pre-W-031, RLS (`profiles_select_own`)
+ * limited the result to your own row, so `.maybeSingle()` always got 0 or 1. W-031
+ * widened SELECT to all authenticated users — an unfiltered query now returns every
+ * profile and `.maybeSingle()` fails with PGRST116 "multiple rows returned". Filter
+ * by `id = uid` explicitly so the behavior is independent of which policies are in
+ * play.
  */
 export async function fetchProfile(): Promise<User | null> {
   const ctrl = new AbortController();
@@ -47,9 +54,13 @@ export async function fetchProfile(): Promise<User | null> {
     PROFILE_FETCH_TIMEOUT_MS,
   );
   try {
+    const { data: auth } = await supabase.auth.getUser();
+    const uid = auth.user?.id;
+    if (!uid) return null;
     const { data, error } = await supabase
       .from('profiles')
       .select(PROFILE_SELECT)
+      .eq('id', uid)
       .abortSignal(ctrl.signal)
       .maybeSingle();
     if (error) throw error;
