@@ -116,15 +116,22 @@ export async function getProofSignedUrl(mediaPath: string | undefined, expiresIn
   }
 }
 
-type SubmissionWithContextRow = SubmissionRow & {
-  // PostgREST returns embedded relations as ARRAYS by default (even for many-to-one
-  // FKs). We grab `[0]` when present. `groups` is similarly an array because the
-  // challenges → groups relationship is many-to-one.
-  challenges: {
-    title: string | null;
-    groups: { name: string | null }[] | null;
-  }[] | null;
+// PostgREST resource expansion shape. supabase-js v2 has been inconsistent about whether
+// many-to-one relations come back as an ARRAY or a single OBJECT depending on the
+// schema/version, so we accept either at runtime and normalize in the mapper below.
+type EmbedChallenge = {
+  title: string | null;
+  groups: EmbedGroup | EmbedGroup[] | null;
 };
+type EmbedGroup = { name: string | null };
+type SubmissionWithContextRow = SubmissionRow & {
+  challenges: EmbedChallenge | EmbedChallenge[] | null;
+};
+
+function pickOne<T>(v: T | T[] | null | undefined): T | undefined {
+  if (!v) return undefined;
+  return Array.isArray(v) ? v[0] : v;
+}
 
 /** All of the current user's recent submissions across every challenge they participate in.
  *  Used by the Profile tab's Submissions section. `is_challenge_participant`-gated via
@@ -150,8 +157,8 @@ export async function listMyRecentSubmissions(limit = 50): Promise<Submission[]>
     return (data ?? []).map((raw) => {
       const r = raw as unknown as SubmissionWithContextRow;
       const base = toSubmission(r);
-      const challenge = r.challenges?.[0];
-      const group = challenge?.groups?.[0];
+      const challenge = pickOne(r.challenges);
+      const group = pickOne(challenge?.groups);
       return {
         ...base,
         challengeTitle: challenge?.title ?? undefined,

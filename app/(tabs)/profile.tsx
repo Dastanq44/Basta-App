@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Alert, FlatList, Image, Pressable, ScrollView, View } from 'react-native';
+import { Alert, FlatList, Image, Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
 import { type Href, useRouter } from 'expo-router';
 import {
   Avatar,
@@ -288,14 +288,26 @@ function ProfileHeader({
 
 const HEATMAP_WEEKS = 13;
 const HEATMAP_DAYS = 7;
-const HEATMAP_CELL = 14; // px
 const HEATMAP_GAP = 3; // px
 
 function ActivityHeatmap({ submissions }: { submissions: Submission[] }) {
   const t = useTheme();
+  const { width: winW } = useWindowDimensions();
+  const [selected, setSelected] = useState<{ date: Date; count: number; key: string } | null>(null);
+
+  // Dynamic cell size — fill the screen width edge-to-edge (minus the screen + heatmap
+  // inner padding). 13 cells + 12 gaps:
+  //   screen padding (lg) ×2 + heatmap inner padding (sm) ×2 + (13-1) gaps consumed.
+  const cellSize = Math.max(
+    12,
+    Math.floor(
+      (winW - 2 * t.spacing.lg - 2 * t.spacing.sm - (HEATMAP_WEEKS - 1) * HEATMAP_GAP) /
+        HEATMAP_WEEKS,
+    ),
+  );
 
   // Compute cell dates + per-day counts.
-  const { cells, counts, maxCount } = useMemo(() => {
+  const { cells, counts } = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     // Start grid on the Sunday (HEATMAP_WEEKS - 1) weeks before this week's Sunday so the
@@ -319,21 +331,19 @@ function ActivityHeatmap({ submissions }: { submissions: Submission[] }) {
       const key = toLocalYMD(new Date(s.createdAt));
       countMap.set(key, (countMap.get(key) ?? 0) + 1);
     }
-
-    let mx = 0;
-    for (const v of countMap.values()) if (v > mx) mx = v;
-    return { cells: cellArr, counts: countMap, maxCount: mx };
+    return { cells: cellArr, counts: countMap };
   }, [submissions]);
 
+  // Fixed buckets (was: relative-to-max). 0 / 1 / 2-3 / 4+ — the top bucket clamps so 4+
+  // submissions always render at full primary saturation, no transparency.
   const colorFor = (count: number, inRange: boolean): string => {
-    if (!inRange) return t.colors.muted; // future days: blank tone
-    if (count <= 0) return t.colors.muted;
-    if (count === 1) return t.colors.primarySoft;
-    // Two more steps between primarySoft and primary based on relative intensity.
-    const ratio = maxCount > 1 ? count / maxCount : 1;
-    if (ratio < 0.5) return blendPrimary(t.colors.primarySoft, t.colors.primary, 0.4);
-    if (ratio < 0.85) return blendPrimary(t.colors.primarySoft, t.colors.primary, 0.7);
-    return t.colors.primary;
+    if (count >= 4) return t.colors.primary;
+    if (count >= 2) return blendPrimary(t.colors.primarySoft, t.colors.primary, 0.65);
+    if (count >= 1) return t.colors.primarySoft;
+    // 0 submissions: was t.colors.muted — too transparent against the card. Use border
+    // tone (mid-gray) which reads as "empty but present" on both light + dark themes.
+    // Future cells share the same tone.
+    return inRange ? t.colors.border : t.colors.border;
   };
 
   return (
@@ -346,38 +356,80 @@ function ActivityHeatmap({ submissions }: { submissions: Submission[] }) {
           {submissions.length} submissions
         </Text>
       </View>
+
       <View
         style={{
-          flexDirection: 'row',
-          gap: HEATMAP_GAP,
           padding: t.spacing.sm,
           backgroundColor: t.colors.card,
           borderRadius: t.radius.md,
           borderWidth: 1,
           borderColor: t.colors.border,
-          alignSelf: 'flex-start',
+          gap: t.spacing.xs,
         }}
       >
-        {Array.from({ length: HEATMAP_WEEKS }, (_, col) => (
-          <View key={col} style={{ gap: HEATMAP_GAP }}>
-            {Array.from({ length: HEATMAP_DAYS }, (_, row) => {
-              const cell = cells[col * HEATMAP_DAYS + row];
-              if (!cell) return null;
-              const count = counts.get(cell.key) ?? 0;
-              return (
-                <View
-                  key={row}
-                  style={{
-                    width: HEATMAP_CELL,
-                    height: HEATMAP_CELL,
-                    borderRadius: 3,
-                    backgroundColor: colorFor(count, cell.inRange),
-                  }}
-                />
-              );
-            })}
+        <View style={{ flexDirection: 'row', gap: HEATMAP_GAP, justifyContent: 'space-between' }}>
+          {Array.from({ length: HEATMAP_WEEKS }, (_, col) => (
+            <View key={col} style={{ gap: HEATMAP_GAP }}>
+              {Array.from({ length: HEATMAP_DAYS }, (_, row) => {
+                const cell = cells[col * HEATMAP_DAYS + row];
+                if (!cell) return null;
+                const count = counts.get(cell.key) ?? 0;
+                const isSelected = selected?.key === cell.key;
+                return (
+                  <Pressable
+                    key={row}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${cell.date.toLocaleDateString()}, ${count} submission${count === 1 ? '' : 's'}`}
+                    onPress={() =>
+                      setSelected((prev) => (prev?.key === cell.key ? null : { date: cell.date, count, key: cell.key }))
+                    }
+                  >
+                    <View
+                      style={{
+                        width: cellSize,
+                        height: cellSize,
+                        borderRadius: 3,
+                        backgroundColor: colorFor(count, cell.inRange),
+                        // Selected cell gets a primary ring so it's clear which day the
+                        // popover refers to.
+                        borderWidth: isSelected ? 1.5 : 0,
+                        borderColor: t.colors.primary,
+                      }}
+                    />
+                  </Pressable>
+                );
+              })}
+            </View>
+          ))}
+        </View>
+
+        {/* Day detail popover. Rendered BELOW the grid inside the same Card so it doesn't
+            require absolute positioning math. Tap the cell again (or any other cell) to
+            change/dismiss. */}
+        {selected ? (
+          <View
+            style={{
+              marginTop: t.spacing.xs,
+              paddingTop: t.spacing.xs,
+              borderTopWidth: 1,
+              borderTopColor: t.colors.border,
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <Text variant="subtitle">
+              {selected.date.toLocaleDateString(undefined, {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+              })}
+            </Text>
+            <Text variant="muted">
+              {selected.count} submission{selected.count === 1 ? '' : 's'}
+            </Text>
           </View>
-        ))}
+        ) : null}
       </View>
     </View>
   );
@@ -448,10 +500,10 @@ function SubmissionListRow({ submission, onPress }: { submission: Submission; on
               </Text>
             ) : null}
           </View>
-          {/* Right column: gray (Day N) above the verification badge. */}
+          {/* Right column: gray "Day N" above the verification badge. */}
           <View style={{ alignItems: 'flex-end', gap: 4 }}>
             <Text variant="caption" style={{ color: t.colors.mutedForeground }}>
-              (Day {submission.challengeDay + 1})
+              Day {submission.challengeDay + 1}
             </Text>
             <SyncBadge status={submission.status} />
           </View>

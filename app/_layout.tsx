@@ -119,6 +119,11 @@ function RootNav() {
         headerBackButtonDisplayMode: 'minimal',
         headerLeft: ({ canGoBack }) =>
           canGoBack ? <HeaderBackButton onPress={() => router.back()} /> : null,
+        // Match the header bar background to the SCREEN background so there's no
+        // contrasting white strip behind the buttons (which read as "the buttons are
+        // sitting in white circles" on phones). Also kill the iOS hairline shadow.
+        headerStyle: { backgroundColor: t.colors.background },
+        headerShadowVisible: false,
       }}
     >
       <Stack.Screen name="(tabs)" />
