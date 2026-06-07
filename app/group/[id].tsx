@@ -297,24 +297,41 @@ export default function GroupScreen() {
 
       {/* Settings sheet — slides up from bottom as one body (was a transparent fade). */}
       <BottomSheet visible={menuOpen} onClose={() => setMenuOpen(false)}>
-        {/* Auto-fading "Copied to clipboard" toast. Centered at the very top of the
-            sheet contents (above the invite-code chip). Doesn't accept taps; opacity is
-            driven by the effect at the top of the screen component. */}
+        {/* Auto-fading "Copied to clipboard" toast. Floats ABOVE the sheet's top edge
+            via position:absolute + a negative top offset. The sheet's container is the
+            transform-anchored parent, so this Animated.View moves with the sheet during
+            the slide-in animation while sitting outside the sheet's content area. Bright
+            primary palette + a soft shadow so it reads as a separate notification, not a
+            sheet menu item. Non-interactive (pointerEvents='none'). */}
         {toastVisible ? (
           <Animated.View
             pointerEvents="none"
             style={{
-              alignSelf: 'center',
-              backgroundColor: t.colors.foreground,
-              paddingHorizontal: t.spacing.md,
-              paddingVertical: 6,
-              borderRadius: t.radius.full,
+              position: 'absolute',
+              top: -56,
+              left: 0,
+              right: 0,
+              alignItems: 'center',
               opacity: toastOpacity,
             }}
           >
-            <Text style={{ color: t.colors.background, fontSize: t.fontSize.sm, fontWeight: '600' }}>
-              Copied to clipboard
-            </Text>
+            <View
+              style={{
+                backgroundColor: t.colors.primary,
+                paddingHorizontal: t.spacing.md,
+                paddingVertical: 8,
+                borderRadius: t.radius.full,
+                shadowColor: '#000',
+                shadowOpacity: 0.18,
+                shadowRadius: 10,
+                shadowOffset: { width: 0, height: 4 },
+                elevation: 5,
+              }}
+            >
+              <Text style={{ color: t.colors.primaryForeground, fontSize: t.fontSize.sm, fontWeight: '700' }}>
+                Copied to clipboard
+              </Text>
+            </View>
           </Animated.View>
         ) : null}
 
