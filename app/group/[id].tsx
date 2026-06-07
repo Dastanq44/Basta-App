@@ -317,18 +317,20 @@ export default function GroupScreen() {
           >
             <View
               style={{
-                backgroundColor: t.colors.primary,
+                backgroundColor: t.colors.card,
                 paddingHorizontal: t.spacing.md,
                 paddingVertical: 8,
                 borderRadius: t.radius.full,
+                borderWidth: 1,
+                borderColor: t.colors.border,
                 shadowColor: '#000',
-                shadowOpacity: 0.18,
+                shadowOpacity: 0.12,
                 shadowRadius: 10,
                 shadowOffset: { width: 0, height: 4 },
-                elevation: 5,
+                elevation: 4,
               }}
             >
-              <Text style={{ color: t.colors.primaryForeground, fontSize: t.fontSize.sm, fontWeight: '700' }}>
+              <Text style={{ color: t.colors.mutedForeground, fontSize: t.fontSize.sm, fontWeight: '600' }}>
                 Copied to clipboard
               </Text>
             </View>
