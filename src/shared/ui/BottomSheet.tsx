@@ -95,6 +95,9 @@ export function BottomSheet({ visible, onClose, children, showHandle = true }: B
             borderTopRightRadius: t.radius.xl,
             padding: t.spacing.lg,
             paddingBottom: t.spacing.xl,
+            // Larger between-children gap so the tinted BottomSheetMenuItem chips
+            // visibly breathe instead of touching edge-to-edge. (Was xs / 4px.)
+            gap: t.spacing.sm,
             transform: [{ translateY: sheetY }],
           }}
         >
@@ -140,7 +143,8 @@ export function BottomSheetMenuItem({ label, destructive, onPress }: BottomSheet
         paddingVertical: 14,
         paddingHorizontal: t.spacing.md,
         backgroundColor: t.colors.muted,
-        borderRadius: t.radius.md,
+        // Softer rounding — was md (14). Items now read as separated pills.
+        borderRadius: t.radius.lg,
         opacity: pressed ? 0.6 : 1,
       })}
     >

@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Alert, FlatList, Image, Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Animated, FlatList, Image, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import {
@@ -49,6 +49,24 @@ export default function GroupScreen() {
   const [tab, setTab] = useState<Tab>('main');
   const [menuOpen, setMenuOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+
+  // Auto-fading "Copied to clipboard" chip that lives at the top of the settings sheet.
+  // No tap dismiss; the timer below handles the lifecycle. Replaces the prior
+  // Alert.alert("Copied", ...) which fully covered the screen.
+  const [toastVisible, setToastVisible] = useState(false);
+  const toastOpacity = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!toastVisible) return;
+    Animated.timing(toastOpacity, { toValue: 1, duration: 160, useNativeDriver: true }).start();
+    const timer = setTimeout(() => {
+      Animated.timing(toastOpacity, { toValue: 0, duration: 200, useNativeDriver: true }).start(
+        ({ finished }) => {
+          if (finished) setToastVisible(false);
+        },
+      );
+    }, 900);
+    return () => clearTimeout(timer);
+  }, [toastVisible, toastOpacity]);
 
   const group = groups.data?.find((g) => g.id === id);
   const isOwner = !!myUid && group?.ownerId === myUid;
@@ -279,6 +297,27 @@ export default function GroupScreen() {
 
       {/* Settings sheet — slides up from bottom as one body (was a transparent fade). */}
       <BottomSheet visible={menuOpen} onClose={() => setMenuOpen(false)}>
+        {/* Auto-fading "Copied to clipboard" toast. Centered at the very top of the
+            sheet contents (above the invite-code chip). Doesn't accept taps; opacity is
+            driven by the effect at the top of the screen component. */}
+        {toastVisible ? (
+          <Animated.View
+            pointerEvents="none"
+            style={{
+              alignSelf: 'center',
+              backgroundColor: t.colors.foreground,
+              paddingHorizontal: t.spacing.md,
+              paddingVertical: 6,
+              borderRadius: t.radius.full,
+              opacity: toastOpacity,
+            }}
+          >
+            <Text style={{ color: t.colors.background, fontSize: t.fontSize.sm, fontWeight: '600' }}>
+              Copied to clipboard
+            </Text>
+          </Animated.View>
+        ) : null}
+
         {/* Invite code — centered, tap-to-copy. The whole chip is a Pressable so the
             invite acts as one big button. setStringAsync writes to the system clipboard
             via expo-clipboard; a quick Alert confirms so the user knows it worked. */}
@@ -290,7 +329,11 @@ export default function GroupScreen() {
               if (!group.inviteCode) return;
               try {
                 await Clipboard.setStringAsync(group.inviteCode);
-                Alert.alert('Copied', 'Invite code copied to clipboard.');
+                // Non-blocking toast inside the sheet (see effect at top of file).
+                // Restarting the timer on re-tap: drop visibility first so the effect
+                // re-runs cleanly even when already visible.
+                setToastVisible(false);
+                setTimeout(() => setToastVisible(true), 0);
               } catch (e) {
                 Alert.alert('Could not copy', e instanceof Error ? e.message : 'Unknown error');
               }
