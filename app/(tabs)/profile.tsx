@@ -223,7 +223,7 @@ export default function ProfileScreen() {
           destructive
           onPress={confirmSignOut}
         />
-        <BottomSheetMenuItem label="Cancel" onPress={() => setMenuOpen(false)} />
+        {/* No Cancel row — the backdrop tap dismisses, which keeps the sheet items tight. */}
       </BottomSheet>
     </Screen>
   );

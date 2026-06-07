@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Alert, FlatList, Image, Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   Avatar,
@@ -169,7 +170,25 @@ export default function GroupScreen() {
         <ScrollView contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.md, paddingBottom: t.spacing.xl }}>
           <View style={{ alignItems: 'center', gap: t.spacing.sm }}>
             {overview.data?.avatarUrl ? (
-              <Image source={{ uri: overview.data.avatarUrl }} style={{ width: 88, height: 88, borderRadius: 44 }} />
+              // iOS doesn't always clip a raw <Image> by its own borderRadius. Wrapping in
+              // a View with overflow:'hidden' guarantees the image is fully clipped to the
+              // circle (otherwise the top corners of the source bitmap can poke past the
+              // rounded mask — what was reading as the avatar being "half cut on top").
+              <View
+                style={{
+                  width: 88,
+                  height: 88,
+                  borderRadius: 44,
+                  overflow: 'hidden',
+                  backgroundColor: t.colors.muted,
+                }}
+              >
+                <Image
+                  source={{ uri: overview.data.avatarUrl }}
+                  style={{ width: 88, height: 88 }}
+                  resizeMode="cover"
+                />
+              </View>
             ) : (
               <Avatar name={group?.name ?? '?'} size={88} />
             )}
@@ -260,26 +279,46 @@ export default function GroupScreen() {
 
       {/* Settings sheet — slides up from bottom as one body (was a transparent fade). */}
       <BottomSheet visible={menuOpen} onClose={() => setMenuOpen(false)}>
-        {/* Invite code lives at the top of the sheet — share-only affordance, fits with
-            the other group settings. */}
+        {/* Invite code — centered, tap-to-copy. The whole chip is a Pressable so the
+            invite acts as one big button. setStringAsync writes to the system clipboard
+            via expo-clipboard; a quick Alert confirms so the user knows it worked. */}
         {group?.inviteCode ? (
-          <View style={{ paddingVertical: t.spacing.xs, paddingHorizontal: t.spacing.sm, marginBottom: t.spacing.xs, gap: t.spacing.xs }}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Tap to copy invite code"
+            onPress={async () => {
+              if (!group.inviteCode) return;
+              try {
+                await Clipboard.setStringAsync(group.inviteCode);
+                Alert.alert('Copied', 'Invite code copied to clipboard.');
+              } catch (e) {
+                Alert.alert('Could not copy', e instanceof Error ? e.message : 'Unknown error');
+              }
+            }}
+            style={({ pressed }) => ({
+              alignItems: 'center',
+              paddingVertical: t.spacing.xs,
+              paddingHorizontal: t.spacing.sm,
+              marginBottom: t.spacing.xs,
+              opacity: pressed ? 0.6 : 1,
+              gap: t.spacing.xs,
+            })}
+          >
             <Text variant="muted">Invite code</Text>
             <View
               style={{
-                alignSelf: 'flex-start',
                 backgroundColor: t.colors.primarySoft,
                 borderRadius: t.radius.md,
                 paddingHorizontal: t.spacing.md,
                 paddingVertical: t.spacing.sm,
               }}
             >
-              <Text selectable style={{ fontSize: t.fontSize.lg, fontWeight: '700', color: t.colors.primary, letterSpacing: 1.5 }}>
+              <Text style={{ fontSize: t.fontSize.lg, fontWeight: '700', color: t.colors.primary, letterSpacing: 1.5 }}>
                 {group.inviteCode}
               </Text>
             </View>
-            <Text variant="caption">Tap &amp; hold to copy.</Text>
-          </View>
+            <Text variant="caption">Tap to copy.</Text>
+          </Pressable>
         ) : null}
 
         {isOwner ? (
@@ -291,9 +330,11 @@ export default function GroupScreen() {
                 router.push(`/group/${id}/edit` as Href);
               }}
             />
+            {/* Archive sits in the owner block but is rendered in the default (foreground)
+                tone, not the destructive red — per the user's request. The Alert.alert
+                confirmation downstream still describes the consequence clearly. */}
             <BottomSheetMenuItem
               label={archive.isPending ? 'Archiving…' : 'Archive group'}
-              destructive
               onPress={() => {
                 setMenuOpen(false);
                 confirmArchive();
@@ -309,14 +350,17 @@ export default function GroupScreen() {
             confirmLeave();
           }}
         />
-        <BottomSheetMenuItem
-          label="Report group"
-          onPress={() => {
-            setMenuOpen(false);
-            setReportOpen(true);
-          }}
-        />
-        <BottomSheetMenuItem label="Cancel" onPress={() => setMenuOpen(false)} />
+        {/* Report group is only useful for non-owners. The leader can't usefully report
+            their own group, so hide the affordance for them. */}
+        {isOwner ? null : (
+          <BottomSheetMenuItem
+            label="Report group"
+            onPress={() => {
+              setMenuOpen(false);
+              setReportOpen(true);
+            }}
+          />
+        )}
       </BottomSheet>
 
       {id ? (

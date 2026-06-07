@@ -127,7 +127,9 @@ export type BottomSheetMenuItemProps = {
   onPress: () => void;
 };
 
-/** Standard menu item for inside a BottomSheet — centered label, large tap target. */
+/** Standard menu item for inside a BottomSheet — centered label, large tap target. Each
+ *  item now has a tinted background so the sheet reads as a stack of distinct buttons
+ *  rather than a list of text rows. */
 export function BottomSheetMenuItem({ label, destructive, onPress }: BottomSheetMenuItemProps) {
   const t = useTheme();
   return (
@@ -136,7 +138,8 @@ export function BottomSheetMenuItem({ label, destructive, onPress }: BottomSheet
       onPress={onPress}
       style={({ pressed }) => ({
         paddingVertical: 14,
-        paddingHorizontal: t.spacing.sm,
+        paddingHorizontal: t.spacing.md,
+        backgroundColor: t.colors.muted,
         borderRadius: t.radius.md,
         opacity: pressed ? 0.6 : 1,
       })}

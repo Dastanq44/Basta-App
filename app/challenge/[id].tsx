@@ -300,7 +300,7 @@ export default function ChallengeDetailScreen() {
             }}
           />
         ) : null}
-        <BottomSheetMenuItem label="Cancel" onPress={() => setMenuOpen(false)} />
+        {/* No Cancel row — the backdrop tap dismisses. */}
       </BottomSheet>
 
       <ReportSheet
