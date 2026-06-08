@@ -258,6 +258,31 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
 - **Detected by:** User-reported review of the SQL file before applying.
 - **Commit:** `feat(safety): add moderation and account deletion UI`.
 
+## [OPEN] W-031 — Apply push_tokens migration + run `npx eas init` for the projectId (T-050A)
+- **Date:** 2026-06-06 · **Area:** backend / Supabase + tooling
+- **What:** `supabase/migrations/20260606000000_push_tokens.sql` adds the `push_tokens`
+  table (own-row SELECT RLS, no direct writes), `register_push_token(token, platform,
+  device_name)` and `unregister_push_token(token)` SECURITY DEFINER RPCs. Idempotent
+  (CREATE TABLE IF NOT EXISTS + CREATE OR REPLACE on the two functions).
+- **Apply via:** Supabase Dashboard → SQL editor → paste → Run. No ordering vs other
+  open migrations.
+- **Also (one-time, tooling):**
+  1. Run `npx eas login` once with the Expo account that owns this project.
+  2. Run `npx eas init` inside the repo to mint a projectId. This writes
+     `expo.extra.eas.projectId` into `app.json`. Until that step runs, the push service
+     no-ops with a console.info on every launch.
+- **Build for real-device testing:** `npx eas build --profile development --platform ios`
+  (or `android`). The `development` profile in `eas.json` uses `developmentClient: true`
+  so the resulting binary still runs against the JS dev server.
+- **Notification icon placeholder:** `app.json` registers
+  `["expo-notifications", { "color": "#6C5CE7" }]` — no `icon` asset yet. Expo will
+  fall back to the app icon for now. Drop a 96×96 white-on-transparent PNG at
+  `./assets/notification-icon.png` and add `"icon": "./assets/notification-icon.png"`
+  to the plugin entry before shipping the production build.
+- **Defaults for T-050B/C** (documented here so the next slice picks them up):
+  quiet hours `22:00–08:00` per `profiles.timezone`, daily cap `5` push deliveries.
+- **Status:** Open until the migration is applied AND `eas init` has been run.
+
 ## [OPEN] W-019 — Apply Phase 4A migration (account controls + moderation infra + restore_group)
 - **Date:** 2026-06-01 (updated 2026-06-02 for T-026) · **Area:** backend / Supabase
 - **What:** Single migration `supabase/migrations/20260601100000_phase4a_user_control_safety.sql`

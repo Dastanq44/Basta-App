@@ -21,6 +21,99 @@
 
 ---
 
+## 2026-06-06 — Claude 1 / T-050A push token registration (registration only, no dispatch)
+
+**Did:** First slice of T-050 push notifications. **Registration ONLY** — token lands in
+`push_tokens` on the server; nothing is sent to Expo Push Service yet. Server-side
+dispatch (Edge Function + outbox + triggers + pg_cron) lives in **T-050B**, UI
+preferences + reminders + tap-deep-links in **T-050C**.
+
+### Deps added
+`expo-notifications` `~0.32.17` + `expo-device` `~8.0.10` (via `npx expo install`).
+`expo-constants` was already a transitive dep. The `expo install` hit the recurring
+W-013 ERESOLVE — fixed with the clean-reinstall workflow (`rm -rf node_modules
+package-lock.json && npm install`). NO `--legacy-peer-deps` used.
+
+### Server (W-031)
+- `supabase/migrations/20260606000000_push_tokens.sql`:
+  - `push_tokens` table: `expo_token` PK, `user_id`, `platform`, `device_name`,
+    `created_at`, `last_seen_at`, `revoked_at`. Partial index on `(user_id)` filtering
+    `where revoked_at is null` so T-050B's dispatch can ignore revoked tokens cheaply.
+  - RLS: SELECT-own only. No INSERT/UPDATE/DELETE policies — writes are funneled
+    through the two RPCs.
+  - `register_push_token(token, platform, device_name)` SECURITY DEFINER. Upsert on
+    `expo_token`; refreshes `last_seen_at`; clears any prior `revoked_at` so a
+    previously-revoked token can be re-activated (e.g. user re-signs in on the same
+    device); reassigns `user_id` on conflict so a token bound to user A is transferred
+    to user B if they sign in on the same device.
+  - `unregister_push_token(token)` SECURITY DEFINER. Soft revoke (sets `revoked_at`)
+    only on rows owned by the caller.
+
+### Client
+- `app.json`: registered the `expo-notifications` plugin with `color: "#6C5CE7"`. No
+  `icon` asset yet — Expo will fall back to the app icon. Drop a 96×96
+  white-on-transparent PNG at `./assets/notification-icon.png` and add the `icon` field
+  to the plugin entry before the production build.
+- `src/services/notifications/index.ts`: replaced the no-op skeleton with a real impl.
+  Every failure mode no-ops with a console log; the bootstrap call never throws:
+  - Expo Go (`Constants.appOwnership === 'expo'`) → skip.
+  - Simulator / emulator (`!Device.isDevice`) → skip.
+  - Missing EAS projectId (resolved via `Constants.expoConfig?.extra?.eas?.projectId` ||
+    `Constants.easConfig?.projectId`) → skip with a hint to run `npx eas init`.
+  - Permission denied (after prompt) → skip.
+  - Android: `setNotificationChannelAsync('default', DEFAULT importance)` BEFORE the
+    token fetch, since channel setup must precede the fetch.
+  - `getExpoPushTokenAsync({ projectId })` errors → caught + logged + return null.
+  - Server-side RPC rejection → caught + logged + return null.
+- `app/_layout.tsx`: one-shot bootstrap inside `RootNav`. Fires the first time
+  `gate.status === 'ready' && gate.target === '/(tabs)'`. Guarded by a `useRef` so it
+  runs at most once per app lifetime. Fire-and-forget — never blocks navigation.
+
+### eas.json (new)
+- Skeleton with `development` / `preview` / `production` build profiles + a `submit`
+  block. Apple Team ID is NOT hardcoded; users fill that at build/submit time.
+- `development` profile uses `developmentClient: true` so the resulting binary still
+  runs against the JS dev server (essential for iteration on push features in T-050B/C).
+
+### USER actions
+1. Apply W-031: paste `20260606000000_push_tokens.sql` into the Supabase SQL editor.
+2. Run `npx eas login` once with the Expo account that owns the project.
+3. Run `npx eas init` to mint the projectId — writes `expo.extra.eas.projectId` into
+   `app.json`. Until this step runs, the service no-ops on every launch.
+4. For real-device testing: `npx eas build --profile development --platform ios`
+   (or `android`). Expo Go can still run the app; push registration just skips.
+
+### Defaults documented for T-050B / T-050C
+- Quiet hours: `22:00 – 08:00` per `profiles.timezone`.
+- Daily push cap: **5** deliveries.
+
+**Checks:** `npm run typecheck` ✅ · `npm run lint` ✅ · `npx expo-doctor` ✅ (18/18).
+
+**Branch / commit:** `mvp` @ <see post-commit hash>
+
+**Next up:**
+1. USER applies W-031 and runs `npx eas init`.
+2. T-050B (server-side dispatch): outbox table + triggers + `dispatch-pushes` Edge
+   Function + pg_cron schedule. This is where the verification-flow pushes actually
+   reach devices.
+3. T-050C: preferences UI + scheduled categories + tap-deep-links.
+
+**Blockers / decisions needed:** None.
+
+**Notes for next session:**
+- Don't send pushes from the mobile client. Ever. Even local dev testing should go
+  through the Edge Function once it exists; the rule is "the client only registers
+  tokens, the server only dispatches."
+- The Edge Function (T-050B) will use the project's **service-role key** from the
+  function's secrets — NOT bundled with the app.
+- When `Constants.expoConfig` resolves the projectId differently from `Constants.easConfig`
+  in a future SDK version, the service tries both. If a third location lands, add it
+  next to those.
+- `Notifications.addNotificationResponseReceivedListener` (deep-link handling) is NOT
+  wired yet — that's a T-050C concern.
+
+---
+
 ## 2026-06-05 — Claude 1 / Group Main polish + wizard restructure (UI-only, no migration)
 
 **Did:** Adjustments on top of Claude 2's Phase 3–4 from earlier today, per the user's spec.

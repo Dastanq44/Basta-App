@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack, useRouter, useSegments } from 'expo-router';
@@ -8,6 +8,7 @@ import { queryClient } from '@/shared/lib/queryClient';
 import { HeaderBackButton, ThemeProvider, useTheme, useThemeMode } from '@/shared/ui';
 import { isAtTarget, useOnboardingGate } from '@/navigation/guards';
 import { initOffline } from '@/offline';
+import { push } from '@/services/notifications';
 
 // Root layout = providers + root stack. Thin: composition + provider wiring only (D-002).
 // The session+onboarding gate lives in <RootNav> so it can read the theme + run inside
@@ -61,6 +62,18 @@ function RootNav() {
       router.replace(gate.target);
     }
   }, [gate, segments, router]);
+
+  // Push registration bootstrap (T-050A). Fires ONCE the first time a signed-in,
+  // onboarded user lands on the tabs target. The service module no-ops on Expo Go /
+  // simulator / missing projectId / denied permission, so this is always safe; the
+  // void Promise never blocks navigation.
+  const pushBootstrapped = useRef(false);
+  useEffect(() => {
+    if (pushBootstrapped.current) return;
+    if (gate.status !== 'ready' || gate.target !== '/(tabs)') return;
+    pushBootstrapped.current = true;
+    void push.registerForPush();
+  }, [gate]);
 
   if (gate.status === 'loading') {
     return (

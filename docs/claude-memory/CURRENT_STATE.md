@@ -3,7 +3,16 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-06-05 — by: Claude 2 (UI overhaul phases 1–4: indigo theme, Home, Groups, challenge wizard; W-029 + W-030)_
+_Last updated: 2026-06-06 — by: Claude 1 (T-050A push token registration; W-031 + `eas init`)_
+
+> **2026-06-06 T-050A push registration:** `expo-notifications` + `expo-device` added
+> (+ existing `expo-constants`). `app.json` registers the `expo-notifications` plugin
+> (color `#6C5CE7`; no `icon` asset yet — uses app-icon fallback). `services/notifications`
+> now does real registration with safe no-ops in every failure mode (Expo Go, simulator,
+> missing EAS projectId, denied permission, token-fetch errors). One-shot bootstrap in
+> `app/_layout.tsx` after `gate.target === '/(tabs)'`. New migration `20260606000000_push_tokens.sql`
+> (W-031). New `eas.json` skeleton — no Apple Team ID hardcoded. NO server-side dispatch,
+> NO triggers, NO pg_cron, NO preferences in this slice; those land in T-050B/C.
 
 > **2026-06-05 UI overhaul (phases 1–4):** theme recoloured violet → **INDIGO** (still
 > user-selectable light/dark, Profile → Appearance). Added 5th **Explore** tab (placeholder).
@@ -20,7 +29,7 @@ _Last updated: 2026-06-05 — by: Claude 2 (UI overhaul phases 1–4: indigo the
 > bespoke-restyled yet. Invite codes hardened to 12-char base62 (W-026, supersedes W-018).
 > **Committed to `mvp` this session and pushed to `origin/mvp`.**
 
-## Status: PHASE 4A COMPLETE + T-026..T-031 + UI overhaul ph.1–4 · apply 14 migrations + 1 dashboard toggle + 1 storage bucket (group-avatars)
+## Status: PHASE 4A COMPLETE + T-026..T-031 + UI overhaul ph.1–4 + T-050A · apply 15 migrations + 1 dashboard toggle + 1 storage bucket (group-avatars) + `npx eas init`
 
 Phase 4A-1 (password reset + leave/archive group + archive challenge) is complete and
 Phase 4A-2 (report/block UI + account-deletion request UI) is now done too. All MVP-scope
@@ -94,6 +103,7 @@ applies one SQL file. All checks green.
 - **W-028** — Patch: qualify column refs in `get_my_today_submission` (B-013 fix).
 - **W-029** — Home overview RPCs (Home tab counts/streak + Verify inbox; 2026-06-05).
 - **W-030** — Group profile: description + avatar columns/RPCs + RLS; ALSO create a public `group-avatars` Storage bucket (2026-06-05).
+- **W-031** — `push_tokens` table + register/unregister RPCs (T-050A; this session). Also: run `npx eas init` once to mint a projectId, then `npx eas build --profile development -p ios|android` for real-device push testing.
 - W-020 — Auth → URL Configuration → add `basta://reset-password` to Redirect URLs.
 
 The full MVP loop now exists in code: register → group → challenge → submit proof (offline) →

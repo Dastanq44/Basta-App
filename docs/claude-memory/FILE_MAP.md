@@ -33,7 +33,9 @@ Basta_App/
 │       ├── 20260603300000_transfer_group_leadership.sql    # T-030: transfer_group_leadership RPC (apply — W-025)
 │       ├── 20260604000000_secure_invite_codes.sql          # W-026: 12-char base62 invite codes (apply; supersedes W-018)
 │       ├── 20260604100000_challenge_today_and_redact.sql   # T-031: get_my_today_submission + list_challenge_streaks + redact_my_submission (apply — W-027)
-│       └── 20260604200000_fix_today_submission_ambiguity.sql # B-013 fix: qualify column refs in get_my_today_submission (apply — W-028)
+│       ├── 20260604200000_fix_today_submission_ambiguity.sql # B-013 fix: qualify column refs in get_my_today_submission (apply — W-028)
+│       └── 20260606000000_push_tokens.sql                    # T-050A: push_tokens table + register_push_token / unregister_push_token RPCs (apply — W-031)
+├── eas.json                       # T-050A: skeleton (development/preview/production/submit). Apple Team ID NOT hardcoded — fill at build/submit time.
 ├── src/features/
 │   ├── auth/                     # T-020: PKCE email auth, useSession, secure-store tokens
 │   ├── onboarding/               # T-021/T-022: terms, profile setup, completeOnboarding
@@ -124,8 +126,8 @@ src/
 │   └── upload/                   # Supabase Storage uploader (swappable to tus)     (planned)
 ├── services/
 │   ├── analytics/                # typed events                                     (planned)
-│   ├── notifications/            # push registration + handlers                     (planned)
-│   └── crash/                    # Sentry init                                      (planned)
+│   ├── notifications/            # T-050A: registerForPush / unregister (Expo + Supabase RPC)  (live, registration-only)
+│   └── crash/                    # Sentry init                                     (planned)
 └── navigation/                   # linking.ts, guards.ts                            (planned)
 
 supabase/
