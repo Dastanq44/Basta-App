@@ -3,7 +3,7 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-06-06 — by: Claude 1 (T-050A push token registration; W-031 + `eas init`)_
+_Last updated: 2026-06-07 — by: Claude 1 (T-050A polish + W-### conflict fix; T-050B server dispatch — W-033)_
 
 > **2026-06-06 T-050A push registration:** `expo-notifications` + `expo-device` added
 > (+ existing `expo-constants`). `app.json` registers the `expo-notifications` plugin
@@ -11,7 +11,7 @@ _Last updated: 2026-06-06 — by: Claude 1 (T-050A push token registration; W-03
 > now does real registration with safe no-ops in every failure mode (Expo Go, simulator,
 > missing EAS projectId, denied permission, token-fetch errors). One-shot bootstrap in
 > `app/_layout.tsx` after `gate.target === '/(tabs)'`. New migration `20260606000000_push_tokens.sql`
-> (W-031). New `eas.json` skeleton — no Apple Team ID hardcoded. NO server-side dispatch,
+> (W-032; renumbered from W-031). New `eas.json` skeleton — no Apple Team ID hardcoded. NO server-side dispatch,
 > NO triggers, NO pg_cron, NO preferences in this slice; those land in T-050B/C.
 
 > **2026-06-05 UI overhaul (phases 1–4):** theme recoloured violet → **INDIGO** (still
@@ -103,7 +103,9 @@ applies one SQL file. All checks green.
 - **W-028** — Patch: qualify column refs in `get_my_today_submission` (B-013 fix).
 - **W-029** — Home overview RPCs (Home tab counts/streak + Verify inbox; 2026-06-05).
 - **W-030** — Group profile: description + avatar columns/RPCs + RLS; ALSO create a public `group-avatars` Storage bucket (2026-06-05).
-- **W-031** — `push_tokens` table + register/unregister RPCs (T-050A; this session). Also: run `npx eas init` once to mint a projectId, then `npx eas build --profile development -p ios|android` for real-device push testing.
+- _W-031 — Retired (was claimed by both the 2026-06-05 profile_description migration and T-050A push_tokens; resolved by moving push_tokens to W-032)._
+- **W-032** — `push_tokens` table + register/unregister RPCs (T-050A). Also: run `npx eas init` once to mint a projectId, then `npx eas build --profile development -p ios|android` for real-device push testing.
+- **W-033** — `notification_outbox` + verify_needed / verify_result triggers + dispatch RPCs (service_role-only) + hardening of W-032 grants (T-050B; this session). Also: deploy the Edge Function with `npx supabase functions deploy dispatch-pushes --no-verify-jwt`.
 - W-020 — Auth → URL Configuration → add `basta://reset-password` to Redirect URLs.
 
 The full MVP loop now exists in code: register → group → challenge → submit proof (offline) →

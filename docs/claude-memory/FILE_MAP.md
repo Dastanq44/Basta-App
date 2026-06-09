@@ -34,7 +34,9 @@ Basta_App/
 │       ├── 20260604000000_secure_invite_codes.sql          # W-026: 12-char base62 invite codes (apply; supersedes W-018)
 │       ├── 20260604100000_challenge_today_and_redact.sql   # T-031: get_my_today_submission + list_challenge_streaks + redact_my_submission (apply — W-027)
 │       ├── 20260604200000_fix_today_submission_ambiguity.sql # B-013 fix: qualify column refs in get_my_today_submission (apply — W-028)
-│       └── 20260606000000_push_tokens.sql                    # T-050A: push_tokens table + register_push_token / unregister_push_token RPCs (apply — W-031)
+│       ├── 20260606000000_push_tokens.sql                    # T-050A: push_tokens table + register_push_token / unregister_push_token RPCs (apply — W-032; renumbered from W-031)
+│       └── 20260607000000_notification_outbox_and_dispatch.sql # T-050B: notification_outbox + enqueue triggers + dispatch RPCs (service_role only) + hardening of W-032 grants (apply — W-033)
+├── supabase/functions/dispatch-pushes/index.ts # T-050B: Deno Edge Function. Drains outbox → Expo Push Service (https://exp.host/--/api/v2/push/send). Deploy: `npx supabase functions deploy dispatch-pushes --no-verify-jwt`.
 ├── eas.json                       # T-050A: skeleton (development/preview/production/submit). Apple Team ID NOT hardcoded — fill at build/submit time.
 ├── src/features/
 │   ├── auth/                     # T-020: PKCE email auth, useSession, secure-store tokens

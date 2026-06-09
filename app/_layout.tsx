@@ -1,10 +1,11 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { queryClient } from '@/shared/lib/queryClient';
+import { useSession } from '@/features/auth';
 import { HeaderBackButton, ThemeProvider, useTheme, useThemeMode } from '@/shared/ui';
 import { isAtTarget, useOnboardingGate } from '@/navigation/guards';
 import { initOffline } from '@/offline';
@@ -55,6 +56,7 @@ function RootNav() {
   const gate = useOnboardingGate();
   const segments = useSegments() as string[];
   const router = useRouter();
+  const session = useSession();
 
   useEffect(() => {
     if (gate.status !== 'ready') return;
@@ -63,17 +65,19 @@ function RootNav() {
     }
   }, [gate, segments, router]);
 
-  // Push registration bootstrap (T-050A). Fires ONCE the first time a signed-in,
-  // onboarded user lands on the tabs target. The service module no-ops on Expo Go /
-  // simulator / missing projectId / denied permission, so this is always safe; the
-  // void Promise never blocks navigation.
-  const pushBootstrapped = useRef(false);
+  // Push registration bootstrap (T-050A, refined). The service is user-aware: it
+  // checks the SecureStore cache against `currentUserId` and only hits the server
+  // when the cached entry is missing or owned by a different user. So firing this
+  // effect on every (uid × target) change is safe + cheap. No useRef one-shot guard
+  // — that broke the "user switch on the same device" case. Service no-ops on Expo
+  // Go / simulator / missing projectId / denied permission, so the promise never
+  // blocks navigation.
+  const currentUserId = session.session?.user.id;
   useEffect(() => {
-    if (pushBootstrapped.current) return;
     if (gate.status !== 'ready' || gate.target !== '/(tabs)') return;
-    pushBootstrapped.current = true;
-    void push.registerForPush();
-  }, [gate]);
+    if (!currentUserId) return;
+    void push.registerForPush(currentUserId);
+  }, [gate, currentUserId]);
 
   if (gate.status === 'loading') {
     return (

@@ -258,8 +258,48 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
 - **Detected by:** User-reported review of the SQL file before applying.
 - **Commit:** `feat(safety): add moderation and account deletion UI`.
 
-## [OPEN] W-031 — Apply push_tokens migration + run `npx eas init` for the projectId (T-050A)
-- **Date:** 2026-06-06 · **Area:** backend / Supabase + tooling
+## [INFO] W-031 — `profile_description_and_avatars` (historical; do NOT reuse)
+- **Date:** 2026-06-05 · **Area:** backend / Supabase
+- **What:** `supabase/migrations/20260605000000_profile_description_and_avatars.sql`
+  added `profiles.description`, widened `profiles` SELECT for authenticated users,
+  and set up Storage RLS for the public `user-avatars` bucket. Originally tagged
+  W-031 in its own migration header + the 2026-06-05 HANDOFF entry, but never
+  registered in this index — T-050A's push_tokens migration accidentally re-claimed
+  W-031. This tombstone exists so future migrations don't re-collide. W-031 is now
+  RETIRED.
+- **Apply via:** Supabase Dashboard → SQL editor (idempotent — safe to re-apply).
+  Also: create the public `user-avatars` Storage bucket.
+
+## [OPEN] W-033 — Apply notification_outbox + dispatch RPCs migration + deploy `dispatch-pushes` Edge Function (T-050B)
+- **Date:** 2026-06-07 · **Area:** backend / Supabase + Edge Functions
+- **What:** `supabase/migrations/20260607000000_notification_outbox_and_dispatch.sql`
+  adds the `notification_outbox` table, the two enqueue triggers (verify_needed on
+  AFTER INSERT submissions; verify_result on AFTER UPDATE OF status), four SECURITY
+  DEFINER dispatch RPCs (`claim_pending_notifications`, `mark_notification_sent`,
+  `mark_notification_failed`, `revoke_push_token`), and tightens the W-032 register/
+  unregister RPC grants (revoke from PUBLIC, explicit grant to authenticated). The
+  dispatch RPCs are restricted to `service_role` — PUBLIC/anon/authenticated have NO
+  execute rights, so even a leaked anon key can't drain the outbox.
+- **Depends on W-032 (push_tokens) AND W-019 (blocks table).** Apply both first.
+- **Apply via:** Supabase Dashboard → SQL editor → paste → Run.
+- **Then deploy the Edge Function:** `npx supabase functions deploy dispatch-pushes
+  --no-verify-jwt`. The function uses the project's service-role key from its
+  secrets — **never bundle that key with the mobile app.** Optional: set the
+  `EXPO_ACCESS_TOKEN` secret on the function (`npx supabase secrets set
+  EXPO_ACCESS_TOKEN=...`) to raise Expo Push Service rate limits.
+- **Manual test (after deploy):** with two test accounts in the same group on
+  EAS dev builds, submit a proof from account A. From a terminal, invoke
+  `npx supabase functions invoke dispatch-pushes --no-verify-jwt`. Account B's
+  device should receive a "Proof needs review" notification within seconds. When B
+  verifies, invoke the function again — A should receive "Your proof was verified".
+- **NOT in this slice:** preferences UI, quiet hours, daily cap, daily reminder /
+  streak-at-risk categories, pg_cron schedule, pg_net invocation, tap deep-links.
+  All of those land in T-050C.
+- **Status:** Open until the migration is applied AND the Edge Function is deployed.
+
+## [OPEN] W-032 — Apply push_tokens migration + run `npx eas init` for the projectId (T-050A)
+- **Date:** 2026-06-06 (renumbered from W-031 on 2026-06-07) · **Area:** backend +
+  tooling
 - **What:** `supabase/migrations/20260606000000_push_tokens.sql` adds the `push_tokens`
   table (own-row SELECT RLS, no direct writes), `register_push_token(token, platform,
   device_name)` and `unregister_push_token(token)` SECURITY DEFINER RPCs. Idempotent

@@ -17,7 +17,9 @@ const NO_FEATURE_INTERNALS = {
 module.exports = {
   root: true,
   extends: ['expo'],
-  ignorePatterns: ['node_modules/', '.expo/', 'dist/', 'babel.config.js'],
+  // supabase/functions/ ships Deno-native code (npm: specifiers, Deno.serve) that the
+  // Node/Expo lint pipeline can't resolve. Linted via `deno lint` in CI when needed.
+  ignorePatterns: ['node_modules/', '.expo/', 'dist/', 'babel.config.js', 'supabase/functions/'],
   rules: {
     'no-restricted-imports': ['error', { patterns: [NO_FEATURE_INTERNALS] }],
   },

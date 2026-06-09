@@ -21,6 +21,138 @@
 
 ---
 
+## 2026-06-07 — Claude 1 / T-050A polish + T-050B server-side dispatch (verification flow)
+
+**Did:** Tightened T-050A and built T-050B (verification-flow pushes end-to-end on
+the server). Mobile client still NEVER sends pushes — all dispatch goes through the
+new Supabase Edge Function using the project's service-role key.
+
+### T-050A polish
+- **SecureStore-backed token cache.** `src/services/notifications/index.ts` now
+  persists `{ token, userId }` under SecureStore key `basta.push.lastToken` and
+  short-circuits the bootstrap when the cache matches the current user + device.
+  Old cache from a previous user triggers a defensive soft-revoke on that token
+  before the new user's `register_push_token` runs.
+- **Bootstrap is user-aware.** The `useRef` one-shot guard in `RootNav` was wrong —
+  it broke the user-switch-on-same-device case. Replaced with an effect that
+  depends on `currentUserId`; the service is idempotent so refiring on every
+  uid×target change is safe.
+- **Sign-out unregisters.** `useSignOut` now awaits `push.unregisterCurrent()`
+  BEFORE `supabase.auth.signOut()` so the RPC's `auth.uid()` still resolves; the
+  device's row is soft-revoked + the local cache cleared. Failure during the
+  network revoke is best-effort — the cache clears regardless.
+
+### W-### conflict resolved
+- W-031 was claimed by BOTH the 2026-06-05 `profile_description_and_avatars`
+  migration AND T-050A's `push_tokens`. Resolution: profile_description keeps W-031
+  (first chronologically); push_tokens renumbered to **W-032** in
+  `BUGS_AND_WARNINGS.md` (with an INFO tombstone for the retired W-031),
+  `CURRENT_STATE.md`, `TASKS.md`, `FILE_MAP.md`, and the migration file header. T-050B
+  takes **W-033**.
+
+### T-050B server-side dispatch
+- **Migration (W-033)** —
+  `supabase/migrations/20260607000000_notification_outbox_and_dispatch.sql`:
+  - `notification_outbox` (id, user_id, category, title, body, data jsonb, status,
+    attempts, last_error, claimed_at, sent_at, created_at). Indexes
+    `(status, created_at)` and `(user_id, created_at desc)`. RLS enabled but NO
+    policies — clients can't touch it; only the SECURITY DEFINER triggers + RPCs
+    write to it.
+  - `enqueue_verify_needed` AFTER INSERT on submissions, only when
+    `status='pending_verification'` AND challenge mode is 'group'. Inserts one
+    outbox row per group member except the author, excluding both directions of
+    the W-019 `blocks` relationship and deduping against existing pending rows
+    for the same user × submission.
+  - `enqueue_verify_result` AFTER UPDATE OF status when the new status is
+    verified/rejected and it differs from the old status. Inserts one outbox row
+    for the author with a status-aware title/body, deduped on
+    (user, submission, category, status).
+  - `claim_pending_notifications(p_limit)` — claims pending rows with
+    `FOR UPDATE SKIP LOCKED`, bumps `attempts`, sets `status='processing'`,
+    returns one row per (outbox, active push token) pair — plus one row per
+    outbox with `expo_token=NULL` when the user has no active tokens so the
+    caller can mark the row failed instead of spinning.
+  - `mark_notification_sent(p_outbox_id, p_ticket_id)` — idempotent on
+    `status='processing'`; a second device's OK ticket no-ops.
+  - `mark_notification_failed(p_outbox_id, p_error, p_retryable)` — retryable +
+    attempts<3 reverts to `pending` (with `claimed_at` cleared); otherwise
+    terminal `failed`. Caps `last_error` to 500 chars.
+  - `revoke_push_token(p_expo_token, p_reason)` — sets `revoked_at=now()` when
+    the row is still active.
+  - **Hardening:** revokes `register_push_token` / `unregister_push_token` from
+    PUBLIC and explicitly grants to `authenticated`. Revokes ALL of the four
+    dispatch RPCs from PUBLIC and explicitly grants to `service_role` only.
+- **Edge Function (Deno)** —
+  `supabase/functions/dispatch-pushes/index.ts`. Builds Expo push messages
+  (`{ to, title, body, sound: 'default', data }`), POSTs to
+  `https://exp.host/--/api/v2/push/send` in batches of ≤100, includes
+  `Authorization: Bearer <EXPO_ACCESS_TOKEN>` when the secret is set. Ticket
+  handling: `ok` → `mark_notification_sent` (first ok per outbox wins);
+  `DeviceNotRegistered` → `revoke_push_token` + mark failed non-retryable;
+  `MessageRateExceeded` / `MismatchSenderId` → retryable; everything else →
+  non-retryable. HTTP-level: 429/5xx → retryable batch-wide; 4xx → terminal;
+  body parse / unexpected shape → retryable. Returns
+  `{ claimed, sent, failed, retryable, revokedTokens }`.
+
+### USER actions for T-050B
+1. **Apply W-032 first** (T-050A push_tokens) if you haven't already.
+2. **Apply W-019** (Phase 4A blocks table) if you haven't already — the
+   verify_needed trigger queries `public.blocks` and the migration will fail
+   without it.
+3. **Apply W-033:** paste
+   `20260607000000_notification_outbox_and_dispatch.sql` into the Supabase SQL
+   editor.
+4. **Deploy the Edge Function:**
+   `npx supabase functions deploy dispatch-pushes --no-verify-jwt`.
+   The function uses the project's service-role key from its secrets — never
+   bundled with the app.
+5. **Optional:** `npx supabase secrets set EXPO_ACCESS_TOKEN=...` to raise the
+   Expo Push Service rate ceiling. The function works without it.
+6. **Manual test:** A and B in the same group, both on EAS dev builds with
+   tokens registered. A submits a proof. From a terminal run
+   `npx supabase functions invoke dispatch-pushes --no-verify-jwt`. B's device
+   should receive "Proof needs review" within seconds; on B verifying, run the
+   function again and A receives "Your proof was verified ✅".
+
+### Note on `npx eas init`
+Attempted non-interactively; CLI requires an Expo login. Out of scope for an
+automated step. **USER must run** `npx eas login` then `npx eas init` to mint the
+projectId (writes `expo.extra.eas.projectId` into `app.json`). Until that runs,
+the mobile push service no-ops on every launch.
+
+**Checks:** `npm run typecheck` ✅ · `npm run lint` ✅ · `npx expo-doctor` ✅.
+
+**Branch / commit:** `mvp` @ <see post-commit hash>
+
+**Next up:**
+1. USER applies W-019/W-032/W-033 and deploys the Edge Function.
+2. T-050C — preferences UI (`app/profile/notifications.tsx`) + daily reminder +
+   "streak at risk" via pg_cron + `Notifications.addNotificationResponseReceivedListener`
+   for deep-links. Defaults already documented: quiet hours `22:00–08:00`,
+   daily cap `5`.
+
+**Blockers / decisions needed:** None.
+
+**Notes for next session:**
+- The Edge Function is invoked manually for now. T-050C will add pg_cron +
+  pg_net so it runs every minute server-side. For local iteration, invoke with
+  `npx supabase functions invoke dispatch-pushes --no-verify-jwt`.
+- The dispatch RPCs are deliberately `service_role` only. If a future need
+  requires authenticated access (e.g. a debug screen for own outbox rows),
+  expose own-row SELECT via RLS rather than granting execute on dispatch
+  functions to authenticated.
+- Future ticket-receipt polling (Expo's `/getReceipts` for confirmed delivery)
+  isn't wired yet. For T-050B the ticket id from `mark_notification_sent` is
+  accepted but not stored — when we want receipt polling, add a `ticket_id`
+  column and a follow-up scheduled job that queries Expo for receipts and
+  promotes `sent` rows to `delivered` (or surfaces async failures).
+- The verify_needed trigger fires only on INSERT — redacts (W-022's
+  redact_my_submission) update the row to clear votes + status back to pending,
+  but the spec said INSERT only so we don't re-notify on redact. Easy to
+  revisit when the product wants it.
+
+---
+
 ## 2026-06-06 — Claude 1 / T-050A push token registration (registration only, no dispatch)
 
 **Did:** First slice of T-050 push notifications. **Registration ONLY** — token lands in

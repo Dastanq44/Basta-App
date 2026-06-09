@@ -34,8 +34,12 @@ fi
 #    Exclude this hook itself: it legitimately contains the detection patterns.
 added=$(git diff --cached -U0 --no-color -- . ':(exclude).githooks/pre-commit' \
   | grep -E '^\+' | grep -vE '^\+\+\+' || true)
+# `service_role` was previously included here but it's the NAME of Supabase's
+# elevated Postgres role — legitimately used in `grant ... to service_role`
+# SQL and in docs explaining the role's permissions. The actual service-role
+# KEY is a JWT starting with `eyJ`, which the JWT pattern below catches.
 hits=$(printf '%s\n' "$added" | grep -nE \
-  'sk_live_[0-9A-Za-z]{16,}|service_role|eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|AKIA[0-9A-Z]{16}|gh[pousr]_[0-9A-Za-z]{30,}|xox[baprs]-[0-9A-Za-z-]{10,}' \
+  'sk_live_[0-9A-Za-z]{16,}|eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|AKIA[0-9A-Z]{16}|gh[pousr]_[0-9A-Za-z]{30,}|xox[baprs]-[0-9A-Za-z-]{10,}' \
   || true)
 if [ -n "$hits" ]; then
   echo "✖ pre-commit: possible secret value in staged changes:"

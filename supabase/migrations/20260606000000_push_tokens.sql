@@ -1,4 +1,6 @@
--- T-050A / W-031: push_tokens table for ExpoPushToken registration.
+-- T-050A / W-032: push_tokens table for ExpoPushToken registration.
+-- (Renumbered from W-031 → W-032; the 2026-06-05 profile_description_and_avatars
+--  migration owns W-031 — see docs/claude-memory/BUGS_AND_WARNINGS.md.)
 -- Apply via Supabase Dashboard → SQL editor or `supabase db push`. Idempotent.
 --
 -- SCOPE: registration ONLY. No server-side dispatch, no triggers, no pg_cron, no
