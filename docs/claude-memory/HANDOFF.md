@@ -21,6 +21,108 @@
 
 ---
 
+## 2026-06-08 — Claude 1 / T-050B hardening: per-outbox aggregation + shared-secret header
+
+**Did:** Two correctness/security fixes on `supabase/functions/dispatch-pushes/index.ts`
+before T-050C. No migration changes; the SQL contract for the four dispatch RPCs is
+unchanged.
+
+### Bug fix — multi-device outbox aggregation
+The previous Edge Function processed Expo tickets one-by-one and wrote
+`mark_notification_sent` / `mark_notification_failed` inline. Consequence: if user A
+had two devices (token T1, T2) and Expo returned `DeviceNotRegistered` for T1 then
+`ok` for T2, the function called `mark_notification_failed(non-retryable)` first, the
+outbox transitioned to terminal `failed`, then `mark_notification_sent` no-opped
+(because the RPC is gated on `status='processing'`). The outbox stayed failed even
+though one of A's devices got the push.
+
+The function now runs in two phases:
+- **Phase 1 — collect.** Iterate every batch, every ticket, every batch-level HTTP
+  outcome. Record per outbox into an in-memory map: `firstOkTicketId` (the first OK
+  ticket id seen) and `errors[]` (every ticket / batch-level failure). NO DB writes
+  inside this loop. `DeviceNotRegistered` accumulates the token into a separate
+  `tokensToRevoke` map.
+- **Phase 2 — commit.** Walk the map and write exactly one final status per outbox:
+  - `firstOkTicketId !== null` → `mark_notification_sent(p_ticket_id=firstOkTicketId)`.
+  - else if `errors.every(e => e.retryable)` → `mark_notification_failed(retryable=true)`
+    (the RPC bounces the row back to `pending` until attempts hits 3).
+  - else → `mark_notification_failed(retryable=false)` (terminal).
+- Then revoke the `tokensToRevoke` set. Revokes happen AFTER status writes so a
+  sibling OK has already won the outbox.
+
+Cross-batch correctness: outboxes whose tokens are spread across multiple HTTP
+batches (rare, only when a single user has >100 active devices) now also reach a
+correct final status — the accumulation runs over the whole dispatch invocation,
+not per batch.
+
+### Security fix — shared-secret header
+The function is deployed `--no-verify-jwt` (cron + `supabase functions invoke`
+shouldn't need a user JWT). Without an extra gate, anyone hitting the function URL
+could drain the outbox / cause it to spam tokens. Added a header check on every
+invocation:
+
+  ```
+  x-dispatch-secret: <DISPATCH_PUSH_SECRET>
+  ```
+
+`DISPATCH_PUSH_SECRET` is read from `Deno.env`. Missing on the function side →
+`500` (deliberate hard fail, not silent allow-all). Missing or mismatched on the
+caller side → `401`. The secret is set with:
+
+  ```
+  npx supabase secrets set DISPATCH_PUSH_SECRET=<long-random-secret>
+  ```
+
+(Generate one with `openssl rand -base64 48` or any high-entropy source.)
+
+### Type-check command for the function
+The Edge Function lives outside the Expo TS pipeline (Deno globals, `npm:` specifiers),
+so `npm run typecheck` skips it. Use:
+
+  ```
+  deno check supabase/functions/dispatch-pushes/index.ts
+  ```
+
+Requires Deno locally. Supabase's `functions deploy` also type-checks during upload.
+
+### USER actions (updated)
+1. Apply W-019 (Phase 4A `blocks` table) if not already.
+2. Apply W-032 (T-050A `push_tokens`) if not already.
+3. Apply W-033 (T-050B `notification_outbox` + dispatch RPCs).
+4. **NEW:** `npx supabase secrets set DISPATCH_PUSH_SECRET=<long-random-secret>`.
+5. `npx supabase functions deploy dispatch-pushes --no-verify-jwt`.
+6. Optional: `npx supabase secrets set EXPO_ACCESS_TOKEN=...` for higher Expo rate limits.
+7. If `app.json` lacks `expo.extra.eas.projectId`: `npx eas login` then `npx eas init`.
+
+### Manual test
+```
+curl -X POST <FUNCTION_URL> -H "x-dispatch-secret: <DISPATCH_PUSH_SECRET>"
+```
+Without the secret header you should get `401`. With the wrong secret, `401`.
+With the right secret, the JSON summary
+`{ claimed, sent, failed, retryable, revokedTokens }`.
+
+**Checks:** `npm run typecheck` ✅ · `npm run lint` ✅ · `npx expo-doctor` ✅.
+
+**Branch / commit:** `mvp` @ <see post-commit hash>
+
+**Next up:** T-050C — preferences UI (`app/profile/notifications.tsx`) + daily
+reminder + "streak at risk" + `pg_cron` + `Notifications.addNotificationResponseReceivedListener`
+for deep-links. Defaults already documented: quiet hours `22:00–08:00`, daily cap `5`.
+
+**Blockers / decisions needed:** None.
+
+**Notes for next session:**
+- T-050C should keep the same shared-secret pattern on any new function endpoints.
+- If we later expose a debug dashboard showing the user's own outbox rows, add an
+  own-row SELECT RLS policy on `notification_outbox` (currently default-deny).
+  Dispatch RPCs stay role-only.
+- Receipt polling (Expo `/getReceipts`) still isn't wired. T-050B accepts the
+  ticket id in `mark_notification_sent` but doesn't store it; when we want async
+  delivery confirmation, add a `ticket_id` column + scheduled receipt poll.
+
+---
+
 ## 2026-06-07 — Claude 1 / T-050A polish + T-050B server-side dispatch (verification flow)
 
 **Did:** Tightened T-050A and built T-050B (verification-flow pushes end-to-end on

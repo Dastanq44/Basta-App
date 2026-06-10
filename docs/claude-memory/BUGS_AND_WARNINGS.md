@@ -270,32 +270,66 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
 - **Apply via:** Supabase Dashboard → SQL editor (idempotent — safe to re-apply).
   Also: create the public `user-avatars` Storage bucket.
 
-## [OPEN] W-033 — Apply notification_outbox + dispatch RPCs migration + deploy `dispatch-pushes` Edge Function (T-050B)
-- **Date:** 2026-06-07 · **Area:** backend / Supabase + Edge Functions
+## [OPEN] W-033 — Apply notification_outbox + dispatch RPCs migration + deploy `dispatch-pushes` Edge Function + set DISPATCH_PUSH_SECRET (T-050B)
+- **Date:** 2026-06-07 (hardened 2026-06-08) · **Area:** backend / Supabase + Edge Functions
 - **What:** `supabase/migrations/20260607000000_notification_outbox_and_dispatch.sql`
   adds the `notification_outbox` table, the two enqueue triggers (verify_needed on
   AFTER INSERT submissions; verify_result on AFTER UPDATE OF status), four SECURITY
   DEFINER dispatch RPCs (`claim_pending_notifications`, `mark_notification_sent`,
   `mark_notification_failed`, `revoke_push_token`), and tightens the W-032 register/
   unregister RPC grants (revoke from PUBLIC, explicit grant to authenticated). The
-  dispatch RPCs are restricted to `service_role` — PUBLIC/anon/authenticated have NO
-  execute rights, so even a leaked anon key can't drain the outbox.
+  dispatch RPCs are restricted to the Supabase elevated role — PUBLIC/anon/authenticated
+  have NO execute rights, so even a leaked anon key can't drain the outbox.
 - **Depends on W-032 (push_tokens) AND W-019 (blocks table).** Apply both first.
-- **Apply via:** Supabase Dashboard → SQL editor → paste → Run.
-- **Then deploy the Edge Function:** `npx supabase functions deploy dispatch-pushes
-  --no-verify-jwt`. The function uses the project's service-role key from its
-  secrets — **never bundle that key with the mobile app.** Optional: set the
-  `EXPO_ACCESS_TOKEN` secret on the function (`npx supabase secrets set
-  EXPO_ACCESS_TOKEN=...`) to raise Expo Push Service rate limits.
-- **Manual test (after deploy):** with two test accounts in the same group on
-  EAS dev builds, submit a proof from account A. From a terminal, invoke
-  `npx supabase functions invoke dispatch-pushes --no-verify-jwt`. Account B's
-  device should receive a "Proof needs review" notification within seconds. When B
-  verifies, invoke the function again — A should receive "Your proof was verified".
+- **Edge Function (hardened on 2026-06-08):**
+  - Per-outbox aggregation (multi-device bug fix). The function used to write
+    mark_failed inline per ticket; a DeviceNotRegistered ticket from one device
+    could permanently fail an outbox before a sibling device's OK ticket arrived.
+    The function now runs phase-1 (collect tickets across ALL batches) and
+    phase-2 (one final status per outbox: any OK → sent; else allRetryable →
+    failed retryable; else → failed terminal). DeviceNotRegistered still revokes
+    the token but no longer decides the outbox status on its own.
+  - Shared-secret gate. The function is deployed `--no-verify-jwt` (so cron +
+    `supabase functions invoke` don't need a user JWT), so callers MUST send
+    the header `x-dispatch-secret: <DISPATCH_PUSH_SECRET>`. Missing/mismatched
+    → 401. Function-side missing → 500 (deliberate hard fail).
+- **USER actions (in order):**
+  1. Apply W-032 (T-050A push_tokens) if not already.
+  2. Apply W-019 (Phase 4A blocks table) if not already — the verify_needed
+     trigger queries `public.blocks`.
+  3. Apply W-033: paste `20260607000000_notification_outbox_and_dispatch.sql`
+     into the Supabase SQL editor.
+  4. Set the dispatch secret on the function:
+     `npx supabase secrets set DISPATCH_PUSH_SECRET=<long-random-secret>`.
+     Generate one e.g. `openssl rand -base64 48` (or any high-entropy generator).
+  5. Deploy the function:
+     `npx supabase functions deploy dispatch-pushes --no-verify-jwt`.
+     The function uses the project's service-role key from its secrets —
+     **never bundle that key with the mobile app.** Optional:
+     `npx supabase secrets set EXPO_ACCESS_TOKEN=...` to raise rate limits.
+  6. Still pending from T-050A: if `app.json` lacks
+     `expo.extra.eas.projectId`, run `npx eas login` then `npx eas init`. Until
+     that runs, the mobile push service no-ops on every launch.
+- **Type-check the function outside of deploy:**
+  `deno check supabase/functions/dispatch-pushes/index.ts`.
+  (Requires Deno installed locally. Supabase's deploy step also type-checks; this
+  command is what to use when iterating without redeploying. `npm run typecheck`
+  excludes `supabase/functions/**` because the function uses Deno globals + `npm:`
+  specifiers that the Node/Expo TS pipeline can't resolve.)
+- **Manual test (after deploy + secret set):** with two test accounts in the same
+  group on EAS dev builds, submit a proof from account A. From a terminal:
+  ```
+  curl -X POST <FUNCTION_URL> -H "x-dispatch-secret: <DISPATCH_PUSH_SECRET>"
+  ```
+  Or `npx supabase functions invoke dispatch-pushes --no-verify-jwt -H
+  "x-dispatch-secret: <DISPATCH_PUSH_SECRET>"`. Account B's device should
+  receive a "Proof needs review" notification within seconds. When B verifies,
+  invoke again — A should receive "Your proof was verified".
 - **NOT in this slice:** preferences UI, quiet hours, daily cap, daily reminder /
   streak-at-risk categories, pg_cron schedule, pg_net invocation, tap deep-links.
   All of those land in T-050C.
-- **Status:** Open until the migration is applied AND the Edge Function is deployed.
+- **Status:** Open until migration is applied, secret is set, AND the Edge
+  Function is deployed.
 
 ## [OPEN] W-032 — Apply push_tokens migration + run `npx eas init` for the projectId (T-050A)
 - **Date:** 2026-06-06 (renumbered from W-031 on 2026-06-07) · **Area:** backend +

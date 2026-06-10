@@ -3,7 +3,7 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-06-07 — by: Claude 1 (T-050A polish + W-### conflict fix; T-050B server dispatch — W-033)_
+_Last updated: 2026-06-08 — by: Claude 1 (T-050B hardening — per-outbox aggregation + shared-secret header on dispatch-pushes)_
 
 > **2026-06-06 T-050A push registration:** `expo-notifications` + `expo-device` added
 > (+ existing `expo-constants`). `app.json` registers the `expo-notifications` plugin
@@ -105,7 +105,7 @@ applies one SQL file. All checks green.
 - **W-030** — Group profile: description + avatar columns/RPCs + RLS; ALSO create a public `group-avatars` Storage bucket (2026-06-05).
 - _W-031 — Retired (was claimed by both the 2026-06-05 profile_description migration and T-050A push_tokens; resolved by moving push_tokens to W-032)._
 - **W-032** — `push_tokens` table + register/unregister RPCs (T-050A). Also: run `npx eas init` once to mint a projectId, then `npx eas build --profile development -p ios|android` for real-device push testing.
-- **W-033** — `notification_outbox` + verify_needed / verify_result triggers + dispatch RPCs (service_role-only) + hardening of W-032 grants (T-050B; this session). Also: deploy the Edge Function with `npx supabase functions deploy dispatch-pushes --no-verify-jwt`.
+- **W-033** — `notification_outbox` + verify_needed / verify_result triggers + dispatch RPCs (Supabase elevated role only) + hardening of W-032 grants (T-050B). Edge Function hardened on 2026-06-08: per-outbox aggregation (multi-device bug fix) + shared-secret header. **USER must:** apply the migration, set `DISPATCH_PUSH_SECRET` via `npx supabase secrets set`, deploy with `npx supabase functions deploy dispatch-pushes --no-verify-jwt`, and (if not yet done) run `npx eas init` for the projectId. Type-check the function with `deno check supabase/functions/dispatch-pushes/index.ts`.
 - W-020 — Auth → URL Configuration → add `basta://reset-password` to Redirect URLs.
 
 The full MVP loop now exists in code: register → group → challenge → submit proof (offline) →

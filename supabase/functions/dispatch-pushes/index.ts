@@ -2,38 +2,34 @@
 //
 // WHAT: Drains `notification_outbox` and sends pushes via the Expo Push Service.
 //
+// PROTECTION: deployed with `--no-verify-jwt` (so cron + service-role callers
+// don't need to mint a user JWT), so we gate the endpoint behind a shared secret
+// instead. Callers MUST send the header `x-dispatch-secret: <DISPATCH_PUSH_SECRET>`
+// matching the function's secret. Missing/mismatched → 401. Missing on the function
+// side → 500 (deliberate hard fail rather than silent allow-all). Set the secret with:
+//   npx supabase secrets set DISPATCH_PUSH_SECRET=<long-random-secret>
+// To check the function compiles cleanly outside of deploy:
+//   deno check supabase/functions/dispatch-pushes/index.ts
+//
 // FLOW:
-//   1. Call `claim_pending_notifications(50)`. The RPC moves rows from pending →
-//      processing under FOR UPDATE SKIP LOCKED. We get back one row per (outbox,
-//      active push token) pair — plus one row per outbox with `expo_token=NULL`
-//      when that user has no active tokens left (those rows get marked failed below
-//      so we don't spin on them).
-//   2. Group rows by outbox_id (one outbox can have multiple devices/tokens).
-//   3. POST to https://exp.host/--/api/v2/push/send in batches of ≤100 messages.
-//      Include the `Authorization: Bearer <EXPO_ACCESS_TOKEN>` header when the
-//      function secret is set (raises the rate ceiling for production traffic).
-//   4. Parse Expo tickets:
-//      * status='ok'                → mark_notification_sent (first ok per outbox).
-//      * details.error='DeviceNotRegistered' → revoke_push_token + mark failed
-//        non-retryable if no other device for this outbox succeeded.
-//      * status='error', other code (MessageRateExceeded, MessageTooBig, etc.) →
-//        mark failed retryable for transient codes, non-retryable otherwise.
-//   5. Handle HTTP-level conditions:
-//      * fetch network error → mark all batch outboxes failed retryable.
-//      * HTTP 429 or 5xx     → mark all batch outboxes failed retryable.
-//      * HTTP 4xx (≠429)     → mark all batch outboxes failed non-retryable.
-//      * 2xx with malformed body → mark all batch outboxes failed retryable.
-//   6. Return a JSON summary { claimed, sent, failed, retryable, revokedTokens }.
-//
-// AUTHENTICATION: this function uses the project's service-role key (provided via
-// Edge Function secrets — NEVER bundled with the mobile app). The dispatch RPCs are
-// granted to `service_role` only (see migration W-033).
-//
-// IDEMPOTENCY:
-//   * `mark_notification_sent` only writes when status='processing', so a duplicate
-//     OK ticket from a second device is a no-op.
-//   * `mark_notification_failed` is similarly status='processing' gated.
-//   * `revoke_push_token` is conditional on `revoked_at is null`.
+//   1. Header check → 401 fast.
+//   2. `claim_pending_notifications(50)` moves rows from pending → processing
+//      (FOR UPDATE SKIP LOCKED). Result is one row per (outbox, active push token)
+//      pair — plus one row per outbox with `expo_token=NULL` when that user has no
+//      active tokens.
+//   3. **Phase 1 — collect**: send batches of ≤100 messages to
+//      `https://exp.host/--/api/v2/push/send`, but ONLY accumulate per-outbox
+//      results into an in-memory map. No DB writes during the loop.
+//   4. **Phase 2 — commit**: for each outbox, write ONE final status:
+//        * any token returned `ok` → `mark_notification_sent` (with the first OK
+//          ticket id).
+//        * else if ALL errors were retryable → `mark_notification_failed(..., retryable=true)`
+//          (RPC bounces back to pending until attempts hits 3).
+//        * else → `mark_notification_failed(..., retryable=false)` (terminal).
+//      `DeviceNotRegistered` still revokes the token but never decides the outbox
+//      status on its own — a sibling token's OK wins.
+//   5. Revoke all collected DeviceNotRegistered tokens.
+//   6. Return JSON summary { claimed, sent, failed, retryable, revokedTokens }.
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
@@ -57,19 +53,37 @@ type ExpoTicketError = {
 };
 type ExpoTicket = ExpoTicketOk | ExpoTicketError;
 
+type OutboxAgg = {
+  /** First OK ticket id seen for this outbox (null = no OK yet). Truthy implies sent. */
+  firstOkTicketId: string | null;
+  /** All errors observed across this outbox's tokens. Used only when no OK is recorded. */
+  errors: { code: string; retryable: boolean }[];
+};
+
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 const CLAIM_LIMIT = 50;
 const PUSH_BATCH = 100;
 
 const RETRYABLE_TICKET_ERRORS = new Set([
   'MessageRateExceeded',
-  'MismatchSenderId', // transient FCM config races
+  'MismatchSenderId',
 ]);
 
 Deno.serve(async (req) => {
-  // The function can be invoked by a scheduled job (pg_cron in T-050C) or via a
-  // manual POST. Either way, we don't read the body — the work to do lives entirely
-  // in the outbox table.
+  // 1. Shared-secret gate. The function is deployed with --no-verify-jwt because
+  //    pg_cron + manual `supabase functions invoke` shouldn't need a user JWT.
+  //    Without this header check, anyone hitting the function URL could drain the
+  //    outbox.
+  const expected = Deno.env.get('DISPATCH_PUSH_SECRET');
+  if (!expected) {
+    console.error('dispatch-pushes: DISPATCH_PUSH_SECRET not set on the function');
+    return jsonResponse(500, { error: 'DISPATCH_PUSH_SECRET not configured' });
+  }
+  const provided = req.headers.get('x-dispatch-secret');
+  if (!provided || provided !== expected) {
+    return jsonResponse(401, { error: 'unauthorized' });
+  }
+
   try {
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -79,7 +93,7 @@ Deno.serve(async (req) => {
 
     const accessToken = Deno.env.get('EXPO_ACCESS_TOKEN');
 
-    // 1. Claim pending rows.
+    // 2. Claim pending rows.
     const { data: rows, error: claimErr } = await supabase.rpc(
       'claim_pending_notifications',
       { p_limit: CLAIM_LIMIT },
@@ -94,34 +108,25 @@ Deno.serve(async (req) => {
       return jsonResponse(200, summary(0, 0, 0, 0, 0));
     }
 
-    // 2. Split off rows with no active tokens — those get marked failed up front.
+    // Split off "no active tokens" outboxes — they get marked failed at the end with
+    // no Expo round-trip. Track them in a Set so a stray duplicate doesn't double-fail.
+    const noTokenOutboxIds = new Set<string>();
     const messages: ClaimedRow[] = [];
-    const noTokenOutboxes = new Set<string>();
     for (const r of claimed) {
-      if (!r.expo_token) noTokenOutboxes.add(r.outbox_id);
+      if (!r.expo_token) noTokenOutboxIds.add(r.outbox_id);
       else messages.push(r);
     }
 
-    let failed = 0;
-    for (const id of noTokenOutboxes) {
-      const { error } = await supabase.rpc('mark_notification_failed', {
-        p_outbox_id: id,
-        p_error: 'no_active_tokens',
-        p_retryable: false,
-      });
-      if (!error) failed++;
-      else console.warn('dispatch-pushes: mark_failed (no_tokens) error:', error.message);
-    }
+    const perOutbox = new Map<string, OutboxAgg>();
+    const tokensToRevoke = new Map<string, string>();
+    for (const m of messages) ensureAgg(perOutbox, m.outbox_id);
 
-    let sent = 0;
-    let retryable = 0;
-    let revokedTokens = 0;
-
-    // Track which outboxes already had at least one OK ticket — used so a partial
-    // success across multiple devices doesn't get marked failed.
-    const outboxAlreadySent = new Set<string>();
-
-    // 3. Send in chunks of PUSH_BATCH.
+    // 3. Phase 1 — send batches, accumulate results into perOutbox / tokensToRevoke.
+    //    Crucially: NO DB writes inside this loop. Earlier the per-ticket loop
+    //    short-circuited mark_failed before a sibling token's OK could land, which
+    //    permanently failed multi-device outboxes whose first ticket was
+    //    DeviceNotRegistered. Now the final status is computed after ALL tickets
+    //    across ALL batches have been seen.
     for (let i = 0; i < messages.length; i += PUSH_BATCH) {
       const batch = messages.slice(i, i + PUSH_BATCH);
       const expoMessages = batch.map((m) => ({
@@ -146,29 +151,16 @@ Deno.serve(async (req) => {
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         console.warn('dispatch-pushes: fetch error:', msg);
-        retryable += await markBatch(supabase, batch, outboxAlreadySent, `fetch_error: ${msg}`, true);
+        recordBatchError(perOutbox, batch, `fetch_error: ${msg}`, true);
         continue;
       }
 
-      // HTTP-level error handling.
       if (httpRes.status === 429 || (httpRes.status >= 500 && httpRes.status < 600)) {
-        retryable += await markBatch(
-          supabase,
-          batch,
-          outboxAlreadySent,
-          `http_${httpRes.status}`,
-          true,
-        );
+        recordBatchError(perOutbox, batch, `http_${httpRes.status}`, true);
         continue;
       }
       if (!httpRes.ok) {
-        failed += await markBatch(
-          supabase,
-          batch,
-          outboxAlreadySent,
-          `http_${httpRes.status}`,
-          false,
-        );
+        recordBatchError(perOutbox, batch, `http_${httpRes.status}`, false);
         continue;
       }
 
@@ -177,90 +169,104 @@ Deno.serve(async (req) => {
         body = await httpRes.json();
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
-        retryable += await markBatch(supabase, batch, outboxAlreadySent, `body_parse: ${msg}`, true);
+        recordBatchError(perOutbox, batch, `body_parse: ${msg}`, true);
         continue;
       }
 
       const tickets = body?.data;
       if (!Array.isArray(tickets) || tickets.length !== batch.length) {
-        retryable += await markBatch(
-          supabase,
-          batch,
-          outboxAlreadySent,
-          'unexpected_response_shape',
-          true,
-        );
+        recordBatchError(perOutbox, batch, 'unexpected_response_shape', true);
         continue;
       }
 
-      // Per-ticket processing.
+      // Per-ticket recording.
       for (let j = 0; j < tickets.length; j++) {
         const ticket = tickets[j];
         const msg = batch[j];
+        if (!ticket || !msg) continue;
+        const agg = ensureAgg(perOutbox, msg.outbox_id);
 
         if (ticket.status === 'ok') {
-          if (!outboxAlreadySent.has(msg.outbox_id)) {
-            const { error } = await supabase.rpc('mark_notification_sent', {
-              p_outbox_id: msg.outbox_id,
-              p_ticket_id: ticket.id ?? null,
-            });
-            if (!error) {
-              sent++;
-              outboxAlreadySent.add(msg.outbox_id);
-            } else {
-              console.warn('dispatch-pushes: mark_sent error:', error.message);
-            }
-          }
+          if (agg.firstOkTicketId === null) agg.firstOkTicketId = ticket.id;
           continue;
         }
 
-        // ticket.status === 'error'
         const code = ticket.details?.error;
 
         if (code === 'DeviceNotRegistered') {
-          const { error: revokeErr } = await supabase.rpc('revoke_push_token', {
-            p_expo_token: msg.expo_token!,
-            p_reason: 'DeviceNotRegistered',
-          });
-          if (!revokeErr) revokedTokens++;
-          else console.warn('dispatch-pushes: revoke_push_token error:', revokeErr.message);
-
-          // If no other device already accepted this outbox, mark it failed
-          // non-retryable. (A later sibling success in the same batch will be
-          // accepted by the idempotent mark_notification_sent.)
-          if (!outboxAlreadySent.has(msg.outbox_id)) {
-            const { error } = await supabase.rpc('mark_notification_failed', {
-              p_outbox_id: msg.outbox_id,
-              p_error: `DeviceNotRegistered:${msg.expo_token}`,
-              p_retryable: false,
-            });
-            if (!error) failed++;
-          }
+          tokensToRevoke.set(msg.expo_token!, 'DeviceNotRegistered');
+          agg.errors.push({ code: 'DeviceNotRegistered', retryable: false });
           continue;
         }
 
         if (code && RETRYABLE_TICKET_ERRORS.has(code)) {
-          if (!outboxAlreadySent.has(msg.outbox_id)) {
-            const { error } = await supabase.rpc('mark_notification_failed', {
-              p_outbox_id: msg.outbox_id,
-              p_error: code,
-              p_retryable: true,
-            });
-            if (!error) retryable++;
-          }
+          agg.errors.push({ code, retryable: true });
           continue;
         }
 
-        // Unknown / non-retryable ticket error.
-        if (!outboxAlreadySent.has(msg.outbox_id)) {
-          const { error } = await supabase.rpc('mark_notification_failed', {
-            p_outbox_id: msg.outbox_id,
-            p_error: code ?? ticket.message ?? 'unknown_ticket_error',
-            p_retryable: false,
-          });
-          if (!error) failed++;
-        }
+        // Unknown / non-retryable.
+        const msgText = (ticket as ExpoTicketError).message;
+        agg.errors.push({
+          code: code ?? msgText ?? 'unknown_ticket_error',
+          retryable: false,
+        });
       }
+    }
+
+    // 4. Phase 2 — commit one final status per outbox.
+    let sent = 0;
+    let failed = 0;
+    let retryable = 0;
+
+    for (const [outboxId, agg] of perOutbox) {
+      if (agg.firstOkTicketId !== null) {
+        const { error } = await supabase.rpc('mark_notification_sent', {
+          p_outbox_id: outboxId,
+          p_ticket_id: agg.firstOkTicketId,
+        });
+        if (!error) sent++;
+        else console.warn('dispatch-pushes: mark_sent error:', error.message);
+        continue;
+      }
+
+      const errs = agg.errors;
+      const allRetryable = errs.length > 0 && errs.every((e) => e.retryable);
+      const code = errs[0]?.code ?? 'no_tickets';
+      const { error } = await supabase.rpc('mark_notification_failed', {
+        p_outbox_id: outboxId,
+        p_error: code,
+        p_retryable: allRetryable,
+      });
+      if (!error) {
+        if (allRetryable) retryable++;
+        else failed++;
+      } else {
+        console.warn('dispatch-pushes: mark_failed error:', error.message);
+      }
+    }
+
+    // 5. Mark no-token outboxes failed non-retryable. (Doing this AFTER perOutbox
+    //    keeps the loop above simple; these outboxes never had a Phase 1 entry.)
+    for (const id of noTokenOutboxIds) {
+      const { error } = await supabase.rpc('mark_notification_failed', {
+        p_outbox_id: id,
+        p_error: 'no_active_tokens',
+        p_retryable: false,
+      });
+      if (!error) failed++;
+      else console.warn('dispatch-pushes: mark_failed (no_tokens) error:', error.message);
+    }
+
+    // 6. Revoke all collected DeviceNotRegistered tokens. Done LAST so a sibling
+    //    OK ticket on the same outbox (different device) has already won.
+    let revokedTokens = 0;
+    for (const [token, reason] of tokensToRevoke) {
+      const { error } = await supabase.rpc('revoke_push_token', {
+        p_expo_token: token,
+        p_reason: reason,
+      });
+      if (!error) revokedTokens++;
+      else console.warn('dispatch-pushes: revoke_push_token error:', error.message);
     }
 
     return jsonResponse(200, summary(claimed.length, sent, failed, retryable, revokedTokens));
@@ -271,30 +277,34 @@ Deno.serve(async (req) => {
   }
 });
 
-/** Mark every outbox in `batch` failed with the given error, except those already
- *  marked sent via another device. Returns the count of rows actually updated. */
-async function markBatch(
-  supabase: ReturnType<typeof createClient>,
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+function ensureAgg(map: Map<string, OutboxAgg>, id: string): OutboxAgg {
+  let a = map.get(id);
+  if (!a) {
+    a = { firstOkTicketId: null, errors: [] };
+    map.set(id, a);
+  }
+  return a;
+}
+
+/** Push a batch-wide error onto every outbox in `batch` (one entry per outbox row).
+ *  Multiple device rows for the same outbox collapse into one entry — duplicating
+ *  the error doesn't help the "allRetryable" decision. */
+function recordBatchError(
+  map: Map<string, OutboxAgg>,
   batch: ClaimedRow[],
-  outboxAlreadySent: Set<string>,
-  error: string,
+  code: string,
   retryable: boolean,
-): Promise<number> {
-  // Dedup per outbox in this batch (multiple device rows share an outbox).
-  const distinct = new Set<string>();
+): void {
+  const seen = new Set<string>();
   for (const m of batch) {
-    if (!outboxAlreadySent.has(m.outbox_id)) distinct.add(m.outbox_id);
+    if (seen.has(m.outbox_id)) continue;
+    seen.add(m.outbox_id);
+    ensureAgg(map, m.outbox_id).errors.push({ code, retryable });
   }
-  let n = 0;
-  for (const id of distinct) {
-    const { error: err } = await supabase.rpc('mark_notification_failed', {
-      p_outbox_id: id,
-      p_error: error,
-      p_retryable: retryable,
-    });
-    if (!err) n++;
-  }
-  return n;
 }
 
 function summary(
