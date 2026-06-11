@@ -45,6 +45,22 @@ type PendingRow = {
   created_at: string;
 };
 
+export type StreakAggregate = {
+  currentStreak: number;
+  bestStreak: number;
+};
+
+/** Current + best aggregated streaks across all of the caller's challenges (T-053-E). */
+export async function getMyStreakAggregate(): Promise<StreakAggregate> {
+  const { data, error } = await supabase.rpc('get_my_streak_aggregate');
+  if (error) throw error;
+  const d = (data ?? {}) as Record<string, number>;
+  return {
+    currentStreak: d.current_streak ?? 0,
+    bestStreak: d.best_streak ?? 0,
+  };
+}
+
 /** Group proofs awaiting the caller's verification (the "Verify a friend" inbox). */
 export async function listPendingVerifications(): Promise<PendingVerification[]> {
   const { data, error } = await supabase.rpc('list_pending_verifications_for_me');

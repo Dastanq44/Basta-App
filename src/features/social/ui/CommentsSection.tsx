@@ -4,6 +4,7 @@ import {
   Avatar,
   BottomSheet,
   Card,
+  KEYBOARD_DONE_ACCESSORY_ID,
   Text,
   useTheme,
 } from '@/shared/ui';
@@ -197,6 +198,7 @@ function ComposerRow({
         editable={!sending}
         multiline
         returnKeyType="default"
+        inputAccessoryViewID={KEYBOARD_DONE_ACCESSORY_ID}
         style={{
           flex: 1,
           color: t.colors.foreground,

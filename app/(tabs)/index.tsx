@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { Image, Pressable, ScrollView, View } from 'react-native';
+import { Image, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { type Href, useFocusEffect, useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { Avatar, Button, Card, Icon, ProgressBar, Screen, StatTile, Text, useTheme } from '@/shared/ui';
@@ -72,9 +72,24 @@ export default function TodayScreen() {
     return out;
   }, [challenges.data, recentSubmissions.data]);
 
+  const onRefresh = useCallback(() => {
+    void overview.refetch();
+    void profile.refetch();
+    void challenges.refetch();
+    void recentSubmissions.refetch();
+  }, [overview, profile, challenges, recentSubmissions]);
+
+  const refreshing =
+    (overview.isFetching && !overview.isPending) ||
+    (challenges.isFetching && !challenges.isPending) ||
+    (recentSubmissions.isFetching && !recentSubmissions.isPending);
+
   return (
     <Screen padded={false} edges={['top']}>
-      <ScrollView contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.lg, paddingBottom: t.spacing.xl }}>
+      <ScrollView
+        contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.lg, paddingBottom: t.spacing.xl }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
         {/* Greeting — avatar is tappable, redirects to Profile. Avatar + text both
             bigger than before (46 → 64; heading variant → explicit larger size) so the
             greeting reads as the page header rather than an afterthought. */}

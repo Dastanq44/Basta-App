@@ -1,7 +1,8 @@
 import { forwardRef, useState } from 'react';
-import { TextInput as RNTextInput, type TextInputProps, View } from 'react-native';
+import { Platform, TextInput as RNTextInput, type TextInputProps, View } from 'react-native';
 import { Text } from './Text';
 import { useTheme } from './theme';
+import { KEYBOARD_DONE_ACCESSORY_ID } from './KeyboardDoneAccessory';
 
 export type InputProps = Omit<TextInputProps, 'style'> & {
   label?: string;
@@ -24,6 +25,14 @@ export const Input = forwardRef<RNTextInput, InputProps>(function Input(
     : focused
       ? t.colors.ring
       : t.colors.border;
+
+  // iOS multiline inputs don't dismiss on Return (the key inserts a newline). Attach
+  // the shared <KeyboardDoneAccessory /> by default so the user always gets a
+  // native "Done" affordance above the keyboard (T-053-E). Caller can override by
+  // passing their own `inputAccessoryViewID` or explicitly setting it to undefined.
+  const accessoryId =
+    rest.inputAccessoryViewID ??
+    (Platform.OS === 'ios' && rest.multiline ? KEYBOARD_DONE_ACCESSORY_ID : undefined);
 
   return (
     <View style={{ gap: t.spacing.xs }}>
@@ -55,6 +64,7 @@ export const Input = forwardRef<RNTextInput, InputProps>(function Input(
           },
         ]}
         {...rest}
+        inputAccessoryViewID={accessoryId}
       />
       {error ? (
         <Text variant="caption" style={{ color: t.colors.destructive }}>

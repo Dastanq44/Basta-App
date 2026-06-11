@@ -6,7 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { queryClient } from '@/shared/lib/queryClient';
 import { useSession } from '@/features/auth';
-import { HeaderBackButton, ThemeProvider, useTheme, useThemeMode } from '@/shared/ui';
+import { HeaderBackButton, KeyboardDoneAccessory, ThemeProvider, useTheme, useThemeMode } from '@/shared/ui';
 import { isAtTarget, useOnboardingGate } from '@/navigation/guards';
 import { initOffline } from '@/offline';
 import { push } from '@/services/notifications';
@@ -35,6 +35,9 @@ export default function RootLayout() {
         <ThemeProvider>
           <ThemedStatusBar />
           <RootNav />
+          {/* Shared iOS "Done" bar above the keyboard. UIKit binds it to multiline
+              TextInputs by `nativeID`, so a single instance covers the whole app. */}
+          <KeyboardDoneAccessory />
         </ThemeProvider>
       </QueryClientProvider>
     </SafeAreaProvider>

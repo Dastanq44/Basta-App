@@ -33,3 +33,4 @@ export { ScreenHeader, HeaderBackButton } from './ScreenHeader';
 export type { ScreenHeaderProps } from './ScreenHeader';
 export { ThemeProvider, useTheme, useThemeMode, lightTheme, darkTheme } from './theme';
 export type { ThemeTokens, ColorTokens, ThemeMode } from './theme';
+export { KeyboardDoneAccessory, KEYBOARD_DONE_ACCESSORY_ID } from './KeyboardDoneAccessory';

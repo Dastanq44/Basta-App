@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Alert, FlatList, Image, Pressable, ScrollView, View } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { Alert, FlatList, Image, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { type Href, useRouter } from 'expo-router';
 import {
   Avatar,
@@ -9,11 +9,13 @@ import {
   Icon,
   Screen,
   SegmentedControl,
+  StatTile,
   Text,
   useTheme,
 } from '@/shared/ui';
 import { useSession, useSignOut } from '@/features/auth';
 import { useProfile, userAvatarUrl } from '@/features/onboarding';
+import { useMyStreakAggregate } from '@/features/home';
 import { useRequestAccountDeletion } from '@/features/moderation';
 import { SyncBadge, useMyRecentSubmissions } from '@/features/proofs';
 import { ActivityHeatmap } from '@/features/profile';
@@ -32,6 +34,7 @@ export default function ProfileScreen() {
   const signOut = useSignOut();
   const profile = useProfile();
   const submissions = useMyRecentSubmissions();
+  const streak = useMyStreakAggregate();
   const deletionRequest = useRequestAccountDeletion();
 
   const [menuOpen, setMenuOpen] = useState(false);
@@ -85,6 +88,16 @@ export default function ProfileScreen() {
     ]);
   };
 
+  const onRefresh = useCallback(() => {
+    void profile.refetch();
+    void submissions.refetch();
+    void streak.refetch();
+  }, [profile, submissions, streak]);
+  const refreshing =
+    (profile.isFetching && !profile.isPending) ||
+    (submissions.isFetching && !submissions.isPending) ||
+    (streak.isFetching && !streak.isPending);
+
   return (
     <Screen padded={false} edges={['top']}>
       {/* In-screen header. The Tabs layout disables the native header, so the 3-dot
@@ -128,6 +141,9 @@ export default function ProfileScreen() {
           data={submissions.data ?? []}
           keyExtractor={(s) => s.id}
           contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.sm, paddingBottom: t.spacing.xxl }}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
           ListHeaderComponent={
             <View style={{ gap: t.spacing.md, marginBottom: t.spacing.md }}>
               <ProfileHeader
@@ -136,6 +152,10 @@ export default function ProfileScreen() {
                 username={username}
                 description={user?.description ?? undefined}
                 email={email}
+              />
+              <StreakTiles
+                current={streak.data?.currentStreak ?? 0}
+                best={streak.data?.bestStreak ?? 0}
               />
               <ActivityHeatmap submissions={submissions.data ?? []} />
               <SegmentedControl
@@ -163,13 +183,20 @@ export default function ProfileScreen() {
           renderItem={({ item }) => <SubmissionListRow submission={item} onPress={() => router.push(`/submission/${item.id}` as Href)} />}
         />
       ) : (
-        <ScrollView contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.md }}>
+        <ScrollView
+          contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.md }}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        >
           <ProfileHeader
             avatarUrl={avatarRemoteUrl}
             displayName={displayName}
             username={username}
             description={user?.description ?? undefined}
             email={email}
+          />
+          <StreakTiles
+            current={streak.data?.currentStreak ?? 0}
+            best={streak.data?.bestStreak ?? 0}
           />
           <ActivityHeatmap submissions={submissions.data ?? []} />
           <SegmentedControl
@@ -233,6 +260,30 @@ export default function ProfileScreen() {
 // ─────────────────────────────────────────────────────────────────────────────
 // Subcomponents
 // ─────────────────────────────────────────────────────────────────────────────
+
+function StreakTiles({ current, best }: { current: number; best: number }) {
+  const t = useTheme();
+  return (
+    <View style={{ flexDirection: 'row', gap: t.spacing.sm }}>
+      <View style={{ flex: 1 }}>
+        <StatTile
+          tone="streak"
+          icon="🔥"
+          value={String(current)}
+          label={`Current streak · ${current === 1 ? 'day' : 'days'}`}
+        />
+      </View>
+      <View style={{ flex: 1 }}>
+        <StatTile
+          tone="primary"
+          icon="🏆"
+          value={String(best)}
+          label={`Best streak · ${best === 1 ? 'day' : 'days'}`}
+        />
+      </View>
+    </View>
+  );
+}
 
 function ProfileHeader({
   avatarUrl,
