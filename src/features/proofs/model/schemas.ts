@@ -2,6 +2,12 @@ import { z } from 'zod';
 
 export const proofInput = z.object({
   challengeId: z.string().uuid(),
+  /** Short user-supplied title shown on the challenge / profile / detail rows. Required since W-034. */
+  title: z
+    .string()
+    .trim()
+    .min(1, 'Add a title')
+    .max(80, 'At most 80 characters'),
   /** Local file URI (`file://...`) from the picker/camera. */
   mediaLocalUri: z.string().min(1, 'Pick a photo first'),
   comment: z

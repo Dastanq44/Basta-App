@@ -46,14 +46,16 @@ export default function EditProofModal() {
       <ProofComposer
         submitting={redact.isPending}
         errorMessage={redact.error instanceof Error ? redact.error.message : null}
+        initialTitle={today.data.title}
         initialComment={today.data.comment}
         ctaLabel={redact.isPending ? 'Saving…' : 'Save changes'}
-        intro="Replace today's photo and edit your note. Group voters will re-verify the new content."
-        onSubmit={async ({ mediaLocalUri, comment }) => {
+        intro="Replace today's photo, retitle, and edit your description. Group voters will re-verify the new content."
+        onSubmit={async ({ title, mediaLocalUri, comment }) => {
           if (!id) return;
           await redact.mutateAsync({
             submissionId,
             challengeId: id,
+            title,
             mediaLocalUri,
             comment,
           });

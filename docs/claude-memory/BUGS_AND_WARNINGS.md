@@ -270,6 +270,27 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
 - **Apply via:** Supabase Dashboard → SQL editor (idempotent — safe to re-apply).
   Also: create the public `user-avatars` Storage bucket.
 
+## [OPEN] W-034 — Apply submission-titles migration (T-053-A)
+- **Date:** 2026-06-11 · **Area:** backend / Supabase
+- **What:** `supabase/migrations/20260608000000_submission_titles.sql` adds
+  `submissions.title text NOT NULL` (CHECK 1..80 chars) and recreates 5 RPCs to
+  thread / return the new column: `submit_proof`, `redact_my_submission`,
+  `list_challenge_submissions`, `get_submission_with_author`, `get_my_today_submission`.
+  All recreated with DROP + CREATE because parameter lists / RETURNS TABLE shapes
+  change (CREATE OR REPLACE wouldn't suffice).
+- **Backfill:** existing rows get `title = 'Day ' || (challenge_day + 1)`. Idempotent —
+  the UPDATE is gated on `title IS NULL` and the CHECK constraint is dropped + re-added.
+- **Apply via:** Supabase Dashboard → SQL editor (or `supabase db push`).
+- **Client coupling:** the W-034 migration MUST go in before / with the matching
+  client deploy. Pre-W-034 mobile builds calling `submit_proof` with the old
+  4-arg signature will get `function ... does not exist`. The current mvp branch is
+  already updated; if you roll back without re-applying the column drop, the new
+  client crashes on submit. Both move together.
+- **Queue safety:** for jobs queued pre-W-034 (legacy `SubmitProofPayload` without
+  `title`), the processor substitutes `'Untitled'` to clear the upgrade window
+  (`src/offline/queue/processor.ts`). After everyone has submitted at least once
+  post-W-034, that fallback is dead code but harmless.
+
 ## [OPEN] W-033 — Apply notification_outbox + dispatch RPCs migration + deploy `dispatch-pushes` Edge Function + set DISPATCH_PUSH_SECRET (T-050B)
 - **Date:** 2026-06-07 (hardened 2026-06-08) · **Area:** backend / Supabase + Edge Functions
 - **What:** `supabase/migrations/20260607000000_notification_outbox_and_dispatch.sql`

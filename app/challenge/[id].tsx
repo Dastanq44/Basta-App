@@ -653,8 +653,8 @@ function SubmissionRow({
         <View style={{ gap: t.spacing.sm }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <View style={{ flex: 1, gap: 2 }}>
-              <Text variant="heading">{authorLabel}</Text>
-              <Text variant="muted">Day {submission.challengeDay + 1}</Text>
+              <Text variant="heading">{submission.title}</Text>
+              <Text variant="muted">{authorLabel} · Day {submission.challengeDay + 1}</Text>
             </View>
             <SyncBadge status={submission.status} />
           </View>

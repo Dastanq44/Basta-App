@@ -42,6 +42,7 @@ export function useSubmitProof() {
       const payload: SubmitProofPayload = {
         submissionId,
         challengeId: input.challengeId,
+        title: input.title,
         mediaLocalUri: persistedUri,
         comment: input.comment,
       };

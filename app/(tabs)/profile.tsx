@@ -458,21 +458,17 @@ function parseHex(hex: string): { r: number; g: number; b: number } | null {
   return { r: (v >> 16) & 0xff, g: (v >> 8) & 0xff, b: v & 0xff };
 }
 
-// "Jun 5, 2026, 9:25 AM" — explicitly no seconds (user's request). `toLocaleString()`
-// without options shows ":SS" on some locales, so we pass an explicit minutes-resolution
-// format.
+// Profile rows show DATE ONLY (no clock time) — slice T-053-A.
 const DATE_FMT: Intl.DateTimeFormatOptions = {
   year: 'numeric',
   month: 'short',
   day: 'numeric',
-  hour: 'numeric',
-  minute: '2-digit',
 };
 
 function SubmissionListRow({ submission, onPress }: { submission: Submission; onPress: () => void }) {
   const t = useTheme();
-  const title = submission.challengeTitle?.trim() || 'Challenge';
-  const dateLabel = new Date(submission.createdAt).toLocaleString(undefined, DATE_FMT);
+  const title = submission.title?.trim() || 'Untitled';
+  const dateLabel = new Date(submission.createdAt).toLocaleDateString(undefined, DATE_FMT);
   const subline = submission.challengeGroupName
     ? `${dateLabel} · ${submission.challengeGroupName}`
     : dateLabel;

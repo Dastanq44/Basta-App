@@ -59,7 +59,7 @@ export default function VerifySubmissionScreen() {
 
   return (
     <Screen>
-      <Stack.Screen options={{ title: `Day ${s.challengeDay + 1}` }} />
+      <Stack.Screen options={{ title: s.title }} />
       <View style={{ gap: t.spacing.md }}>
         <View
           style={{
@@ -84,7 +84,10 @@ export default function VerifySubmissionScreen() {
         </View>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Text variant="heading">Day {s.challengeDay + 1}</Text>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text variant="heading">{s.title}</Text>
+            <Text variant="muted">Day {s.challengeDay + 1}</Text>
+          </View>
           <SyncBadge status={s.status} />
         </View>
 

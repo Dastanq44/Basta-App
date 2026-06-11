@@ -77,9 +77,13 @@ async function handleSubmitProof(jobId: string, payload: SubmitProofPayload): Pr
   });
 
   // 2) Call the RPC. Idempotent server-side.
+  // Title-missing fallback: jobs queued before W-034 don't carry a title; substitute
+  // "Untitled" so the upgrade-window job still goes through (server enforces 1..80 chars).
+  const fallbackTitle = ((payload.title as string | undefined) ?? '').trim() || 'Untitled';
   const { error } = await supabase.rpc('submit_proof', {
     p_submission_id: payload.submissionId,
     p_challenge_id: payload.challengeId,
+    p_title: fallbackTitle,
     p_media_path: remotePath,
     p_comment: payload.comment ?? null,
   });

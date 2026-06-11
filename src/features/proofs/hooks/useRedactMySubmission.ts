@@ -11,6 +11,8 @@ export type RedactSubmissionInput = {
   /** The existing submission row's id (also the storage filename — see uploadProofMedia). */
   submissionId: string;
   challengeId: string;
+  /** New title (1..80 chars). Required since W-034. */
+  title: string;
   /** Local file URI from ImagePicker. The hook uploads it (overwriting the deterministic
    *  storage path) then calls the redact RPC. */
   mediaLocalUri: string;
@@ -44,7 +46,7 @@ export function useRedactMySubmission() {
         localUri: input.mediaLocalUri,
       });
 
-      await redactMySubmission(input.submissionId, remotePath, input.comment);
+      await redactMySubmission(input.submissionId, input.title, remotePath, input.comment);
       return { remotePath };
     },
     onSuccess: (data, input) => {

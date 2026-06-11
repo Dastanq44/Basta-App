@@ -14,6 +14,8 @@ export type SubmitProofPayload = {
   /** Same value as the queue row `id` — also the submissions.id used for idempotency. */
   submissionId: string;
   challengeId: string;
+  /** Short user-supplied title. Required by `submit_proof` since W-034. */
+  title: string;
   /** Path to a file in the app sandbox; the queue processor uploads it. */
   mediaLocalUri: string;
   comment?: string;

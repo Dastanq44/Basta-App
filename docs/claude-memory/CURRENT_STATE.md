@@ -3,7 +3,22 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-06-08 — by: Claude 1 (T-050B hardening — per-outbox aggregation + shared-secret header on dispatch-pushes)_
+_Last updated: 2026-06-11 — by: Claude 2 (T-053-A — submission titles end-to-end)_
+
+> **2026-06-11 T-053-A submission titles:** every submission now carries a required
+> user-supplied title (1..80 chars). New migration **W-034**
+> (`20260608000000_submission_titles.sql`) adds `submissions.title` NOT NULL with a
+> backfill of `'Day N'` for legacy rows, and recreates five RPCs to thread / return the
+> new column: `submit_proof`, `redact_my_submission`, `list_challenge_submissions`,
+> `get_submission_with_author`, `get_my_today_submission`. Client: `ProofComposer` got a
+> required Title input above the photo (also renamed its existing screen-heading prop
+> from `title` → `screenTitle` to avoid clashing with the form field). `Submission`
+> entity grew a `title: string` field; `proofInput` zod requires 1..80 chars; queue
+> payload + processor pass title through (with an `'Untitled'` fallback for upgrade-window
+> jobs). Display surfaces switched: challenge detail row → title primary + author/day
+> below; submission detail → title at top, author w/ Avatar + Day + datetime below,
+> photo, then description; verify screen → title at top + Day subline; profile rows →
+> submission title primary + date (no time) + group name. **USER must apply W-034.**
 
 > **2026-06-06 T-050A push registration:** `expo-notifications` + `expo-device` added
 > (+ existing `expo-constants`). `app.json` registers the `expo-notifications` plugin

@@ -17,6 +17,7 @@ type SubmissionRow = {
   challenge_id: string;
   author_id: string;
   challenge_day: number;
+  title: string;
   comment: string | null;
   media_path: string | null;
   status: ServerSubmissionStatus;
@@ -37,6 +38,7 @@ function toSubmission(r: SubmissionRow): Submission {
     challengeId: r.challenge_id,
     authorId: r.author_id,
     challengeDay: r.challenge_day,
+    title: r.title,
     comment: r.comment ?? undefined,
     mediaRemotePath: r.media_path ?? undefined,
     status: r.status,
@@ -147,7 +149,7 @@ export async function listMyRecentSubmissions(limit = 50): Promise<Submission[]>
     const { data, error } = await supabase
       .from('submissions')
       .select(
-        'id, challenge_id, author_id, challenge_day, comment, media_path, status, verified_at, rejected_at, created_at, challenges ( title, groups ( name ) )',
+        'id, challenge_id, author_id, challenge_day, title, comment, media_path, status, verified_at, rejected_at, created_at, challenges ( title, groups ( name ) )',
       )
       .eq('author_id', uid)
       .order('created_at', { ascending: false })
@@ -244,6 +246,7 @@ export async function listChallengeStreaks(challengeId: string): Promise<Contest
  */
 export async function redactMySubmission(
   submissionId: string,
+  title: string,
   mediaPath: string,
   comment: string | undefined,
 ): Promise<void> {
@@ -252,6 +255,7 @@ export async function redactMySubmission(
     const { error } = await supabase
       .rpc('redact_my_submission', {
         p_submission_id: submissionId,
+        p_title: title,
         p_media_path: mediaPath,
         p_comment: comment ?? null,
       })

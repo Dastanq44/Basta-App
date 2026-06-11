@@ -3,25 +3,33 @@ import { Alert, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, Vi
 import * as ImagePicker from 'expo-image-picker';
 import { Button, Card, Input, Screen, Text, useTheme } from '@/shared/ui';
 
-export type ProofComposerSubmit = (input: { mediaLocalUri: string; comment?: string }) => Promise<void>;
+export type ProofComposerSubmit = (input: {
+  title: string;
+  mediaLocalUri: string;
+  comment?: string;
+}) => Promise<void>;
 
 export type ProofComposerProps = {
   onSubmit: ProofComposerSubmit;
   submitting: boolean;
   errorMessage?: string | null;
-  /** Optional override for the screen title — defaults to "Today's proof". */
-  title?: string;
-  /** Optional override for the helper line under the title. */
+  /** Optional override for the screen heading — defaults to "Today's proof". */
+  screenTitle?: string;
+  /** Optional override for the helper line under the heading. */
   intro?: string;
   /** Optional override for the primary CTA label (e.g. "Save changes" in edit mode). */
   ctaLabel?: string;
-  /** Pre-fill the comment field — used by the redact (edit) flow. */
+  /** Pre-fill the title field — used by the redact (edit) flow. */
+  initialTitle?: string;
+  /** Pre-fill the description field — used by the redact (edit) flow. */
   initialComment?: string;
 };
 
+const TITLE_MAX = 80;
+
 /**
- * Photo-first proof composer. Camera or library; comment is optional.
- * Stays a presentational component — orchestration (queue + upload) lives in the parent screen.
+ * Photo-first proof composer. Title required (W-034), photo required, description optional.
+ * Stays presentational — orchestration (queue + upload) lives in the parent screen.
  * Used by BOTH the submit-proof modal (initial submission via the offline queue) and the
  * edit-proof modal (in-place redact, direct RPC).
  */
@@ -29,15 +37,19 @@ export function ProofComposer({
   onSubmit,
   submitting,
   errorMessage,
-  title,
+  screenTitle,
   intro,
   ctaLabel,
+  initialTitle,
   initialComment,
 }: ProofComposerProps) {
   const t = useTheme();
+  const [title, setTitle] = useState(initialTitle ?? '');
   const [mediaLocalUri, setMediaLocalUri] = useState<string | null>(null);
   const [comment, setComment] = useState(initialComment ?? '');
   const [pickerError, setPickerError] = useState<string | null>(null);
+
+  const trimmedTitle = title.trim();
 
   const pickFromLibrary = async () => {
     setPickerError(null);
@@ -70,12 +82,20 @@ export function ProofComposer({
   };
 
   const handleSubmit = async () => {
+    if (!trimmedTitle) {
+      setPickerError('Add a title.');
+      return;
+    }
     if (!mediaLocalUri) {
       setPickerError('Pick a photo first.');
       return;
     }
     try {
-      await onSubmit({ mediaLocalUri, comment: comment.trim() || undefined });
+      await onSubmit({
+        title: trimmedTitle,
+        mediaLocalUri,
+        comment: comment.trim() || undefined,
+      });
     } catch (e) {
       Alert.alert('Could not save proof', e instanceof Error ? e.message : 'Unknown error');
     }
@@ -85,10 +105,20 @@ export function ProofComposer({
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <Screen padded={false}>
         <ScrollView contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.lg, paddingBottom: t.spacing.xl }}>
-          <Text variant="title">{title ?? "Today's proof"}</Text>
+          <Text variant="title">{screenTitle ?? "Today's proof"}</Text>
           <Text variant="muted">
-            {intro ?? 'Take a photo or pick one from your library. You can add a short note.'}
+            {intro ?? 'Give it a title, snap a photo, and add a description if you want.'}
           </Text>
+
+          <Input
+            label="Title"
+            value={title}
+            onChangeText={(v) => setTitle(v.slice(0, TITLE_MAX))}
+            placeholder="Short headline for today"
+            maxLength={TITLE_MAX}
+            editable={!submitting}
+            returnKeyType="done"
+          />
 
           {mediaLocalUri ? (
             <Card>
@@ -123,7 +153,7 @@ export function ProofComposer({
           ) : null}
 
           <Input
-            label="Note (optional)"
+            label="Description (optional)"
             value={comment}
             onChangeText={setComment}
             placeholder="What did you do today?"
@@ -140,7 +170,7 @@ export function ProofComposer({
             label={ctaLabel ?? (submitting ? 'Saving…' : 'Submit proof')}
             onPress={handleSubmit}
             loading={submitting}
-            disabled={submitting || !mediaLocalUri}
+            disabled={submitting || !trimmedTitle || !mediaLocalUri}
           />
         </ScrollView>
       </Screen>

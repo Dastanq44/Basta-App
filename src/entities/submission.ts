@@ -32,6 +32,8 @@ export type Submission = {
   authorId: UserId;
   /** Server-assigned day index from startDate in the author's timezone (D-003). */
   challengeDay: number;
+  /** User-supplied short title shown as the row's primary line. 1..80 chars; required since W-034. */
+  title: string;
   comment?: string;
   /** Local sandbox URI while offline. */
   mediaLocalUri?: string;

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Image, Pressable, ScrollView, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Button, Card, Screen, Text, useTheme } from '@/shared/ui';
+import { Avatar, Button, Card, Screen, Text, useTheme } from '@/shared/ui';
 import { useSession } from '@/features/auth';
 import { SyncBadge, useProofSignedUrl, useSubmission } from '@/features/proofs';
 import { CommentsSection, ReactionBar } from '@/features/social';
@@ -10,6 +10,14 @@ import {
   useBlockedUserIds,
   useBlockUser,
 } from '@/features/moderation';
+
+const SUBMISSION_DETAIL_DATE_FMT: Intl.DateTimeFormatOptions = {
+  year: 'numeric',
+  month: 'short',
+  day: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+};
 
 // Thin route: the social view of a submission — photo + comment + reactions + comments thread,
 // plus Report / Block-author for non-owner submissions. Blocked authors' proofs are hidden.
@@ -90,8 +98,30 @@ export default function SubmissionScreen() {
 
   return (
     <Screen padded={false}>
-      <Stack.Screen options={{ title: `Day ${s.challengeDay + 1}` }} />
+      <Stack.Screen options={{ title: s.title }} />
       <ScrollView contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.lg, paddingBottom: t.spacing.xl }}>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: t.spacing.sm }}>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text variant="title">{s.title}</Text>
+          </View>
+          <SyncBadge status={s.status} />
+        </View>
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm }}>
+          <Avatar
+            name={s.authorDisplayName ?? s.authorUsername ?? null}
+            size={36}
+          />
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text variant="heading">
+              {s.authorDisplayName || (s.authorUsername ? `@${s.authorUsername}` : 'Member')}
+            </Text>
+            <Text variant="muted">
+              Day {s.challengeDay + 1} · {new Date(s.createdAt).toLocaleString(undefined, SUBMISSION_DETAIL_DATE_FMT)}
+            </Text>
+          </View>
+        </View>
+
         <View
           style={{
             width: '100%',
@@ -112,16 +142,6 @@ export default function SubmissionScreen() {
           ) : (
             <Text variant="muted">No photo attached.</Text>
           )}
-        </View>
-
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <View style={{ flex: 1, gap: 2 }}>
-            <Text variant="heading">
-              {s.authorDisplayName || (s.authorUsername ? `@${s.authorUsername}` : 'Member')}
-            </Text>
-            <Text variant="muted">Day {s.challengeDay + 1}</Text>
-          </View>
-          <SyncBadge status={s.status} />
         </View>
 
         {s.comment ? (

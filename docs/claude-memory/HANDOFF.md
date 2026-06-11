@@ -21,6 +21,96 @@
 
 ---
 
+## 2026-06-11 — Claude 2 / T-053-A: submission titles end-to-end
+
+**Did:** Shipped slice A of the T-053 UI/UX refinement batch — required submission
+titles, threaded through schema + queue + composer + the three display surfaces the
+user named (challenge detail row / submission detail page / profile submission row),
+plus the Verify screen for consistency.
+
+### Migration W-034 (`20260608000000_submission_titles.sql`)
+- `submissions.title text NOT NULL` (CHECK: 1..80 chars).
+- One-time backfill of legacy rows to `'Day ' || (challenge_day + 1)`.
+- Recreated **5 RPCs** (drop + create — signature changes don't work with `CREATE OR
+  REPLACE`):
+  - `submit_proof(uuid, uuid, text, text, text)` — added `p_title`; validates 1..80.
+  - `redact_my_submission(uuid, text, text, text)` — added `p_title`; same validation.
+  - `list_challenge_submissions` — returns `title` (added to RETURNS TABLE).
+  - `get_submission_with_author` — same.
+  - `get_my_today_submission` — same.
+- All re-granted to `authenticated`.
+
+### Client
+- `src/entities/submission.ts` — `title: string` (required).
+- `src/features/proofs/model/schemas.ts` — `proofInput.title` zod string (trim, 1..80).
+- `src/offline/queue/types.ts` — `SubmitProofPayload.title: string`.
+- `src/offline/queue/processor.ts` — passes `p_title`; upgrade-window fallback to
+  `'Untitled'` for jobs queued pre-W-034 (since old rows in SQLite won't have the field).
+- `src/features/proofs/api/index.ts` — `SubmissionRow.title`, mapper sets it,
+  `listMyRecentSubmissions` select includes `title`, `redactMySubmission(submissionId,
+  title, mediaPath, comment)` signature.
+- `src/features/proofs/hooks/useSubmitProof.ts` + `useRedactMySubmission.ts` — input
+  shapes thread title through.
+- `src/features/proofs/ui/ProofComposer.tsx` — required Title `Input` above the photo
+  block (maxLength 80, `returnKeyType="done"`); CTA disabled until title is set;
+  description label renamed from "Note (optional)" → "Description (optional)" to
+  match the spec. Renamed the existing screen-heading override prop from `title` →
+  `screenTitle` so it doesn't clash with the new form field (no callers passed it).
+- `app/challenge/[id]/submit-proof.tsx` + `app/challenge/[id]/edit-proof.tsx` — pass
+  `title` into the mutation; edit modal pre-fills `initialTitle={today.data.title}`.
+
+### Display surfaces
+- `app/challenge/[id].tsx` recent-submission row → primary = submission title, subline
+  = `<author> · Day N` (was: heading = author, subline = Day N).
+- `app/submission/[id].tsx` reordered to spec — Title at top + SyncBadge, then a row
+  with `<Avatar>` + author display name + `Day N · <date+time>`, then the photo,
+  then the description card, then reactions/comments. Stack screen title is now the
+  submission's own title.
+- `app/verify/[submissionId].tsx` — heading switched to title (Day N moved to subline);
+  Stack title is the submission's title.
+- `app/(tabs)/profile.tsx` — submission row heading = `submission.title` (was
+  `challengeTitle`); date format dropped hour/minute (date only) per spec; group name
+  still appended after the date.
+
+### Checks
+- `npm run typecheck` clean.
+- `npm run lint` — 1 pre-existing warning (unrelated, in `app/challenge/[id].tsx`
+  exhaustive-deps); no new diagnostics.
+- `npx expo-doctor` — 18/18 checks pass.
+
+**In progress:** Slice T-053-A only. T-053-B (comment likes + merged comment composer
+arrow-send button) is next. T-053-C (free-form emoji reactions + reactor popover),
+T-053-D (other-user profile route + leaderboard avatars/crown/transfer-leadership),
+T-053-E (pull-to-refresh + streak tiles + iOS keyboard "Done" accessory) follow.
+
+**Next up:**
+1. **USER must apply** the W-034 migration in Supabase Dashboard → SQL editor (or
+   `supabase db push`). Idempotent — safe to re-run. The legacy backfill row will
+   only write into rows where `title IS NULL`.
+2. Start T-053-B: `comment_likes` table (W-035) + RPCs (`like_comment` /
+   `unlike_comment` / `list_comment_likers`); thread the heart UI + merged
+   send-arrow composer into `src/features/social/ui/CommentsSection.tsx`.
+
+**Blockers / decisions needed:** none — the user already locked the 4 design forks
+for this batch (title required + Day-N backfill; rich other-user profile; stat tiles
+for streak; `rn-emoji-keyboard` for reactions). Document is at the top of this file
+for the next session.
+
+**Branch / commit:** `mvp` @ pending — will commit + push after the user reviews.
+
+**Notes for next session:**
+- W-### counter is at **W-034**. Next migration → **W-035**.
+- The Home tab's "Verify a friend" pending-verification card still shows `challenge
+  title + Day N + author` — it doesn't carry the submission title yet. Could be widened
+  in a later slice if desired (touches `list_pending_verifications_for_me` RPC).
+- The Submission entity now has BOTH `title` (the submission's own title, required) and
+  `challengeTitle` (the joined parent-challenge title, optional from PostgREST
+  expansion). Don't confuse them.
+- The `SUBMISSION_DETAIL_DATE_FMT` constant in `app/submission/[id].tsx` includes hour+
+  minute; the profile uses a separate `DATE_FMT` with date-only. Intentional per spec.
+
+---
+
 ## 2026-06-08 — Claude 1 / T-050B hardening: per-outbox aggregation + shared-secret header
 
 **Did:** Two correctness/security fixes on `supabase/functions/dispatch-pushes/index.ts`

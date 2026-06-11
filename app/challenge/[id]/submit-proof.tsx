@@ -15,9 +15,9 @@ export default function SubmitProofModal() {
       <ProofComposer
         submitting={submit.isPending}
         errorMessage={submit.error instanceof Error ? submit.error.message : null}
-        onSubmit={async ({ mediaLocalUri, comment }) => {
+        onSubmit={async ({ title, mediaLocalUri, comment }) => {
           if (!id) return;
-          await submit.mutateAsync({ challengeId: id, mediaLocalUri, comment });
+          await submit.mutateAsync({ challengeId: id, title, mediaLocalUri, comment });
           router.back();
         }}
       />
