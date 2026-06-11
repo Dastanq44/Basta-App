@@ -21,6 +21,120 @@
 
 ---
 
+## 2026-06-11 — Claude 2 / Bootstrap consolidation: 25 migrations → 1
+
+**Did:** At the user's request, flattened the 25 incremental migrations
+(W-010 … W-038) into a SINGLE bootstrap migration that captures only the
+final intended state — no intermediate DROP/CREATE noise. Deleted all 25
+originals. Result: one ~2,300-line file replaces ~3,800 lines of historical
+deltas.
+
+### What landed
+- `supabase/migrations/20260528000000_bootstrap.sql` (new, single file).
+  Sections (top to bottom):
+  1. Extensions (`pgcrypto`).
+  2. Enums (`member_role`, `challenge_mode`, `submission_status`,
+     `verification_result`, `report_target`).
+  3. Tables (15) — final schema with all final columns + CHECK constraints
+     baked into the `create table` definitions (no later `alter table add
+     column` lines for the same row).
+  4. Indexes.
+  5. Helper functions (`is_group_member`, `is_group_admin`,
+     `is_challenge_participant` with the W-022 group-member widening,
+     `is_blocked_by_me`, `generate_invite_code`).
+  6. Trigger functions + their triggers (`add_owner_member`,
+     `add_creator_participant`, `touch_submissions_updated_at`,
+     `enqueue_verify_needed`, `enqueue_verify_result`).
+  7. Application RPCs (35+ SECURITY DEFINER functions, ALL in their final
+     form — `submit_proof` already takes `p_title`, `group_leaderboard`
+     already returns `avatar_url`, etc.).
+  8. RLS — every table's `enable row level security` + final policies
+     (with `drop policy if exists` headers so re-applying is safe).
+  9. Storage RLS for `proof-media` / `group-avatars` / `user-avatars`.
+  10. Grants — including the service-role-only restrictions on the
+      dispatch RPCs.
+- Removed all 25 prior migrations from `supabase/migrations/`.
+
+### What's intentionally NOT in the bootstrap
+- **Bucket creation.** `proof-media` / `group-avatars` / `user-avatars` must
+  still be created in Dashboard → Storage (the bootstrap's header documents
+  this). Buckets live in `storage.buckets` which typically isn't writable
+  from a project migration.
+- **Edge Function deploy.** `dispatch-pushes` and the
+  `DISPATCH_PUSH_SECRET` Supabase secret are out of scope — same
+  documented in the header.
+- **EAS init.** `npx eas init` for the ExpoPushToken projectId — same.
+- **Auth email template `{{ .Token }}`.** Documented in the header but the
+  Dashboard owns it.
+- **Legacy data backfills** (e.g. the W-034 `'Day N'` title backfill, the
+  W-026 invite-code regeneration). On a fresh DB those rows don't exist;
+  the bootstrap captures only the destination schema.
+
+### Why the consolidation is safe
+- Every `create or replace function` writes the final body — no order
+  dependency on a function being created in one section and dropped in
+  another.
+- All `create table` statements use `if not exists`, all `drop policy if
+  exists` precedes each `create policy`, all RLS is enabled idempotently.
+- The helper `is_challenge_participant` is created BEFORE any RPC or RLS
+  policy that references it (the file is ordered: extensions → enums →
+  tables → helpers → triggers → RPCs → RLS → storage RLS → grants).
+- The `enqueue_verify_needed` trigger function joins `public.blocks`,
+  which the bootstrap creates in the same file (earlier section) — the
+  W-033 dependency on W-019 is satisfied trivially.
+
+### Checks
+- The bootstrap is intended for a FRESH database. No automated DB
+  application was performed in this session — verification is the user's
+  next step.
+- `npm run typecheck` / `npm run lint` / `npx expo-doctor` not affected
+  (no client-side code touched).
+
+**In progress:** None. The migrations folder is at its final shape.
+
+**Next up:**
+1. **USER must apply the bootstrap.** Either:
+   - **Fresh DB path** (recommended): wipe the project (Dashboard → SQL
+     editor → `drop schema public cascade; create schema public; grant all
+     on schema public to postgres, anon, authenticated, service_role;`),
+     wipe auth.users, empty/recreate the 3 buckets, then paste the
+     bootstrap into the SQL editor (or `supabase db push`).
+   - **Existing-DB path**: applying the bootstrap on top of an already-
+     migrated DB is safe (everything is idempotent), but pointless —
+     nothing in it would change.
+2. Re-create the 3 Storage buckets if you wiped them:
+   `proof-media` private; `group-avatars` public; `user-avatars` public.
+3. Set `DISPATCH_PUSH_SECRET` + deploy `dispatch-pushes` Edge Function
+   (T-050B).
+4. `npx eas init` (T-050A) if `app.json` still lacks `expo.extra.eas.projectId`.
+
+**Blockers / decisions needed:** none.
+
+**Branch / commit:** `mvp` @ pending — will commit + push after this docs
+update.
+
+**Notes for next session:**
+- The W-### counter is effectively RETIRED. New migrations from now on can
+  start a fresh series (e.g. `W-100`) or just keep going from `W-039` —
+  whichever the next slice prefers. The current BUGS_AND_WARNINGS index
+  marks the old W-### entries as ARCHIVED-IN-BOOTSTRAP.
+- The bootstrap is a single file with the timestamp `20260528000000` —
+  the EARLIEST original timestamp. If anyone later adds a new migration,
+  it'll get a NEW timestamp (>= today) and run AFTER the bootstrap. The
+  Supabase CLI tracks state via the file's full name in
+  `supabase_migrations.schema_migrations`.
+- The bootstrap intentionally OMITS `update_group(p_group_id, p_name)`
+  (W-024) because `update_group_meta(...)` (W-030) is the superset; the
+  client only calls the latter. If you ever need the name-only RPC for
+  some legacy caller, it's recoverable from git history but otherwise
+  gone from the schema.
+- If you ever need to inspect the original W-### history, the git log
+  has each individual migration as its own commit between commits
+  `37953d6..e3f3888`. `git show <commit>` retrieves any old migration
+  file verbatim.
+
+---
+
 ## 2026-06-11 — Claude 2 / T-053-B…E: comment likes, free-form reactions, user profile, leaderboard polish, refresh + streak tiles + iOS Done
 
 **Did:** Shipped the remaining four slices of the T-053 UI/UX batch in four

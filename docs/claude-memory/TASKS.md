@@ -7,7 +7,8 @@
 ## In progress / next up
 | ID | Status | Phase | Task | Notes |
 |----|--------|-------|------|-------|
-| T-053 | DONE | mvp | UI/UX refinement batch (titles, comment likes, free-form reactions, user profile, leaderboard, streak, refresh, keyboard) | All 5 slices done — W-034..W-038. USER must apply all 5 migrations. See HANDOFF 2026-06-11. |
+| T-053 | DONE | mvp | UI/UX refinement batch (titles, comment likes, free-form reactions, user profile, leaderboard, streak, refresh, keyboard) | All 5 slices done — W-034..W-038. (Migrations consolidated into BOOTSTRAP 2026-06-11.) See HANDOFF 2026-06-11. |
+| T-054 | DONE | mvp | Bootstrap consolidation: 25 migrations → 1 | `supabase/migrations/20260528000000_bootstrap.sql`. The 25 originals were deleted. USER applies ONLY the bootstrap on a fresh DB. See HANDOFF 2026-06-11 (bootstrap entry). |
 | T-000 | DONE | setup | Create shared-memory & handoff system | This system of files |
 | T-001 | DONE | setup | `git init` + `.gitignore` + first commit; remote + `mvp` branch | git live on `mvp` |
 | T-004 | DONE | mvp | Architecture proposal (`docs/architecture/*`) | Proposal only — not implemented |

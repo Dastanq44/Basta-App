@@ -3,7 +3,15 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-06-11 — by: Claude 2 (T-053 batch complete — A through E)_
+_Last updated: 2026-06-11 — by: Claude 2 (bootstrap consolidation — 25 migrations → 1)_
+
+> **2026-06-11 bootstrap consolidation:** the 25 incremental migrations
+> (W-010 … W-038) were flattened into a single
+> `supabase/migrations/20260528000000_bootstrap.sql` (~2,300 lines) that
+> captures only the FINAL schema. The 25 originals were deleted. USER must
+> apply ONLY the bootstrap on a fresh database. The 3 Storage buckets,
+> Edge Function deploy, `DISPATCH_PUSH_SECRET`, and `npx eas init` remain
+> separate USER actions (documented in the bootstrap's header).
 
 > **2026-06-11 T-053-B…E refinement batch:** four more slices on top of T-053-A
 > ship together. **W-035** (`comment_likes`): heart on every comment (counter

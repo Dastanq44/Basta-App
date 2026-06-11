@@ -13,6 +13,31 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
 
 ## Active warnings (not bugs — traps to respect)
 
+## [OPEN] BOOTSTRAP — Apply the consolidated migration + recreate Storage buckets + secrets
+- **Date:** 2026-06-11 · **Area:** backend / Supabase + Storage + Edge Functions
+- **Single migration file:** `supabase/migrations/20260528000000_bootstrap.sql`.
+  This ONE migration replaces W-010 … W-038 (the 25 prior incremental
+  migrations were deleted from the repo). Apply via Dashboard → SQL editor
+  or `supabase db push`. Idempotent.
+- **All [OPEN] `W-0NN — Apply ...` entries below are ARCHIVED-IN-BOOTSTRAP.**
+  They describe historical migrations that were folded into the bootstrap.
+  Do NOT try to re-apply them individually — they no longer exist as files.
+  Use git history (`git log --all -- supabase/migrations/`) to inspect the
+  original deltas if needed.
+- **Storage buckets** (USER must create in Dashboard → Storage):
+  - `proof-media` — Public: **OFF** (RLS policies in the bootstrap grant
+    own-folder INSERT + co-participant SELECT)
+  - `group-avatars` — Public: **ON** (public read; owner-only writes)
+  - `user-avatars` — Public: **ON** (public read; self-only writes/deletes)
+- **Edge Function** (T-050B): `npx supabase secrets set DISPATCH_PUSH_SECRET=<long-random>`
+  then `npx supabase functions deploy dispatch-pushes --no-verify-jwt`.
+  Without these, verification-flow push triggers enqueue rows but nothing
+  consumes them.
+- **EAS projectId** (T-050A): `npx eas init` if `app.json` lacks
+  `expo.extra.eas.projectId`.
+- **Auth email template:** must contain `{{ .Token }}` (W-008). The mobile
+  PKCE flow uses the 6-digit token, not the magic link URL.
+
 ## [OPEN] W-001 — Repo is not initialized yet
 - **Date:** 2026-05-27 · **Area:** setup
 - **Trap:** There is no git repo and no app code. The "check git status / continue from existing
