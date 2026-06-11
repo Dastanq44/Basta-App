@@ -5,6 +5,7 @@ import {
   getComments,
   getReactions,
   listCommentLikers,
+  listReactionReactors,
   reactToSubmission,
   setCommentLike,
 } from '../api';
@@ -14,6 +15,8 @@ export const reactionsQueryKey = (submissionId: string) => ['reactions', submiss
 export const commentsQueryKey = (submissionId: string) => ['comments', submissionId] as const;
 export const commentLikersQueryKey = (commentId: string) =>
   ['comment-likers', commentId] as const;
+export const reactionReactorsQueryKey = (submissionId: string, emoji: string) =>
+  ['reaction-reactors', submissionId, emoji] as const;
 
 export function useReactions(submissionId: string | undefined) {
   const session = useSession();
@@ -99,6 +102,22 @@ export function useCommentLikers(commentId: string | undefined, enabled: boolean
     queryKey: commentLikersQueryKey(commentId ?? ''),
     queryFn: () => listCommentLikers(commentId!),
     enabled: enabled && session.status === 'signedIn' && !!commentId,
+    staleTime: 15_000,
+    retry: 1,
+  });
+}
+
+/** Users who reacted to a submission with a given emoji — for the long-press popover on a chip. */
+export function useReactionReactors(
+  submissionId: string | undefined,
+  emoji: string | undefined,
+  enabled: boolean,
+) {
+  const session = useSession();
+  return useQuery({
+    queryKey: reactionReactorsQueryKey(submissionId ?? '', emoji ?? ''),
+    queryFn: () => listReactionReactors(submissionId!, emoji!),
+    enabled: enabled && session.status === 'signedIn' && !!submissionId && !!emoji,
     staleTime: 15_000,
     retry: 1,
   });

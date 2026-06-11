@@ -55,6 +55,46 @@ export async function reactToSubmission(submissionId: string, emoji: string | nu
   }
 }
 
+type ReactionReactorRow = {
+  user_id: string;
+  username: string | null;
+  display_name: string | null;
+  reacted_at: string;
+};
+
+export type ReactionReactor = {
+  userId: string;
+  username?: string;
+  displayName?: string;
+  reactedAt: string;
+};
+
+/** Users who reacted with a given emoji — for the long-press popover (W-036). */
+export async function listReactionReactors(
+  submissionId: string,
+  emoji: string,
+): Promise<ReactionReactor[]> {
+  const c = ctrl();
+  try {
+    const { data, error } = await supabase
+      .rpc('list_submission_reactors', {
+        p_submission_id: submissionId,
+        p_emoji: emoji,
+      })
+      .abortSignal(c.signal);
+    if (error) throw error;
+    return ((data ?? []) as ReactionReactorRow[]).map((r) => ({
+      userId: r.user_id,
+      username: r.username ?? undefined,
+      displayName: r.display_name ?? undefined,
+      reactedAt: r.reacted_at,
+    }));
+  } catch (e) {
+    console.error('[basta] listReactionReactors failed:', e);
+    throw e;
+  }
+}
+
 // ---------- Comments ----------
 
 type CommentRow = {
