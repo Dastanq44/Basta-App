@@ -270,6 +270,60 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
 - **Apply via:** Supabase Dashboard → SQL editor (idempotent — safe to re-apply).
   Also: create the public `user-avatars` Storage bucket.
 
+## [OPEN] W-038 — Apply streak-aggregate migration (T-053-E)
+- **Date:** 2026-06-11 · **Area:** backend / Supabase
+- **What:** `supabase/migrations/20260608400000_streak_aggregate.sql` adds
+  `get_my_streak_aggregate()` RPC returning `{current_streak, best_streak}`.
+  Best uses a gaps-and-islands query over the caller's verified days; current
+  reuses the home_overview anchor-and-walk. SECURITY DEFINER + grant to
+  authenticated. NO existing surface changes.
+- **Apply via:** Supabase Dashboard → SQL editor (or `supabase db push`).
+- **Client coupling:** `useMyStreakAggregate` on the Profile tab calls this
+  RPC. Without W-038 applied, the streak tiles render `0 / 0`.
+
+## [OPEN] W-037 — Apply group_leaderboard avatar widening (T-053-D)
+- **Date:** 2026-06-11 · **Area:** backend / Supabase
+- **What:** `supabase/migrations/20260608300000_leaderboard_avatars.sql`
+  DROPs + recreates `group_leaderboard(uuid)` to add `avatar_url` to
+  RETURNS TABLE. CREATE OR REPLACE can't change the return shape.
+- **Apply via:** Supabase Dashboard → SQL editor (or `supabase db push`).
+- **Client coupling:** the leaderboard API reads `avatar_url` from each row
+  and the new LeaderboardRow renders an avatar between the rank # and the
+  name. Without W-037 applied, avatars fall back to initials (no crash, just
+  no photos on the board).
+
+## [OPEN] W-036 — Apply free-form reactions migration (T-053-C)
+- **Date:** 2026-06-11 · **Area:** backend / Supabase
+- **What:** `supabase/migrations/20260608200000_freeform_reactions.sql`
+  widens the `submission_reactions.emoji` CHECK from `1..8` → `1..32` chars
+  so multi-codepoint ZWJ emojis (skin tones, family) fit; adds
+  `list_submission_reactors(p_submission_id, p_emoji)` RPC for the
+  long-press reactors popover. SECURITY DEFINER + grant to authenticated.
+- **Apply via:** Supabase Dashboard → SQL editor (or `supabase db push`).
+- **Client coupling:** the rewritten `ReactionBar` calls
+  `list_submission_reactors` on long-press and the user picks an emoji from
+  the rn-emoji-keyboard picker; some of those emojis exceed 8 chars and
+  would be rejected by the old CHECK constraint.
+- **Dep note:** `rn-emoji-keyboard` was installed with a **one-off**
+  `npm install ... --legacy-peer-deps` (recurring W-013 ERESOLVE around
+  react-dom/react peers). NOT added to `.npmrc` per the project rule —
+  prefer the clean reinstall workflow when `node_modules/` need a redo.
+
+## [OPEN] W-035 — Apply comment-likes migration (T-053-B)
+- **Date:** 2026-06-11 · **Area:** backend / Supabase
+- **What:** `supabase/migrations/20260608100000_comment_likes.sql` creates
+  `submission_comment_likes` (`(comment_id, user_id)` PK; ON DELETE CASCADE
+  against both parents) + RLS read-allowed when the caller is a challenge
+  participant of the comment's parent submission. Adds three SECURITY
+  DEFINER RPCs: `like_comment`, `unlike_comment`, `list_comment_likers`.
+  Also adds `list_submission_comments(p_submission_id)` which bundles
+  author display + per-row `likes_count` + `liked_by_me` so the client
+  doesn't N+1.
+- **Apply via:** Supabase Dashboard → SQL editor (or `supabase db push`).
+- **Client coupling:** the rewritten `CommentsSection` calls
+  `list_submission_comments`. Without W-035 applied, the comments query
+  fails with "function does not exist".
+
 ## [OPEN] W-034 — Apply submission-titles migration (T-053-A)
 - **Date:** 2026-06-11 · **Area:** backend / Supabase
 - **What:** `supabase/migrations/20260608000000_submission_titles.sql` adds

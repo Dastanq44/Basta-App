@@ -21,6 +21,149 @@
 
 ---
 
+## 2026-06-11 — Claude 2 / T-053-B…E: comment likes, free-form reactions, user profile, leaderboard polish, refresh + streak tiles + iOS Done
+
+**Did:** Shipped the remaining four slices of the T-053 UI/UX batch in four
+commits on `mvp` after T-053-A. Four new migrations land (W-035 → W-038);
+all USER-must-apply.
+
+### T-053-B (commit `d81af52`) — Comment likes + merged composer
+- **W-035** (`20260608100000_comment_likes.sql`): `submission_comment_likes`
+  table (`(comment_id, user_id)` PK, CASCADE both ways), RLS read-allowed for
+  challenge participants, `like_comment` / `unlike_comment` /
+  `list_comment_likers` RPCs (participant-gated), `list_submission_comments`
+  RPC bundling author display + per-row `likes_count` + `liked_by_me`.
+- `SubmissionComment` entity widened: `likesCount` (required int) +
+  `likedByMe` (required bool) + raw `authorUsername` / `authorDisplayName`.
+- Social API: dropped the direct SELECT, uses the new RPC; added
+  `setCommentLike` + `listCommentLikers`.
+- `useToggleCommentLike` is **optimistic** (cache flip + revert on error);
+  `useCommentLikers(commentId, enabled)` is lazy via the `enabled` flag.
+- `CommentsSection` rewritten: rows are Avatar + author + body + heart
+  button on the right (`♥`/`♡`; counter only when `> 0`); long-press the
+  heart opens a `BottomSheet` of likers. "Add a comment…" + "Post" merged
+  into one **pill row** with a 36×36 circular **arrow-up** send button.
+
+### T-053-C (commit `5b77cc7`) — Free-form emoji reactions
+- **W-036** (`20260608200000_freeform_reactions.sql`): widen
+  `submission_reactions.emoji` CHECK from `1..8` → `1..32` chars so
+  multi-codepoint ZWJ emojis (skin tones, family) fit;
+  `list_submission_reactors(p_submission_id, p_emoji)` RPC for the
+  long-press reactors popover.
+- **Dep:** `rn-emoji-keyboard` added. **W-013 ERESOLVE** triggered as
+  expected; resolved with a one-off `npm install rn-emoji-keyboard
+  --legacy-peer-deps` (NOT added to `.npmrc` — the project rule stands).
+  expo-doctor 18/18.
+- `listReactionReactors` + `ReactionReactor` type in the social API;
+  `useReactionReactors(submissionId, emoji, enabled)` hook.
+- `ReactionBar` rewritten: chips for emojis with `count > 0` (sorted by
+  count desc); long-press a chip → `BottomSheet` of reactors. `(+)` button
+  at the right toggles an inline preset popover with the canonical
+  `REACTION_EMOJIS` + a `(+)` that opens the full `rn-emoji-keyboard`
+  picker (search + categories). Tapping any emoji upserts the caller's
+  reaction; re-tapping the chosen emoji clears it.
+
+### T-053-D (commit `79f2338`) — User profile route + leaderboard polish
+- **W-037** (`20260608300000_leaderboard_avatars.sql`): drop + recreate
+  `group_leaderboard` to add `avatar_url` to RETURNS TABLE.
+- New route `app/user/[id].tsx`: read-only public profile (avatar +
+  display name + `@username` + bio + ActivityHeatmap + recent
+  submissions). Bounces to `/(tabs)/profile` if the route lands on the
+  caller's own id.
+- Extracted **`src/features/profile/ui/ActivityHeatmap.tsx`** so the own
+  Profile tab and the user route render the same chart (removed the
+  inline copy from `(tabs)/profile.tsx`).
+- New `fetchPublicProfile` + `usePublicProfile` + `PublicProfile` type in
+  onboarding (uses the W-031 wide-open profiles RLS).
+- New `listUserRecentSubmissions` + `useUserRecentSubmissions` in proofs
+  (mirror of the Mine variant; RLS gates the rows to challenges the
+  caller participates in).
+- **CrownIcon redesigned**: three rounded peaks with gem dots over a
+  pill base; default tint switched from `mutedForeground` → `primary`.
+- Group leaderboard rewrite (`app/group/[id].tsx`): rank # → Avatar
+  (uses the new `avatar_url`) → name → **CROWN ON THE RIGHT of the
+  nickname** → count + "proofs". Tap any row → `/user/[id]` (or
+  `/(tabs)/profile` for self). Transfer-leadership moved off the row tap:
+  3-dot menu now has a "Transfer leadership" item (owner-only) that opens
+  a `TransferLeadershipSheet` with the non-self members; tapping a member
+  reuses the existing confirm-and-transfer Alert flow.
+
+### T-053-E (commit `3c54243`) — Pull-to-refresh + streak tiles + iOS Done
+- **W-038** (`20260608400000_streak_aggregate.sql`): `get_my_streak_aggregate()`
+  RPC returns `{current_streak, best_streak}`. Best is computed via a
+  gaps-and-islands query over the caller's verified days; current reuses
+  the anchor-and-walk from `home_overview`.
+- Home feature: new `getMyStreakAggregate` + `useMyStreakAggregate` +
+  `StreakAggregate` type.
+- **Home (Today) tab**: `<RefreshControl>` over the ScrollView. Refresh
+  fans out to overview + profile + challenges + recentSubmissions.
+- **Profile tab**: `<RefreshControl>` on BOTH branches (the submissions
+  `FlatList` + the ranking `ScrollView`). Refresh fans out to profile +
+  submissions + streak.
+- New `<StreakTiles>` row on Profile renders two `<StatTile>`s — Current
+  (streak tone + 🔥) + Best (primary tone + 🏆), each with a day/days
+  unit. Slots above the heatmap on both branches.
+- Shared **`<KeyboardDoneAccessory>`** primitive: iOS-only
+  `InputAccessoryView` with a "Done" button that calls
+  `Keyboard.dismiss()`. Mounted ONCE at the root (`app/_layout.tsx`).
+  `nativeID = 'basta.keyboard.done'`. UIKit binds it to every multiline
+  TextInput by that id.
+- **`Input` primitive**: auto-attaches `inputAccessoryViewID` on iOS
+  multiline (caller can override). The comment composer's raw RN
+  `TextInput` opts in explicitly. No-op on Android (system handles it).
+
+### Checks (every slice)
+- `npm run typecheck` clean.
+- `npm run lint` clean (1 pre-existing warning in
+  `app/challenge/[id].tsx` exhaustive-deps; unrelated).
+- `npx expo-doctor` 18/18 (re-verified after the `rn-emoji-keyboard`
+  install in T-053-C).
+
+**In progress:** None. T-053 batch complete pending user-side migrations.
+
+**Next up:**
+1. **USER must apply** in Supabase Dashboard / `supabase db push`:
+   - **W-035** (`20260608100000_comment_likes.sql`)
+   - **W-036** (`20260608200000_freeform_reactions.sql`)
+   - **W-037** (`20260608300000_leaderboard_avatars.sql`)
+   - **W-038** (`20260608400000_streak_aggregate.sql`)
+   All four are idempotent.
+2. After verifying the slices in a real build, consider T-050C (push
+   preferences UI + daily reminders + pg_cron + tap deep-linking) — that
+   was deferred pre-T-053 and is still on the board.
+
+**Blockers / decisions needed:** none.
+
+**Branch / commit:** `mvp` @ `3c54243` (will push after this docs commit).
+
+**Notes for next session:**
+- W-### counter is at **W-038**. Next migration → **W-039**.
+- The home page Pull-to-refresh fans out into 4 queries; if you ever
+  notice "first pull dismisses too early", the `refreshing` derivation in
+  `app/(tabs)/index.tsx` uses `isFetching && !isPending` so it stays true
+  only during a real refetch, not initial load. Same pattern in profile.
+- `rn-emoji-keyboard` was installed with `--legacy-peer-deps` (W-013
+  fallout). If you ever need to reinstall node_modules from scratch, do
+  the CLEAN reinstall (`rm -rf node_modules package-lock.json && npm
+  install`) — NOT a permanent `.npmrc` flag. (See memory:
+  feedback-npm-peer-conflicts.)
+- The CrownIcon redesign defaults to the theme `primary` tint. Any place
+  that previously relied on the muted gray tone needs to pass `color`
+  explicitly. The only consumer right now is `LeaderboardRow`.
+- `app/user/[id].tsx` re-uses the SAME `ActivityHeatmap` as the own
+  Profile, so any heatmap polish lives in
+  `src/features/profile/ui/ActivityHeatmap.tsx` now.
+- The transfer-leadership flow is now 3 steps: 3-dot → "Transfer
+  leadership" → modal member picker → Alert.alert confirm. The Alert
+  comes from the existing `confirmTransfer` function which I kept
+  unchanged for safety.
+- The shared "Done" key works for ALL multiline TextInputs via Input
+  auto-attach + the one root-mounted accessory. Single-line inputs use
+  `returnKeyType="done"` (T-053-A already set this on the ProofComposer
+  title field).
+
+---
+
 ## 2026-06-11 — Claude 2 / T-053-A: submission titles end-to-end
 
 **Did:** Shipped slice A of the T-053 UI/UX refinement batch — required submission

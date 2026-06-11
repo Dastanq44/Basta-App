@@ -3,7 +3,29 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-06-11 — by: Claude 2 (T-053-A — submission titles end-to-end)_
+_Last updated: 2026-06-11 — by: Claude 2 (T-053 batch complete — A through E)_
+
+> **2026-06-11 T-053-B…E refinement batch:** four more slices on top of T-053-A
+> ship together. **W-035** (`comment_likes`): heart on every comment (counter
+> only when > 0), long-press → BottomSheet of likers; "Add a comment…" + "Post"
+> merged into one pill with a circular arrow-up send button.
+> **W-036** (`freeform_reactions`): widens `submission_reactions.emoji` CHECK
+> to 32 chars, adds `list_submission_reactors`, and the client adds
+> `rn-emoji-keyboard` for a full system-style picker (`(+)` button → preset
+> popover with REACTION_EMOJIS + a `(+)` that opens the full picker;
+> long-press a chip → BottomSheet of reactors).
+> **W-037** (`leaderboard_avatars`): `group_leaderboard` now returns
+> `avatar_url`. New read-only `app/user/[id].tsx` route (avatar + name + bio
+> + shared `ActivityHeatmap` + recent submissions, RLS-gated). CrownIcon
+> redesigned (rounded peaks with gem dots, primary tint). Leaderboard rows
+> = rank → avatar → name → crown-RIGHT → count. Tap → user profile.
+> Transfer-leadership moved into the group 3-dot sheet → modal member
+> picker.
+> **W-038** (`streak_aggregate`): `get_my_streak_aggregate` returns current
+> + best. Profile shows two StatTiles (🔥 current + 🏆 best). Pull-to-
+> refresh wired on Home and Profile tabs; shared `<KeyboardDoneAccessory>`
+> mounted at the root gives every multiline TextInput a native iOS "Done"
+> button above the keyboard. **USER must apply W-035 + W-036 + W-037 + W-038.**
 
 > **2026-06-11 T-053-A submission titles:** every submission now carries a required
 > user-supplied title (1..80 chars). New migration **W-034**
