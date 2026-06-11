@@ -3,7 +3,16 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-06-11 — by: Claude 2 (bootstrap consolidation — 25 migrations → 1)_
+_Last updated: 2026-06-11 — by: Claude (connect app to NEW Supabase project + apply bootstrap)_
+
+> **2026-06-11 NEW Supabase project + schema live:** the backend moved to a fresh
+> project **`ycbesrmtlcippgpswzta`** (`https://ycbesrmtlcippgpswzta.supabase.co`),
+> **replacing `lppfqzqeaizbzunrxnpn`**. USER set the local (gitignored) `.env` and
+> ran the bootstrap migration. Schema verified live via anon REST: `profiles` +
+> `groups` return `HTTP 200 []`. **Still to confirm:** the 3 Storage buckets
+> (`proof-media` private, `group-avatars` public, `user-avatars` public) exist in the
+> new project; Edge Function `dispatch-pushes` + `DISPATCH_PUSH_SECRET` + `npx eas init`
+> remain separate USER actions. Each Claude must point its OWN `.env` at this project.
 
 > **2026-06-11 bootstrap consolidation:** the 25 incremental migrations
 > (W-010 … W-038) were flattened into a single
@@ -249,7 +258,7 @@ features have NOT been exercised at runtime — pending the four migrations abov
   register only after a Claude Code session reload.
 
 ## Not yet decided / needs setup
-- **Supabase project exists** (`lppfqzqeaizbzunrxnpn`); URL + anon key in local `.env`. **Schema
+- **Supabase project** is now `ycbesrmtlcippgpswzta` (was `lppfqzqeaizbzunrxnpn`); URL + anon key in local `.env`. **Bootstrap schema APPLIED + verified live (2026-06-11).** Older note below is superseded. **Schema
   not applied yet** (T-003).
 - **Supabase email-template config (USER):** confirm `{{ .Token }}` is in the "Confirm signup"
   template — required for OTP flow (W-008).

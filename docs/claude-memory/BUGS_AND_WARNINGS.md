@@ -13,7 +13,29 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
 
 ## Active warnings (not bugs — traps to respect)
 
+## [OPEN] W-039 — Backend moved to a NEW Supabase project; each Claude must reconfigure `.env`
+- **Date:** 2026-06-11 · **Area:** environment / Supabase
+- **What:** The backend was migrated to a fresh project **`ycbesrmtlcippgpswzta`**
+  (`https://ycbesrmtlcippgpswzta.supabase.co`), **replacing `lppfqzqeaizbzunrxnpn`**.
+  The bootstrap schema is applied + verified live there (anon REST `profiles`/`groups`
+  → `HTTP 200 []`). The DB is empty (no seed data).
+- **Trap:** `.env` is **gitignored and machine-local** — it does NOT travel between the
+  two Claude accounts. If your local `.env` still points at the old project (or is
+  missing), the app talks to the wrong/empty backend.
+- **Fix (per machine):** set in `.env` —
+  `EXPO_PUBLIC_SUPABASE_URL=https://ycbesrmtlcippgpswzta.supabase.co` and
+  `EXPO_PUBLIC_SUPABASE_ANON_KEY=<new project's anon key>` (Dashboard → Settings → API),
+  then `npx expo start --clear` (Metro inlines env at build time). Anon key is public/safe
+  (W-005) but **never commit `.env`**.
+- **Note:** This session's harness hard-blocks all tool access to `.env*` (a secrets
+  guardrail), so an AI session cannot write `.env` for you — the USER must.
+- **Status:** Open until both machines + on-device smoke test confirm the new project.
+
 ## [OPEN] BOOTSTRAP — Apply the consolidated migration + recreate Storage buckets + secrets
+> **2026-06-11 UPDATE:** the bootstrap has now been **APPLIED to the new project
+> `ycbesrmtlcippgpswzta`** and the schema is verified live (anon REST). Storage buckets,
+> Edge Function deploy + secret, and `npx eas init` are STILL pending USER confirmation
+> on the new project. See W-039 above for the `.env` reconfiguration.
 - **Date:** 2026-06-11 · **Area:** backend / Supabase + Storage + Edge Functions
 - **Single migration file:** `supabase/migrations/20260528000000_bootstrap.sql`.
   This ONE migration replaces W-010 … W-038 (the 25 prior incremental

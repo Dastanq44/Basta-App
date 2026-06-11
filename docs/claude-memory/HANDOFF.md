@@ -21,6 +21,75 @@
 
 ---
 
+## 2026-06-11 — Claude / Connect app to NEW Supabase project + apply bootstrap (no code change)
+
+**Did:** Infra/connection session — **no application code was written or changed.**
+1. **Synced:** `git pull` fast-forwarded `mvp` from `bd38ad7` → `5769716` (9 commits:
+   T-050B push dispatch + Edge Function, T-053-A…E social/UX batch, and the 25→1
+   bootstrap consolidation). `npm install` pulled the new `rn-emoji-keyboard` dep
+   (W-036) into `node_modules`.
+2. **NEW Supabase project provisioned by USER:** project ref
+   **`ycbesrmtlcippgpswzta`** (URL `https://ycbesrmtlcippgpswzta.supabase.co`).
+   This **REPLACES the old project `lppfqzqeaizbzunrxnpn`.** The USER updated the
+   **local `.env`** (gitignored — `EXPO_PUBLIC_SUPABASE_URL` + anon key) themselves;
+   I could not, because this session's harness hard-blocks all access to `.env*`
+   (Read/Write/shell) as a secrets guardrail.
+3. **Bootstrap applied + verified:** the USER ran
+   `supabase/migrations/20260528000000_bootstrap.sql` against the new project.
+   I confirmed the schema is live via anon REST probes:
+   `GET /rest/v1/profiles?select=id&limit=1` and `/groups` both return **HTTP 200 `[]`**
+   (earlier, pre-apply, `profiles` returned `PGRST205 "table not found"`). The anon
+   key is valid and `auth/v1/health` is `200`.
+
+**In progress:** None. This was a connect-and-verify session.
+
+**Changed files (this session):**
+- Docs only: `HANDOFF.md`, `CURRENT_STATE.md`, `TASKS.md`, `BUGS_AND_WARNINGS.md`.
+- **No source changes.** `package-lock.json` churned during `npm install` (the W-013
+  react-dom/react-refresh/scheduler drift) — I **`git restore`d it** so the team's
+  clean-reinstall lockfile (commit `7012884`) stays intact. Tree is clean otherwise.
+- `.env` was edited by the USER but is gitignored and never committed.
+
+**Next up (mostly USER actions before code resumes):**
+1. **Verify the 3 Storage buckets exist** in the NEW project (Dashboard → Storage):
+   `proof-media` (Public OFF), `group-avatars` (Public ON), `user-avatars` (Public ON).
+   I could NOT verify these via the anon key — please confirm. Without them, proof
+   upload + avatars fail at runtime even though the schema is applied.
+2. (Optional, only for live push) `npx supabase secrets set DISPATCH_PUSH_SECRET=…`
+   + `npx supabase functions deploy dispatch-pushes --no-verify-jwt`; `npx eas init`.
+3. Confirm the Auth confirm-signup email template contains `{{ .Token }}` (W-008) on
+   the new project.
+4. **Smoke-test the full loop on-device** against the new project (register → group →
+   challenge → submit proof → verify → streak → leaderboard).
+5. Then resume code: **T-050C** (notification prefs UI + reminders + tap-deep-links) or
+   **Phase 5 / T-072** (Challenges-tab "My challenges" + submissions feed).
+
+**Tests run:** `npm run typecheck` ✅ · `npm run lint` ✅ (1 pre-existing warning only).
+Plus live REST connectivity probes against the new project (documented above).
+**Tests NOT run:** unit/component/E2E — none configured (W-007, no runner). The app was
+**not launched on a device** this session — the new-project connection is verified at the
+REST layer only, not through the actual RN client / auth / Storage upload paths.
+
+**Blockers / decisions needed:** None. No DECISIONS.md change (swapping the backing
+Supabase project is an environment change, not an architecture decision).
+
+**Warnings for the next Claude:**
+- **`.env` is machine-local and gitignored.** If you're the OTHER account on a different
+  machine, your `.env` still points at the OLD project (or is missing). Set:
+  `EXPO_PUBLIC_SUPABASE_URL=https://ycbesrmtlcippgpswzta.supabase.co` + the new anon key
+  (Dashboard → Settings → API), then `npx expo start --clear` (Metro inlines env at
+  build time). The anon key is public/safe per W-005 — but never commit `.env`.
+- The new DB is **empty** (fresh bootstrap) — no seed data. First run starts from zero
+  users/groups/challenges.
+- **W-013** lockfile churn will reappear on every `npm install`; restore it rather than
+  commit it, to preserve the clean lockfile.
+- Old project `lppfqzqeaizbzunrxnpn` is abandoned — ignore stale references to it in
+  older docs/history.
+
+**Branch / commit:** `mvp` @ pending — will commit + push these doc updates.
+
+---
+
 ## 2026-06-11 — Claude 2 / Bootstrap consolidation: 25 migrations → 1
 
 **Did:** At the user's request, flattened the 25 incremental migrations

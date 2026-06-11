@@ -16,7 +16,7 @@
 | T-002 | DONE | mvp | Scaffold Expo + TS app (expo-router) + feature folders | Phase 0 foundation; tsc+lint green |
 | T-020 | DONE | mvp | Email auth (PKCE), secure token storage, session hook | Supabase + secure-store wired; tsc+lint green; runtime NOT yet exercised (W-008) |
 | T-061a | DONE | setup | **Expo SDK 52 → 54 upgrade** (pulled early from T-061) | 18/18 expo-doctor; tsc+lint+`expo start --clear` green. ⚠️ DO NOT downgrade to SDK 52 — iOS Expo Go tracks latest. ⚠️ Use `npx expo install <pkg>` for all new Expo-related deps to preserve SDK 54 alignment. |
-| T-003 | DOING | mvp | Supabase project + apply schema + RLS | **Migration file written** (`supabase/migrations/20260528000000_phase1_profiles_groups.sql`); USER must apply via Dashboard SQL editor — see W-010 |
+| T-003 | DONE | mvp | Supabase project + apply schema + RLS | **2026-06-11:** consolidated `20260528000000_bootstrap.sql` APPLIED to the NEW project `ycbesrmtlcippgpswzta` (replaces `lppfqzqeaizbzunrxnpn`); schema verified live via anon REST (`profiles`/`groups` → 200 `[]`). Remaining: confirm 3 Storage buckets exist; deploy `dispatch-pushes` + secret + `eas init`. |
 | T-021 | DONE | mvp | Terms acceptance gate (versioned) | `CURRENT_TERMS_VERSION` + `profiles.terms_version`; gate redirects to profile-setup on mismatch |
 | T-022 | DONE | mvp | Profile setup; onboarding gate on server `onboarded` flag | Real form (username/displayName/timezone/terms); `onboarded` only flips true after group setup |
 | T-023 | DONE | mvp | Friend invite links + search; group create / join | `createGroup` + `joinGroupByInvite` RPC; on success flips `onboarded=true` and redirects to tabs |
