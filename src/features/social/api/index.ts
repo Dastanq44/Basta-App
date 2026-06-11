@@ -1,7 +1,7 @@
 // Social API — reactions + short comments on submissions. Writes via RPC (participant-gated);
 // reads are direct SELECTs (RLS limits them to challenge participants).
 import { supabase } from '@/shared/lib/supabase';
-import type { SubmissionComment } from '@/entities';
+import type { CommentLiker, SubmissionComment } from '@/entities';
 import type { ReactionSummary } from '../model';
 
 const TIMEOUT_MS = 10_000;
@@ -61,34 +61,40 @@ type CommentRow = {
   id: string;
   submission_id: string;
   author_id: string;
+  author_username: string | null;
+  author_display_name: string | null;
   body: string;
   created_at: string;
-  profiles: { username: string | null; display_name: string | null } | null;
+  likes_count: number;
+  liked_by_me: boolean;
 };
 
 function toComment(r: CommentRow): SubmissionComment {
+  const displayName = r.author_display_name ?? undefined;
+  const username = r.author_username ?? undefined;
   return {
     id: r.id,
     submissionId: r.submission_id,
     authorId: r.author_id,
-    authorName: r.profiles?.display_name ?? r.profiles?.username ?? undefined,
+    authorUsername: username,
+    authorDisplayName: displayName,
+    authorName: displayName ?? (username ? `@${username}` : undefined),
     body: r.body,
     createdAt: r.created_at,
+    likesCount: r.likes_count ?? 0,
+    likedByMe: !!r.liked_by_me,
   };
 }
 
-/** Comments on a submission, oldest first, with author display name resolved. */
+/** Comments on a submission, oldest first, with author + like aggregate (W-035 RPC). */
 export async function getComments(submissionId: string): Promise<SubmissionComment[]> {
   const c = ctrl();
   try {
     const { data, error } = await supabase
-      .from('submission_comments')
-      .select('id, submission_id, author_id, body, created_at, profiles(username, display_name)')
-      .eq('submission_id', submissionId)
-      .order('created_at', { ascending: true })
+      .rpc('list_submission_comments', { p_submission_id: submissionId })
       .abortSignal(c.signal);
     if (error) throw error;
-    return ((data ?? []) as unknown as CommentRow[]).map(toComment);
+    return ((data ?? []) as CommentRow[]).map(toComment);
   } catch (e) {
     console.error('[basta] getComments failed:', e);
     throw e;
@@ -106,6 +112,50 @@ export async function addComment(submissionId: string, body: string): Promise<st
     return (data as { id: string }).id;
   } catch (e) {
     console.error('[basta] addComment failed:', e);
+    throw e;
+  }
+}
+
+// ---------- Comment likes (W-035) ----------
+
+/** Toggle the current user's like on a comment. Optimistic-friendly. */
+export async function setCommentLike(commentId: string, liked: boolean): Promise<void> {
+  const c = ctrl();
+  try {
+    const fn = liked ? 'like_comment' : 'unlike_comment';
+    const { error } = await supabase
+      .rpc(fn, { p_comment_id: commentId })
+      .abortSignal(c.signal);
+    if (error) throw new Error(error.message || 'Could not update like');
+  } catch (e) {
+    console.error('[basta] setCommentLike failed:', e);
+    throw e;
+  }
+}
+
+type CommentLikerRow = {
+  user_id: string;
+  username: string | null;
+  display_name: string | null;
+  liked_at: string;
+};
+
+/** Users who liked a given comment (for the long-press popover). */
+export async function listCommentLikers(commentId: string): Promise<CommentLiker[]> {
+  const c = ctrl();
+  try {
+    const { data, error } = await supabase
+      .rpc('list_comment_likers', { p_comment_id: commentId })
+      .abortSignal(c.signal);
+    if (error) throw error;
+    return ((data ?? []) as CommentLikerRow[]).map((r) => ({
+      userId: r.user_id,
+      username: r.username ?? undefined,
+      displayName: r.display_name ?? undefined,
+      likedAt: r.liked_at,
+    }));
+  } catch (e) {
+    console.error('[basta] listCommentLikers failed:', e);
     throw e;
   }
 }
