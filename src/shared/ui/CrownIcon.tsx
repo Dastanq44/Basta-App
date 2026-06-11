@@ -4,68 +4,92 @@ import { useTheme } from './theme';
 export type CrownIconProps = {
   /** Outer width in px (the height follows the crown's natural proportions). Default 14. */
   size?: number;
-  /** Override color. Defaults to the theme's muted foreground for a neutral gray. */
+  /** Override color. Defaults to the theme's primary so the leader badge reads warmly. */
   color?: string;
 };
 
 /**
- * Tiny crown badge built from pure `View` primitives — no dependency on icon libraries
- * (avoids the recurring SDK 54 `npm install` ERESOLVE described in W-013). The shape is
- * three upward-pointing triangles on a small bar, tintable to any color.
- *
- * Used to mark the group leader in `app/group/[id].tsx` leaderboard rows.
+ * Compact crown badge — three rounded peaks topped with small "gem" dots over a
+ * pill-rounded base. Pure `View` primitives so we add no icon dep (W-013 fallout).
+ * Defaults to the theme's primary tint so the leader badge reads as an accent rather
+ * than a muted glyph. Redesigned for T-053-D — see DECISIONS.md if you're tempted to
+ * revert it to the older three-triangles silhouette.
  */
 export function CrownIcon({ size = 14, color }: CrownIconProps) {
   const t = useTheme();
-  const fill = color ?? t.colors.mutedForeground;
-  const peakHeight = Math.round(size * 0.55);
-  const peakWidth = Math.round(size * 0.28);
-  const sidePeakHeight = Math.round(peakHeight * 0.82);
-  const barHeight = Math.max(2, Math.round(size * 0.22));
+  const fill = color ?? t.colors.primary;
+
+  const peakSize = Math.round(size * 0.28);
+  const gemSize = Math.max(2, Math.round(size * 0.18));
+  const baseHeight = Math.max(3, Math.round(size * 0.28));
+  const peakRow = Math.round(size * 0.5);
+  const middlePeakBoost = Math.round(size * 0.12);
 
   return (
     <View
       accessibilityRole="image"
       accessibilityLabel="Group leader"
-      style={{ width: size, height: size, justifyContent: 'flex-end' }}
+      style={{ width: size, height: size, justifyContent: 'flex-end', alignItems: 'center' }}
     >
+      {/* Three rounded peaks with gem dots. Middle peak is taller. */}
       <View
         style={{
+          width: size,
+          height: peakRow + middlePeakBoost,
           flexDirection: 'row',
-          justifyContent: 'space-between',
           alignItems: 'flex-end',
+          justifyContent: 'space-between',
           marginBottom: -1,
         }}
       >
-        <Triangle width={peakWidth} height={sidePeakHeight} color={fill} />
-        <Triangle width={peakWidth} height={peakHeight} color={fill} />
-        <Triangle width={peakWidth} height={sidePeakHeight} color={fill} />
+        <Peak size={peakSize} gem={gemSize} color={fill} />
+        <Peak size={peakSize} gem={gemSize} color={fill} taller={middlePeakBoost} />
+        <Peak size={peakSize} gem={gemSize} color={fill} />
       </View>
+
+      {/* Rounded-pill base bar. */}
       <View
         style={{
-          height: barHeight,
+          width: size,
+          height: baseHeight,
+          borderRadius: baseHeight / 2,
           backgroundColor: fill,
-          borderRadius: 1,
         }}
       />
     </View>
   );
 }
 
-/** Upward triangle via the classic border-trick. width = base; height = altitude. */
-function Triangle({ width, height, color }: { width: number; height: number; color: string }) {
+function Peak({
+  size,
+  gem,
+  color,
+  taller = 0,
+}: {
+  size: number;
+  gem: number;
+  color: string;
+  taller?: number;
+}) {
   return (
-    <View
-      style={{
-        width: 0,
-        height: 0,
-        borderLeftWidth: width / 2,
-        borderRightWidth: width / 2,
-        borderBottomWidth: height,
-        borderLeftColor: 'transparent',
-        borderRightColor: 'transparent',
-        borderBottomColor: color,
-      }}
-    />
+    <View style={{ alignItems: 'center', gap: 1 }}>
+      <View
+        style={{
+          width: gem,
+          height: gem,
+          borderRadius: gem / 2,
+          backgroundColor: color,
+        }}
+      />
+      <View
+        style={{
+          width: size,
+          height: size + taller,
+          borderTopLeftRadius: size / 2,
+          borderTopRightRadius: size / 2,
+          backgroundColor: color,
+        }}
+      />
+    </View>
   );
 }

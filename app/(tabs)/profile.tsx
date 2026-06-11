@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Alert, FlatList, Image, Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
+import { Alert, FlatList, Image, Pressable, ScrollView, View } from 'react-native';
 import { type Href, useRouter } from 'expo-router';
 import {
   Avatar,
@@ -16,6 +16,7 @@ import { useSession, useSignOut } from '@/features/auth';
 import { useProfile, userAvatarUrl } from '@/features/onboarding';
 import { useRequestAccountDeletion } from '@/features/moderation';
 import { SyncBadge, useMyRecentSubmissions } from '@/features/proofs';
+import { ActivityHeatmap } from '@/features/profile';
 import type { Submission } from '@/entities';
 
 type Tab = 'submissions' | 'ranking';
@@ -277,186 +278,9 @@ function ProfileHeader({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ActivityHeatmap — GitHub-style daily activity calendar, last 90 days.
-//
-// Grid: 13 columns (weeks) × 7 rows (days, Sun..Sat). Newest week on the right.
-// Each cell is colored by the count of submissions on that local-date. Counting is
-// "any submission" — verified, pending, and rejected all count toward the heat.
-// Tradeoff: the strictest variant (verified only) would mirror streak math, but the
-// user picked the inclusive version so even a still-pending day visually registers.
+// ActivityHeatmap lives in src/features/profile/ui/ActivityHeatmap.tsx (shared
+// with the read-only user profile route at app/user/[id].tsx — T-053-D).
 // ─────────────────────────────────────────────────────────────────────────────
-
-const HEATMAP_WEEKS = 13;
-const HEATMAP_DAYS = 7;
-const HEATMAP_GAP = 3; // px
-
-function ActivityHeatmap({ submissions }: { submissions: Submission[] }) {
-  const t = useTheme();
-  const { width: winW } = useWindowDimensions();
-  const [selected, setSelected] = useState<{ date: Date; count: number; key: string } | null>(null);
-
-  // Dynamic cell size — fill the screen width edge-to-edge (minus the screen + heatmap
-  // inner padding). 13 cells + 12 gaps:
-  //   screen padding (lg) ×2 + heatmap inner padding (sm) ×2 + (13-1) gaps consumed.
-  const cellSize = Math.max(
-    12,
-    Math.floor(
-      (winW - 2 * t.spacing.lg - 2 * t.spacing.sm - (HEATMAP_WEEKS - 1) * HEATMAP_GAP) /
-        HEATMAP_WEEKS,
-    ),
-  );
-
-  // Compute cell dates + per-day counts.
-  const { cells, counts } = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    // Start grid on the Sunday (HEATMAP_WEEKS - 1) weeks before this week's Sunday so the
-    // rightmost column is the current week.
-    const startSunday = new Date(today);
-    startSunday.setDate(today.getDate() - today.getDay() - (HEATMAP_WEEKS - 1) * 7);
-
-    const cellArr: { date: Date; key: string; inRange: boolean }[] = [];
-    for (let w = 0; w < HEATMAP_WEEKS; w++) {
-      for (let d = 0; d < HEATMAP_DAYS; d++) {
-        const date = new Date(startSunday);
-        date.setDate(startSunday.getDate() + w * 7 + d);
-        const key = toLocalYMD(date);
-        // inRange: not in the future relative to today.
-        cellArr.push({ date, key, inRange: date.getTime() <= today.getTime() });
-      }
-    }
-
-    const countMap = new Map<string, number>();
-    for (const s of submissions) {
-      const key = toLocalYMD(new Date(s.createdAt));
-      countMap.set(key, (countMap.get(key) ?? 0) + 1);
-    }
-    return { cells: cellArr, counts: countMap };
-  }, [submissions]);
-
-  // Fixed buckets (was: relative-to-max). 0 / 1 / 2-3 / 4+ — the top bucket clamps so 4+
-  // submissions always render at full primary saturation, no transparency.
-  const colorFor = (count: number, inRange: boolean): string => {
-    if (count >= 4) return t.colors.primary;
-    if (count >= 2) return blendPrimary(t.colors.primarySoft, t.colors.primary, 0.65);
-    if (count >= 1) return t.colors.primarySoft;
-    // 0 submissions: was t.colors.muted — too transparent against the card. Use border
-    // tone (mid-gray) which reads as "empty but present" on both light + dark themes.
-    // Future cells share the same tone.
-    return inRange ? t.colors.border : t.colors.border;
-  };
-
-  return (
-    <View style={{ gap: t.spacing.xs }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <Text variant="label" style={{ color: t.colors.mutedForeground }}>
-          ACTIVITY · LAST 90 DAYS
-        </Text>
-        <Text variant="caption" style={{ color: t.colors.mutedForeground }}>
-          {submissions.length} submissions
-        </Text>
-      </View>
-
-      <View
-        style={{
-          padding: t.spacing.sm,
-          backgroundColor: t.colors.card,
-          borderRadius: t.radius.md,
-          borderWidth: 1,
-          borderColor: t.colors.border,
-          gap: t.spacing.xs,
-        }}
-      >
-        <View style={{ flexDirection: 'row', gap: HEATMAP_GAP, justifyContent: 'space-between' }}>
-          {Array.from({ length: HEATMAP_WEEKS }, (_, col) => (
-            <View key={col} style={{ gap: HEATMAP_GAP }}>
-              {Array.from({ length: HEATMAP_DAYS }, (_, row) => {
-                const cell = cells[col * HEATMAP_DAYS + row];
-                if (!cell) return null;
-                const count = counts.get(cell.key) ?? 0;
-                const isSelected = selected?.key === cell.key;
-                return (
-                  <Pressable
-                    key={row}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${cell.date.toLocaleDateString()}, ${count} submission${count === 1 ? '' : 's'}`}
-                    onPress={() =>
-                      setSelected((prev) => (prev?.key === cell.key ? null : { date: cell.date, count, key: cell.key }))
-                    }
-                  >
-                    <View
-                      style={{
-                        width: cellSize,
-                        height: cellSize,
-                        borderRadius: 3,
-                        backgroundColor: colorFor(count, cell.inRange),
-                        // Selected cell gets a primary ring so it's clear which day the
-                        // popover refers to.
-                        borderWidth: isSelected ? 1.5 : 0,
-                        borderColor: t.colors.primary,
-                      }}
-                    />
-                  </Pressable>
-                );
-              })}
-            </View>
-          ))}
-        </View>
-
-        {/* Day detail popover. Rendered BELOW the grid inside the same Card so it doesn't
-            require absolute positioning math. Tap the cell again (or any other cell) to
-            change/dismiss. */}
-        {selected ? (
-          <View
-            style={{
-              marginTop: t.spacing.xs,
-              paddingTop: t.spacing.xs,
-              borderTopWidth: 1,
-              borderTopColor: t.colors.border,
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
-          >
-            <Text variant="subtitle">
-              {selected.date.toLocaleDateString(undefined, {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric',
-              })}
-            </Text>
-            <Text variant="muted">
-              {selected.count} submission{selected.count === 1 ? '' : 's'}
-            </Text>
-          </View>
-        ) : null}
-      </View>
-    </View>
-  );
-}
-
-function toLocalYMD(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-// Linear blend two hex colors (#RRGGBB) by ratio 0..1. Used to build the two mid-intensity
-// shades of the heatmap from the existing primarySoft and primary tokens without adding
-// new theme entries.
-function blendPrimary(aHex: string, bHex: string, ratio: number): string {
-  const a = parseHex(aHex);
-  const b = parseHex(bHex);
-  if (!a || !b) return aHex;
-  const r = Math.round(a.r + (b.r - a.r) * ratio);
-  const g = Math.round(a.g + (b.g - a.g) * ratio);
-  const bb = Math.round(a.b + (b.b - a.b) * ratio);
-  return `#${[r, g, bb].map((n) => n.toString(16).padStart(2, '0')).join('')}`;
-}
-function parseHex(hex: string): { r: number; g: number; b: number } | null {
-  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
-  if (!m) return null;
-  const v = parseInt(m[1]!, 16);
-  return { r: (v >> 16) & 0xff, g: (v >> 8) & 0xff, b: v & 0xff };
-}
 
 // Profile rows show DATE ONLY (no clock time) — slice T-053-A.
 const DATE_FMT: Intl.DateTimeFormatOptions = {

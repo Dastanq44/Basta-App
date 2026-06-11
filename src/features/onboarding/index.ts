@@ -7,7 +7,9 @@ export {
   useUpsertProfile,
   useCompleteOnboarding,
   useUpdateMyProfile,
+  usePublicProfile,
   profileQueryKey,
+  publicProfileQueryKey,
 } from './hooks';
 
 export {
@@ -25,4 +27,4 @@ export {
   deleteMyAvatar,
   userAvatarUrl,
 } from './api';
-export type { UpdateMyProfilePayload } from './api';
+export type { UpdateMyProfilePayload, PublicProfile } from './api';

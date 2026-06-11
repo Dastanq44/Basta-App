@@ -9,6 +9,8 @@ export type LeaderboardEntry = {
   userId: UserId;
   username?: string;
   displayName?: string;
+  /** Public storage path from `profiles.avatar_url` (W-037). */
+  avatarUrl?: string;
   /** Number of verified proofs across the group's challenges. */
   verifiedCount: number;
   rank: number;

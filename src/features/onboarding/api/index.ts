@@ -75,6 +75,56 @@ export async function fetchProfile(): Promise<User | null> {
   }
 }
 
+/**
+ * Read another user's PUBLIC profile fields (W-031 RLS widening lets any authenticated
+ * user see `id, username, display_name, avatar_url, description` on any profile).
+ * Used by the read-only `app/user/[id].tsx` route (T-053-D).
+ */
+export type PublicProfile = {
+  id: string;
+  username?: string;
+  displayName: string;
+  avatarUrl?: string;
+  description?: string;
+};
+
+export async function fetchPublicProfile(userId: string): Promise<PublicProfile | null> {
+  const ctrl = new AbortController();
+  const timeoutId = setTimeout(
+    () => ctrl.abort(new Error(`fetchPublicProfile timed out after ${PROFILE_FETCH_TIMEOUT_MS}ms`)),
+    PROFILE_FETCH_TIMEOUT_MS,
+  );
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, username, display_name, avatar_url, description')
+      .eq('id', userId)
+      .abortSignal(ctrl.signal)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    const row = data as {
+      id: string;
+      username: string | null;
+      display_name: string | null;
+      avatar_url: string | null;
+      description: string | null;
+    };
+    return {
+      id: row.id,
+      username: row.username ?? undefined,
+      displayName: row.display_name ?? row.username ?? 'Member',
+      avatarUrl: row.avatar_url ?? undefined,
+      description: row.description ?? undefined,
+    };
+  } catch (e) {
+    console.error('[basta] fetchPublicProfile failed:', e);
+    throw e;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 export type UpsertProfilePayload = {
   username: string;
   displayName: string;

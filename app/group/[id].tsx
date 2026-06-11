@@ -27,6 +27,7 @@ import {
 } from '@/features/groups';
 import { useGroupLeaderboard } from '@/features/leaderboard';
 import { ReportSheet } from '@/features/moderation';
+import { userAvatarUrl } from '@/features/onboarding';
 import type { Challenge, LeaderboardEntry } from '@/entities';
 
 type Tab = 'main' | 'board' | 'global';
@@ -48,6 +49,7 @@ export default function GroupScreen() {
   const transfer = useTransferGroupLeadership();
   const [tab, setTab] = useState<Tab>('main');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
 
   // Auto-fading "Copied to clipboard" chip that lives at the top of the settings sheet.
@@ -280,9 +282,13 @@ export default function GroupScreen() {
               entry={item}
               isMe={item.userId === myUid}
               isLeader={item.userId === group?.ownerId}
-              onTransfer={
-                isOwner && item.userId !== myUid && !transfer.isPending ? () => confirmTransfer(item) : undefined
-              }
+              onPress={() => {
+                if (item.userId === myUid) {
+                  router.push('/(tabs)/profile' as Href);
+                } else {
+                  router.push(`/user/${item.userId}` as Href);
+                }
+              }}
             />
           )}
         />
@@ -392,6 +398,13 @@ export default function GroupScreen() {
                 router.push(`/group/${id}/edit` as Href);
               }}
             />
+            <BottomSheetMenuItem
+              label="Transfer leadership"
+              onPress={() => {
+                setMenuOpen(false);
+                setTransferOpen(true);
+              }}
+            />
             {/* Archive sits in the owner block but is rendered in the default (foreground)
                 tone, not the destructive red — per the user's request. The Alert.alert
                 confirmation downstream still describes the consequence clearly. */}
@@ -434,6 +447,17 @@ export default function GroupScreen() {
           targetLabel="this group"
         />
       ) : null}
+
+      <TransferLeadershipSheet
+        visible={transferOpen}
+        onClose={() => setTransferOpen(false)}
+        members={(board.data ?? []).filter((m) => m.userId !== myUid)}
+        pending={transfer.isPending}
+        onPick={(entry) => {
+          setTransferOpen(false);
+          confirmTransfer(entry);
+        }}
+      />
     </Screen>
   );
 }
@@ -476,39 +500,104 @@ function LeaderboardRow({
   entry,
   isMe,
   isLeader,
-  onTransfer,
+  onPress,
 }: {
   entry: LeaderboardEntry;
   isMe: boolean;
   isLeader: boolean;
-  onTransfer?: () => void;
+  onPress: () => void;
 }) {
   const t = useTheme();
   const name = entry.displayName || entry.username || 'Member';
-  const card = (
-    <Card style={isMe ? { borderWidth: 1.5, borderColor: t.colors.accent } : undefined}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.md }}>
-        <Text variant="title" style={{ width: 44, color: t.colors.mutedForeground }}>
-          {entry.rank}
-        </Text>
-        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: t.spacing.xs }}>
-          {isLeader ? <CrownIcon size={14} /> : null}
-          <Text variant="heading">
-            {name}
-            {isMe ? <Text variant="muted">  (You)</Text> : null}
+  const avatarRemoteUrl = userAvatarUrl(entry.avatarUrl ?? null);
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityHint={isMe ? 'Open your profile' : "Open this member's profile"}
+      onPress={onPress}
+    >
+      <Card style={isMe ? { borderWidth: 1.5, borderColor: t.colors.accent } : undefined}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.md }}>
+          <Text variant="title" style={{ width: 28, color: t.colors.mutedForeground, textAlign: 'center' }}>
+            {entry.rank}
           </Text>
+          {avatarRemoteUrl ? (
+            <Image source={{ uri: avatarRemoteUrl }} style={{ width: 36, height: 36, borderRadius: 18 }} />
+          ) : (
+            <Avatar name={name} size={36} />
+          )}
+          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Text variant="heading" numberOfLines={1}>
+              {name}
+              {isMe ? <Text variant="muted">  (You)</Text> : null}
+            </Text>
+            {isLeader ? <CrownIcon size={14} /> : null}
+          </View>
+          <Text variant="heading">{entry.verifiedCount}</Text>
+          <Text variant="muted">proofs</Text>
         </View>
-        <Text variant="heading">{entry.verifiedCount}</Text>
-        <Text variant="muted">proofs</Text>
-      </View>
-    </Card>
+      </Card>
+    </Pressable>
   );
-  if (onTransfer) {
-    return (
-      <Pressable accessibilityRole="button" accessibilityHint="Transfer leadership" onPress={onTransfer}>
-        {card}
-      </Pressable>
-    );
-  }
-  return card;
+}
+
+function TransferLeadershipSheet({
+  visible,
+  onClose,
+  members,
+  pending,
+  onPick,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  members: LeaderboardEntry[];
+  pending: boolean;
+  onPick: (entry: LeaderboardEntry) => void;
+}) {
+  const t = useTheme();
+  return (
+    <BottomSheet visible={visible} onClose={onClose}>
+      <View style={{ gap: t.spacing.sm, paddingBottom: t.spacing.xs }}>
+        <Text variant="heading">Transfer leadership</Text>
+        <Text variant="muted">
+          Pick the member who should become the new leader. You&apos;ll be asked to confirm.
+        </Text>
+        {members.length === 0 ? (
+          <Text variant="muted">No other members to transfer to.</Text>
+        ) : (
+          members.map((m) => {
+            const name = m.displayName || m.username || 'Member';
+            const avatarRemoteUrl = userAvatarUrl(m.avatarUrl ?? null);
+            return (
+              <Pressable
+                key={m.userId}
+                accessibilityRole="button"
+                accessibilityLabel={`Make ${name} the leader`}
+                disabled={pending}
+                onPress={() => onPick(m)}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: t.spacing.sm,
+                  paddingVertical: t.spacing.sm,
+                  paddingHorizontal: t.spacing.sm,
+                  borderRadius: t.radius.md,
+                  backgroundColor: t.colors.muted,
+                  opacity: pending ? 0.6 : 1,
+                }}
+              >
+                {avatarRemoteUrl ? (
+                  <Image source={{ uri: avatarRemoteUrl }} style={{ width: 36, height: 36, borderRadius: 18 }} />
+                ) : (
+                  <Avatar name={name} size={36} />
+                )}
+                <Text variant="body" style={{ flex: 1 }}>{name}</Text>
+                <Text variant="muted">›</Text>
+              </Pressable>
+            );
+          })
+        )}
+      </View>
+    </BottomSheet>
+  );
 }

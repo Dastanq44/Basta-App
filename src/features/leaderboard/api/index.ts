@@ -13,6 +13,7 @@ type LeaderboardRow = {
   user_id: string;
   username: string | null;
   display_name: string | null;
+  avatar_url: string | null;
   verified_count: number | string;
 };
 
@@ -28,6 +29,7 @@ export async function getGroupLeaderboard(groupId: string): Promise<LeaderboardE
       userId: r.user_id,
       username: r.username ?? undefined,
       displayName: r.display_name ?? undefined,
+      avatarUrl: r.avatar_url ?? undefined,
       verifiedCount: Number(r.verified_count) || 0,
       rank: i + 1,
     }));
