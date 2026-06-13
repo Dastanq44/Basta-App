@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Avatar, Button, Card, Screen, Text, useTheme } from '@/shared/ui';
@@ -32,6 +32,7 @@ export default function SubmissionScreen() {
   const blockedIds = useBlockedUserIds();
   const blockUser = useBlockUser();
   const [reportOpen, setReportOpen] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
 
   if (submission.isPending) {
     return (
@@ -106,6 +107,7 @@ export default function SubmissionScreen() {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 96 : 0}
       >
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.lg, paddingBottom: t.spacing.xl }}
         keyboardShouldPersistTaps="handled"
       >
@@ -161,7 +163,13 @@ export default function SubmissionScreen() {
 
         <ReactionBar submissionId={s.id} />
 
-        <CommentsSection submissionId={s.id} />
+        <CommentsSection
+          submissionId={s.id}
+          onComposerFocus={() => {
+            // Let the keyboard finish animating in, then bring the composer above it.
+            setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 250);
+          }}
+        />
 
         {!isMine ? (
           <View style={{ gap: t.spacing.sm, marginTop: t.spacing.md }}>

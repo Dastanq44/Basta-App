@@ -146,7 +146,10 @@ export function ReactionBar({ submissionId }: { submissionId: string }) {
         // (a non-floating bar). 'top' would reverse the column and push search to the bottom;
         // 'floating' would make the category bar "levitate" over the emojis.
         categoryPosition="bottom"
-        defaultHeight="65%"
+        // The library grows the sheet by the keyboard height when typing (so it isn't covered),
+        // which pushes the top-anchored search bar up. A shorter base height keeps the search
+        // bar lower / closer to the keyboard while typing.
+        defaultHeight="45%"
         expandable={false}
         theme={{
           backdrop: '#00000066',
@@ -261,7 +264,7 @@ function ReactorsSheet({
   const reactors = useReactionReactors(submissionId, emoji ?? undefined, !!emoji);
 
   return (
-    <BottomSheet visible={!!emoji} onClose={onClose}>
+    <BottomSheet visible={!!emoji} onClose={onClose} bottomInset={96}>
       <View style={{ gap: t.spacing.sm }}>
         <Text variant="heading">Reacted {emoji ?? ''}</Text>
         {reactors.isPending ? (

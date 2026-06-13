@@ -18,7 +18,14 @@ import {
 const COMMENT_MAX = 280;
 
 /** Comments thread + composer for a submission (T-053-B). */
-export function CommentsSection({ submissionId }: { submissionId: string }) {
+export function CommentsSection({
+  submissionId,
+  onComposerFocus,
+}: {
+  submissionId: string;
+  /** Called when the comment input gains focus — the screen scrolls it above the keyboard. */
+  onComposerFocus?: () => void;
+}) {
   const t = useTheme();
   const comments = useComments(submissionId);
   const add = useAddComment(submissionId);
@@ -56,6 +63,7 @@ export function CommentsSection({ submissionId }: { submissionId: string }) {
         value={body}
         onChange={setBody}
         onSend={onSend}
+        onFocus={onComposerFocus}
         sending={add.isPending}
         canSend={canSend}
       />
@@ -134,6 +142,7 @@ function HeartButton({
       accessibilityHint={count > 0 ? 'Hold to see who liked it' : undefined}
       onPress={onPress}
       onLongPress={count > 0 ? onLongPress : undefined}
+      delayLongPress={220}
       hitSlop={6}
       style={{
         flexDirection: 'row',
@@ -141,7 +150,8 @@ function HeartButton({
         gap: 4,
         paddingHorizontal: 6,
         paddingVertical: 2,
-        alignSelf: 'flex-start',
+        // Vertically centered against the comment body (was pinned to the top).
+        alignSelf: 'center',
       }}
     >
       <Text
@@ -172,12 +182,14 @@ function ComposerRow({
   value,
   onChange,
   onSend,
+  onFocus,
   sending,
   canSend,
 }: {
   value: string;
   onChange: (s: string) => void;
   onSend: () => void;
+  onFocus?: () => void;
   sending: boolean;
   canSend: boolean;
 }) {
@@ -205,6 +217,7 @@ function ComposerRow({
         maxLength={COMMENT_MAX}
         editable={!sending}
         multiline
+        onFocus={onFocus}
         returnKeyType="default"
         inputAccessoryViewID={KEYBOARD_DONE_ACCESSORY_ID}
         style={{
@@ -259,7 +272,7 @@ function CommentLikersSheet({
   const likers = useCommentLikers(commentId ?? undefined, !!commentId);
 
   return (
-    <BottomSheet visible={!!commentId} onClose={onClose}>
+    <BottomSheet visible={!!commentId} onClose={onClose} bottomInset={96}>
       <View style={{ gap: t.spacing.sm }}>
         <Text variant="heading">Liked by</Text>
         {likers.isPending ? (
