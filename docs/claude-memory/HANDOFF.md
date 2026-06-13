@@ -64,8 +64,9 @@ expose invite codes globally.
 (`ycbesrmtlcippgpswzta`) — Dashboard SQL editor or `supabase db push`. It's idempotent. No new
 Storage buckets or secrets required.
 
-**Branch / commit:** `mvp` @ pending push (commit `feat(privacy): add visibility controls for
-global discovery`).
+**Branch / commit:** `mvp` @ `811ae71` (`feat(privacy): add visibility controls for global
+discovery`) + a `docs(handoff)` follow-up. Working tree clean; **2 commits ahead of `origin/mvp`,
+not pushed** — push when ready.
 
 **Notes for next session:**
 - The Global predicate is centralized in `is_submission_globally_visible` — reuse it for the feed
