@@ -7,14 +7,16 @@ type Tone = 'streak' | 'success' | 'warning' | 'primary';
 
 export type StatTileProps = {
   value: string | number;
+  /** Small unit rendered inline right after the value (e.g. "days"). */
+  unit?: string;
   label: string;
   tone?: Tone;
   /** Emoji string or a custom node rendered in the tinted circle. */
   icon?: ReactNode | string;
 };
 
-/** Compact stat card: tinted icon circle + big value + caption (the home "streak / done / rank" tiles). */
-export function StatTile({ value, label, tone = 'primary', icon }: StatTileProps) {
+/** Compact stat card: tinted icon circle + big value (+ optional inline unit) + caption. */
+export function StatTile({ value, unit, label, tone = 'primary', icon }: StatTileProps) {
   const t = useTheme();
   const toneColor = { streak: t.colors.streak, success: t.colors.success, warning: t.colors.warning, primary: t.colors.primary }[tone];
   return (
@@ -22,7 +24,14 @@ export function StatTile({ value, label, tone = 'primary', icon }: StatTileProps
       <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: toneColor + '22', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
         {typeof icon === 'string' ? <Text style={{ fontSize: 16 }}>{icon}</Text> : icon}
       </View>
-      <Text style={{ fontSize: t.fontSize.xl, fontWeight: '800', color: t.colors.foreground }}>{value}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+        <Text style={{ fontSize: t.fontSize.xl, fontWeight: '800', color: t.colors.foreground }}>{value}</Text>
+        {unit ? (
+          <Text style={{ fontSize: t.fontSize.sm, fontWeight: '700', color: t.colors.mutedForeground, marginLeft: 4 }}>
+            {unit}
+          </Text>
+        ) : null}
+      </View>
       <Text variant="caption" numberOfLines={2}>
         {label}
       </Text>

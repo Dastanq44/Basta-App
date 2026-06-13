@@ -269,16 +269,18 @@ function StreakTiles({ current, best }: { current: number; best: number }) {
         <StatTile
           tone="streak"
           icon="🔥"
-          value={String(current)}
-          label={`Current streak · ${current === 1 ? 'day' : 'days'}`}
+          value={current}
+          unit={current === 1 ? 'day' : 'days'}
+          label="Current streak"
         />
       </View>
       <View style={{ flex: 1 }}>
         <StatTile
           tone="primary"
           icon="🏆"
-          value={String(best)}
-          label={`Best streak · ${best === 1 ? 'day' : 'days'}`}
+          value={best}
+          unit={best === 1 ? 'day' : 'days'}
+          label="Best streak"
         />
       </View>
     </View>
