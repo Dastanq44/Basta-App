@@ -2,6 +2,7 @@
 // Public surface only. Internals (api/, hooks/, model/) MUST NOT be imported directly.
 export {
   useSession,
+  SessionProvider,
   useSignIn,
   useSignUp,
   useVerifyOtp,

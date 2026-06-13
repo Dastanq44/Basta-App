@@ -18,7 +18,7 @@ import NetInfo from '@react-native-community/netinfo';
 import { supabase } from '@/shared/lib/supabase';
 import { uploadProofMedia } from '@/offline/upload';
 import type { SubmitProofPayload } from './types';
-import { due, reschedule, remove, setStatus } from './store';
+import { due, reschedule, remove, setStatus, recoverInterrupted } from './store';
 
 const BASE_DELAY_MS = 1_000;
 const MAX_DELAY_MS = 5 * 60_000;
@@ -30,32 +30,44 @@ export function backoffDelayMs(attempts: number): number {
 }
 
 let running = false;
+let pendingKick = false;
 let stopped = false;
 let netUnsub: (() => void) | null = null;
 let appStateSub: { remove: () => void } | null = null;
 
 /** Public: kick the processor once. Safe to call from anywhere; coalesced internally. */
 export async function kick(): Promise<void> {
-  if (running || stopped) return;
+  if (stopped) return;
+  // Coalesce: if a run is already in flight, remember that more work was requested so the
+  // current run re-checks the queue on its trailing edge. Without this, a proof enqueued +
+  // kicked DURING an active upload would sit idle until the next NetInfo/AppState event.
+  if (running) {
+    pendingKick = true;
+    return;
+  }
   running = true;
   try {
-    const { isConnected } = await NetInfo.fetch();
-    if (!isConnected) return;
+    do {
+      pendingKick = false;
+      const { isConnected } = await NetInfo.fetch();
+      if (!isConnected) return; // a reconnect event will re-kick
 
-    const jobs = await due(Date.now());
-    for (const job of jobs) {
-      try {
-        if (job.type === 'SUBMIT_PROOF') {
-          await handleSubmitProof(job.id, job.payload as SubmitProofPayload);
-        } else {
-          // No other types in Phase 2 — defensive: mark failed so it doesn't loop silently.
-          await setStatus(job.id, 'failed', `unknown queue type: ${job.type}`);
+      const jobs = await due(Date.now());
+      for (const job of jobs) {
+        try {
+          if (job.type === 'SUBMIT_PROOF') {
+            await handleSubmitProof(job.id, job.payload as SubmitProofPayload);
+          } else {
+            // No other types in Phase 2 — defensive: mark failed so it doesn't loop silently.
+            await setStatus(job.id, 'failed', `unknown queue type: ${job.type}`);
+          }
+        } catch (e) {
+          await onJobError(job.id, job.attempts, e);
+          // Don't break — give the next job a chance.
         }
-      } catch (e) {
-        await onJobError(job.id, job.attempts, e);
-        // Don't break — give the next job a chance.
       }
-    }
+      // Re-run if another kick landed while we were processing (picks up just-enqueued jobs).
+    } while (pendingKick);
   } finally {
     running = false;
   }
@@ -130,8 +142,13 @@ export function startProcessor(): () => void {
     if (state === 'active') void kick();
   });
 
-  // 3) Initial pass once we have a chance to mount.
-  void kick();
+  // 3) Recover any upload interrupted by a previous app kill (stuck in `uploading`), then
+  //    do the initial pass. Recovery runs first so the reset jobs are due-eligible for the kick.
+  void recoverInterrupted(Date.now())
+    .catch((e) => console.error('[basta] queue recovery failed:', e))
+    .finally(() => {
+      void kick();
+    });
 
   return () => {
     stopped = true;

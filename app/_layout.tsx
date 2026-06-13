@@ -5,7 +5,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { queryClient } from '@/shared/lib/queryClient';
-import { useSession } from '@/features/auth';
+import { SessionProvider, useSession } from '@/features/auth';
 import { HeaderBackButton, KeyboardDoneAccessory, ThemeProvider, useTheme, useThemeMode } from '@/shared/ui';
 import { isAtTarget, useOnboardingGate } from '@/navigation/guards';
 import { initOffline } from '@/offline';
@@ -31,15 +31,18 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider>
-          <ThemedStatusBar />
-          <RootNav />
-          {/* Shared iOS "Done" bar above the keyboard. UIKit binds it to multiline
-              TextInputs by `nativeID`, so a single instance covers the whole app. */}
-          <KeyboardDoneAccessory />
-        </ThemeProvider>
-      </QueryClientProvider>
+      {/* One auth subscription for the whole app; every useSession() reads this context. */}
+      <SessionProvider>
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider>
+            <ThemedStatusBar />
+            <RootNav />
+            {/* Shared iOS "Done" bar above the keyboard. UIKit binds it to multiline
+                TextInputs by `nativeID`, so a single instance covers the whole app. */}
+            <KeyboardDoneAccessory />
+          </ThemeProvider>
+        </QueryClientProvider>
+      </SessionProvider>
     </SafeAreaProvider>
   );
 }

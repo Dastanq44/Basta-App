@@ -65,6 +65,22 @@ export async function due<T = unknown>(now: number): Promise<QueuedMutation<T>[]
   return rows.map((r) => rowToMutation<T>(r));
 }
 
+/**
+ * Recover jobs left in the transient `uploading` state by a previous app session that was
+ * killed mid-upload. `due()` only returns `queued`/`offline_retry`, so without this an
+ * interrupted upload would be orphaned forever — silently losing the proof (violates D-004).
+ * Re-running is safe: the storage path is deterministic (upsert overwrites) and `submit_proof`
+ * is idempotent. Call once on processor startup, before the first `kick()`.
+ */
+export async function recoverInterrupted(now: number): Promise<void> {
+  const db = await getDb();
+  await db.runAsync(
+    `UPDATE queue_items SET status = 'offline_retry', next_attempt_at = ?, updated_at = ?
+     WHERE status = 'uploading'`,
+    [now, now],
+  );
+}
+
 /** Items that need user attention (failed) or are in flight (uploading) — for UI. */
 export async function listAll<T = unknown>(): Promise<QueuedMutation<T>[]> {
   const db = await getDb();

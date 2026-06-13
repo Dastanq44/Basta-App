@@ -21,6 +21,51 @@
 
 ---
 
+## 2026-06-13 — Claude (opus) / Codebase audit: queue robustness + 1 session subscription + dead code
+
+**Did:** Full-codebase inspection for bugs + safe optimizations. typecheck, lint
+(0 warnings), expo-doctor 18/18 all green.
+
+### Fixed
+1. **CRITICAL (D-004) — interrupted uploads were orphaned.** The queue `due()`
+   query only returns `queued`/`offline_retry`, but the processor sets a job to
+   `uploading` while it runs. An app kill mid-upload left the job stuck in
+   `uploading` forever — never retried, proof silently lost. Added
+   `recoverInterrupted()` (resets `uploading` → `offline_retry`) and call it in
+   `startProcessor()` before the first `kick()`. Safe to re-run (deterministic
+   storage path + idempotent `submit_proof`). `src/offline/queue/{store,processor}.ts`.
+2. **Queue latency — a proof enqueued during an active upload waited for the next
+   NetInfo/AppState event.** `kick()` dropped concurrent calls. Added a
+   trailing-edge coalesce (`pendingKick` + `do…while`) so the in-flight run
+   re-checks the queue and picks up just-enqueued jobs immediately.
+3. **~30 redundant auth subscriptions → 1.** `useSession()` created its own
+   `getSession()` + `onAuthStateChange` per call site (31 of them, many inside
+   data hooks), so one screen spun up several subscriptions all re-rendering
+   independently on each auth event. Hoisted to a `SessionProvider` mounted once
+   at the root; `useSession()` now reads context. Return shape is unchanged, so
+   all 31 call sites are untouched. `useSession.ts` → `useSession.tsx` (now has
+   JSX); exported `SessionProvider` from the auth barrels; wrapped the tree in
+   `app/_layout.tsx` (outside QueryClient/Theme, around RootNav).
+4. **Removed dead empty feature folders** `src/features/feed` + `src/features/proof`
+   (just `export {}`, never imported, and `proof` collided in name with the real
+   `proofs`).
+
+### Audited clean (no change needed)
+- No `console.log` leftovers; all FlatLists have `keyExtractor`; no `key={index}`
+  on dynamic lists; signed-URL cache (30m stale vs 60m expiry) has no expiry gap;
+  all `.single()` calls are post-write (row exists); staleTimes consistent;
+  SubmissionRow has no per-row signed-URL N+1.
+
+### Deliberately NOT changed (noted, low value / churn risk)
+- Broad `React.memo` on list rows: marginal for MVP-sized lists (≤50), and the
+  inline `renderItem` closures would need `useCallback` too — more churn than
+  benefit. Skipped.
+- `fetch(uri).arrayBuffer()` upload pattern: consistent + working; not a defect.
+
+**Branch / commit:** `mvp` @ pending push.
+
+---
+
 ## 2026-06-13 — Claude (opus) / Avatar fixes round 2: group-avatar uid-path + profile cache-bust
 
 **Did:** Two avatar bugs the user hit after the new Supabase project.
