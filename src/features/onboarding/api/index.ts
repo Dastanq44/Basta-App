@@ -256,27 +256,51 @@ export async function updateMyProfile(payload: UpdateMyProfilePayload): Promise<
 }
 
 /** Uploads a user avatar image to the public `user-avatars` bucket; returns the storage path.
- *  Path convention enforced server-side (RLS): `<uid>/avatar.jpg`. */
+ *  Path convention enforced server-side (RLS = first folder segment is the uid): `<uid>/...`.
+ *
+ *  The filename is UNIQUE per upload (`avatar-<ts>.jpg`). A fixed `<uid>/avatar.jpg` path kept
+ *  producing the same public URL on every change, so the Supabase CDN (cacheControl) and the
+ *  React Native <Image> cache would keep showing the PREVIOUS photo — even across reloads. A
+ *  fresh filename changes the URL and busts both caches. Older files are cleaned up best-effort. */
 export async function uploadMyAvatar(localUri: string): Promise<string> {
   const { data: auth } = await supabase.auth.getUser();
   const uid = auth.user?.id;
   if (!uid) throw new Error('Not signed in');
-  const remotePath = `${uid}/avatar.jpg`;
+
   const res = await fetch(localUri);
   if (!res.ok) throw new Error(`Could not read image (${res.status})`);
   const buf = await res.arrayBuffer();
+
+  const remotePath = `${uid}/avatar-${Date.now()}.jpg`;
   const { error } = await supabase.storage
     .from(USER_AVATAR_BUCKET)
     .upload(remotePath, buf, { contentType: 'image/jpeg', upsert: true, cacheControl: '3600' });
   if (error) throw error;
+
+  // Best-effort: remove the user's previous avatar files so they don't orphan in Storage.
+  try {
+    const { data: existing } = await supabase.storage.from(USER_AVATAR_BUCKET).list(uid);
+    const stale = (existing ?? [])
+      .map((f) => `${uid}/${f.name}`)
+      .filter((p) => p !== remotePath);
+    if (stale.length > 0) await supabase.storage.from(USER_AVATAR_BUCKET).remove(stale);
+  } catch (e) {
+    console.warn('[basta] avatar cleanup skipped:', e);
+  }
+
   return remotePath;
 }
 
-/** Removes the current user's avatar object from Storage. Idempotent. */
+/** Removes the current user's avatar object(s) from Storage. Idempotent. Filenames are
+ *  dynamic (`avatar-<ts>.jpg`), so this clears everything under the user's folder. */
 export async function deleteMyAvatar(): Promise<void> {
   const { data: auth } = await supabase.auth.getUser();
   const uid = auth.user?.id;
   if (!uid) throw new Error('Not signed in');
-  const { error } = await supabase.storage.from(USER_AVATAR_BUCKET).remove([`${uid}/avatar.jpg`]);
+  const { data: existing, error: listErr } = await supabase.storage.from(USER_AVATAR_BUCKET).list(uid);
+  if (listErr) throw listErr;
+  const paths = (existing ?? []).map((f) => `${uid}/${f.name}`);
+  if (paths.length === 0) return;
+  const { error } = await supabase.storage.from(USER_AVATAR_BUCKET).remove(paths);
   if (error) throw error;
 }

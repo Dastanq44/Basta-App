@@ -262,9 +262,14 @@ export async function updateGroupMeta(
   }
 }
 
-/** Uploads a group avatar image to the public `group-avatars` bucket; returns the storage path. */
+/** Uploads a group avatar image to the public `group-avatars` bucket; returns the storage path.
+ *  Unique filename per upload (`avatar-<ts>.jpg`) so the public URL changes — a fixed
+ *  `<groupId>/avatar.jpg` kept the same URL and the CDN + RN <Image> cache would serve the
+ *  previous photo. RLS gates on the first folder segment (the group id), which is unchanged.
+ *  NOTE: group-avatars has no SELECT/DELETE storage policy, so superseded files are left as
+ *  harmless orphans rather than cleaned up (groups change avatars rarely). */
 export async function uploadGroupAvatar(groupId: string, localUri: string): Promise<string> {
-  const remotePath = `${groupId}/avatar.jpg`;
+  const remotePath = `${groupId}/avatar-${Date.now()}.jpg`;
   const res = await fetch(localUri);
   if (!res.ok) throw new Error(`Could not read image (${res.status})`);
   const buf = await res.arrayBuffer();
