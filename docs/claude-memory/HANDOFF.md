@@ -21,6 +21,31 @@
 
 ---
 
+## 2026-06-13 — Claude (opus) / Fix: list_submission_comments 42702 ambiguous "id"
+
+**Did:** Comments failed to load on the submission screen — `getComments` threw
+Postgres `42702` "column reference \"id\" is ambiguous". Root cause: the
+`list_submission_comments` RPC has `returns table (id uuid, …)`, so `id` is in
+scope as an OUT-param variable, and the body did
+`select challenge_id into v_ch from public.submissions where id = p_submission_id`
+with a BARE `id`. Same bug class as the old `get_my_today_submission` fix.
+
+**Fix:** new migration `20260613200000_fix_list_submission_comments_ambiguity.sql`
+— qualifies it as `submissions.id`. Body otherwise identical; grant re-stated.
+Per D-013, a new migration on top of the frozen bootstrap (the bootstrap still
+contains the buggy version; this migration supersedes it on every apply path).
+
+Checked the other RETURNS TABLE RPCs: only `list_submission_comments` had both an
+`id` OUT param AND a bare `id` in the body. `list_submission_reactors` has a bare
+`id` too but no `id` OUT param, so it resolves to the column — not a bug.
+
+**USER:** apply `20260613200000_...sql` (or the SQL block from this session) to the
+live project, then comments load.
+
+**Branch / commit:** `mvp` @ pending push.
+
+---
+
 ## 2026-06-13 — Claude (opus) / Codebase audit: queue robustness + 1 session subscription + dead code
 
 **Did:** Full-codebase inspection for bugs + safe optimizations. typecheck, lint
