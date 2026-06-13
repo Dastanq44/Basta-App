@@ -1,7 +1,6 @@
-import { useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Image, Keyboard, Platform, Pressable, ScrollView, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useHeaderHeight } from '@react-navigation/elements';
 import { Avatar, Button, Card, Screen, Text, useTheme } from '@/shared/ui';
 import { useSession } from '@/features/auth';
 import { SyncBadge, useProofSignedUrl, useSubmission } from '@/features/proofs';
@@ -25,7 +24,6 @@ const SUBMISSION_DETAIL_DATE_FMT: Intl.DateTimeFormatOptions = {
 export default function SubmissionScreen() {
   const t = useTheme();
   const router = useRouter();
-  const headerHeight = useHeaderHeight();
   const { id } = useLocalSearchParams<{ id: string }>();
   const session = useSession();
   const myUid = session.session?.user.id;
@@ -35,6 +33,26 @@ export default function SubmissionScreen() {
   const blockUser = useBlockUser();
   const [reportOpen, setReportOpen] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+  // Track the keyboard so the comment composer can rise well clear of it.
+  const [kbHeight, setKbHeight] = useState(0);
+
+  useEffect(() => {
+    const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvt = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const onShow = Keyboard.addListener(showEvt, (e) => {
+      setKbHeight(e.endCoordinates?.height ?? 0);
+      // Bring the composer up once the layout has the new bottom padding.
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60);
+    });
+    const onHide = Keyboard.addListener(hideEvt, () => setKbHeight(0));
+    return () => {
+      onShow.remove();
+      onHide.remove();
+    };
+  }, []);
+
+  // Extra clearance above the keyboard so the input sits comfortably, not flush against it.
+  const COMPOSER_CLEARANCE = 72;
 
   if (submission.isPending) {
     return (
@@ -104,16 +122,17 @@ export default function SubmissionScreen() {
     // here stacked an empty band below the back button.
     <Screen padded={false} edges={['bottom']}>
       <Stack.Screen options={{ title: s.title }} />
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
-        // Exact header height so the comment input clears the keyboard fully.
-        keyboardVerticalOffset={headerHeight}
-      >
       <ScrollView
         ref={scrollRef}
-        contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.lg, paddingBottom: t.spacing.xl }}
+        contentContainerStyle={{
+          padding: t.spacing.lg,
+          gap: t.spacing.lg,
+          // When the keyboard is up, pad below by its height + clearance so scrollToEnd lifts
+          // the composer well above it (deterministic — no KeyboardAvoidingView offset guessing).
+          paddingBottom: kbHeight > 0 ? kbHeight + COMPOSER_CLEARANCE : t.spacing.xl,
+        }}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
       >
         <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: t.spacing.sm }}>
           <View style={{ flex: 1, gap: 2 }}>
@@ -190,7 +209,6 @@ export default function SubmissionScreen() {
           </View>
         ) : null}
       </ScrollView>
-      </KeyboardAvoidingView>
 
       <ReportSheet
         visible={reportOpen}
