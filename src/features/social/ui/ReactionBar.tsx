@@ -154,6 +154,12 @@ export function ReactionBar({ submissionId }: { submissionId: string }) {
         // Extend content to the bottom edge — otherwise the safe-area inset leaves an
         // unfillable gap below the category bar.
         disableSafeArea
+        // The library's active-category INDICATOR (a box behind the icons) tracks the swipe
+        // continuously when this gesture is on; the icon color still snaps on landing. So we
+        // make the moving box the indicator: indigo box (containerActive) sliding over a gray
+        // bar (container), behind the icons — the indigo "follows" the finger. The active icon
+        // flips to white only once it lands under the box.
+        enableCategoryChangeGesture
         theme={{
           backdrop: '#00000066',
           knob: t.colors.border,
@@ -161,9 +167,9 @@ export function ReactionBar({ submissionId }: { submissionId: string }) {
           header: t.colors.foreground,
           category: {
             icon: t.colors.mutedForeground,
-            iconActive: t.colors.primary,
-            container: t.colors.card,
-            containerActive: t.colors.muted,
+            iconActive: t.colors.primaryForeground,
+            container: t.colors.muted,
+            containerActive: t.colors.primary,
           },
           search: {
             background: t.colors.muted,
