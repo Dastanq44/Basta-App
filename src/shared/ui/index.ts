@@ -23,6 +23,8 @@ export { ProgressBar } from './ProgressBar';
 export type { ProgressBarProps } from './ProgressBar';
 export { StatTile } from './StatTile';
 export type { StatTileProps } from './StatTile';
+export { VisibilityToggle } from './VisibilityToggle';
+export type { VisibilityToggleProps } from './VisibilityToggle';
 export { ListRow } from './ListRow';
 export type { ListRowProps } from './ListRow';
 export { CalendarPicker } from './CalendarPicker';

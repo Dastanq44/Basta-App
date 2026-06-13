@@ -3,7 +3,7 @@
 import { supabase } from '@/shared/lib/supabase';
 import type { Group, GroupId } from '@/entities';
 
-const COLUMNS = 'id, name, owner_id, invite_code, archived_at';
+const COLUMNS = 'id, name, owner_id, invite_code, archived_at, visibility';
 
 const REQUEST_TIMEOUT_MS = 10_000;
 
@@ -19,6 +19,7 @@ type GroupRow = {
   owner_id: string;
   invite_code: string;
   archived_at: string | null;
+  visibility?: 'private' | 'public';
 };
 
 function toGroup(row: GroupRow): Group {
@@ -28,6 +29,7 @@ function toGroup(row: GroupRow): Group {
     ownerId: row.owner_id,
     inviteCode: row.invite_code,
     archivedAt: row.archived_at ?? undefined,
+    isPublic: row.visibility === 'public',
   };
 }
 
@@ -243,7 +245,7 @@ export async function getGroupOverview(groupId: string): Promise<GroupOverview> 
 /** Owner updates name + description + avatar path via the W-030 RPC. */
 export async function updateGroupMeta(
   groupId: string,
-  input: { name: string; description?: string | null; avatarPath?: string | null },
+  input: { name: string; description?: string | null; avatarPath?: string | null; isPublic?: boolean },
 ): Promise<void> {
   const c = withTimeout();
   try {
@@ -253,6 +255,7 @@ export async function updateGroupMeta(
         p_name: input.name,
         p_description: input.description ?? null,
         p_avatar_path: input.avatarPath ?? null,
+        p_visibility: input.isPublic === undefined ? null : input.isPublic ? 'public' : 'private',
       })
       .abortSignal(c.signal);
     if (error) throw new Error(error.message || 'Could not update group');

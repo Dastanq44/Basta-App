@@ -26,6 +26,7 @@ import {
   Screen,
   Text,
   useTheme,
+  VisibilityToggle,
 } from '@/shared/ui';
 
 const EMOJIS = ['💪', '🏃', '📚', '🧘', '🎨', '✍️', '💻', '🌅', '💧', '🥗', '😴', '🎯', '🔥', '⭐', '🏆', '🎸', '🚭', '🧠', '🏋️', '☀️'];
@@ -50,7 +51,7 @@ function diffDaysInclusive(start: string, end: string): number | null {
   return Math.round((e - s) / 86_400_000) + 1;
 }
 
-type StepKey = 'type' | 'group' | 'category' | 'name' | 'icon' | 'start' | 'end' | 'desc';
+type StepKey = 'type' | 'group' | 'category' | 'name' | 'icon' | 'start' | 'end' | 'desc' | 'visibility';
 /** Steps where picking a value auto-advances — no Next button needed. The user's spec:
  *  "Make the decisions (solo/group, which group, category) so that when you choose them
  *  it automatically goes to next step." Other steps require an explicit Next. */
@@ -79,6 +80,7 @@ export default function CreateChallengeScreen() {
   const [startDate, setStartDate] = useState(todayISO());
   const [endDate, setEndDate] = useState(addDaysISO(todayISO(), 29));
   const [description, setDescription] = useState('');
+  const [isPublic, setIsPublic] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [stepIdx, setStepIdx] = useState(0);
 
@@ -92,9 +94,9 @@ export default function CreateChallengeScreen() {
   // Step list rebuilds whenever mode / presetGroupId changes. The current step's KEY is
   // derived from this — we never index into a stale list because every render recomputes.
   const stepKeys: StepKey[] = useMemo(() => {
-    if (presetGroupId) return ['category', 'name', 'icon', 'start', 'end', 'desc'];
-    if (mode === 'group') return ['type', 'group', 'category', 'name', 'icon', 'start', 'end', 'desc'];
-    return ['type', 'category', 'name', 'icon', 'start', 'end', 'desc'];
+    if (presetGroupId) return ['category', 'name', 'icon', 'start', 'end', 'desc', 'visibility'];
+    if (mode === 'group') return ['type', 'group', 'category', 'name', 'icon', 'start', 'end', 'desc', 'visibility'];
+    return ['type', 'category', 'name', 'icon', 'start', 'end', 'desc', 'visibility'];
   }, [mode, presetGroupId]);
 
   const safeIdx = Math.min(stepIdx, stepKeys.length - 1);
@@ -168,6 +170,7 @@ export default function CreateChallengeScreen() {
       durationDays: days ?? 0,
       proofRequirement: description.trim() || undefined,
       groupId: mode === 'group' ? groupId : null,
+      isPublic,
     });
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message ?? 'Please check your inputs');
@@ -447,6 +450,33 @@ export default function CreateChallengeScreen() {
               maxLength={280}
               editable={!create.isPending}
             />
+          </View>
+        );
+      case 'visibility':
+        return (
+          <View style={{ gap: t.spacing.md }}>
+            <Text variant="heading">Who can see this?</Text>
+            <View
+              style={{
+                backgroundColor: t.colors.card,
+                borderRadius: t.radius.xl,
+                borderWidth: 1,
+                borderColor: t.colors.border,
+                padding: t.spacing.lg,
+              }}
+            >
+              <VisibilityToggle
+                value={isPublic}
+                onValueChange={setIsPublic}
+                title="Public challenge"
+                description={
+                  isPublic
+                    ? 'Discoverable in Global. Members can choose to share verified proofs publicly.'
+                    : 'Private — only participants can see this challenge. You can change this later.'
+                }
+                disabled={create.isPending}
+              />
+            </View>
           </View>
         );
     }

@@ -19,6 +19,8 @@ export type SubmitProofPayload = {
   /** Path to a file in the app sandbox; the queue processor uploads it. */
   mediaLocalUri: string;
   comment?: string;
+  /** "Share to Global" opt-in captured at compose time. Default false. */
+  isPublic?: boolean;
 };
 
 export type QueuedMutation<TPayload = unknown> = {

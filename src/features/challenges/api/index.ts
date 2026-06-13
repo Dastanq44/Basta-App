@@ -22,6 +22,7 @@ type ChallengeRow = {
   proof_requirement: string | null;
   verification_threshold: number;
   archived_at: string | null;
+  visibility: 'private' | 'public';
 };
 
 function toChallenge(r: ChallengeRow): Challenge {
@@ -37,11 +38,12 @@ function toChallenge(r: ChallengeRow): Challenge {
     proofRequirement: r.proof_requirement ?? undefined,
     verificationThreshold: r.verification_threshold,
     archivedAt: r.archived_at ?? undefined,
+    isPublic: r.visibility === 'public',
   };
 }
 
 const COLUMNS =
-  'id, group_id, creator_id, title, category, mode, start_date, duration_days, proof_requirement, verification_threshold, archived_at';
+  'id, group_id, creator_id, title, category, mode, start_date, duration_days, proof_requirement, verification_threshold, archived_at, visibility';
 
 /** All challenges visible to the current user (participant + visible group challenges; excludes archived). */
 export async function listMyChallenges(): Promise<Challenge[]> {
@@ -116,6 +118,7 @@ export async function updateChallenge(
         p_category: input.category,
         p_duration_days: input.durationDays,
         p_proof_requirement: input.proofRequirement ?? null,
+        p_visibility: input.isPublic === undefined ? null : input.isPublic ? 'public' : 'private',
       })
       .abortSignal(c.signal);
     if (error) throw new Error(error.message || 'Could not update challenge');
@@ -151,6 +154,7 @@ export async function createChallenge(input: CreateChallengeInput): Promise<stri
         p_start_date: input.startDate,
         p_duration_days: input.durationDays,
         p_proof_requirement: input.proofRequirement ?? null,
+        p_visibility: input.isPublic ? 'public' : 'private',
       })
       .abortSignal(c.signal);
     if (error) throw new Error(error.message || 'Could not create challenge');

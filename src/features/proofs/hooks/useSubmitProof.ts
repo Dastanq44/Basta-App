@@ -45,6 +45,7 @@ export function useSubmitProof() {
         title: input.title,
         mediaLocalUri: persistedUri,
         comment: input.comment,
+        isPublic: input.isPublic ?? false,
       };
       await enqueue({ id: submissionId, type: 'SUBMIT_PROOF', payload });
 

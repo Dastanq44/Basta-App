@@ -51,9 +51,10 @@ export default function EditProofModal() {
         initialTitle={today.data.title}
         initialComment={today.data.comment}
         initialImageUrl={existingImage.data}
+        initialIsPublic={today.data.isPublic}
         ctaLabel={redact.isPending ? 'Saving…' : 'Save changes'}
         intro="Edit your title, photo, and description. Changing the photo makes group voters re-verify."
-        onSubmit={async ({ title, mediaLocalUri, comment }) => {
+        onSubmit={async ({ title, mediaLocalUri, comment, isPublic }) => {
           if (!id) return;
           await redact.mutateAsync({
             submissionId,
@@ -62,6 +63,7 @@ export default function EditProofModal() {
             mediaLocalUri, // omitted ⇒ keep existing photo
             existingMediaPath: today.data?.mediaRemotePath,
             comment,
+            isPublic,
           });
           router.back();
         }}

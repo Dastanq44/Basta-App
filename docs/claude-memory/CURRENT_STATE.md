@@ -3,7 +3,17 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-06-11 — by: Claude (connect app to NEW Supabase project + apply bootstrap)_
+_Last updated: 2026-06-13 — by: Claude (fable) (privacy/visibility foundation)_
+
+> **2026-06-13 privacy/visibility foundation (D-014):** new migration
+> `supabase/migrations/20260614000000_visibility_foundation.sql` adds a `visibility` enum
+> (`profiles`/`groups`/`challenges`, default **private**) + `submissions.is_public` (default
+> **false**), the central `is_submission_globally_visible(uuid)` predicate, a widened proof-media
+> Storage SELECT policy (Global viewers can load public posts' images), and recreates the write/read
+> RPCs to carry the new fields. Client gets a uniform `isPublic` field + `<VisibilityToggle>` on
+> Edit Profile / Edit Group / Create+Edit Challenge / Proof composer ("Share to Global", default
+> off). Global feed itself NOT built yet. **USER must apply this migration BEFORE running the new
+> build** (base selects now reference `visibility`). typecheck + lint + expo-doctor (18/18) all green.
 
 > **2026-06-11 NEW Supabase project + schema live:** the backend moved to a fresh
 > project **`ycbesrmtlcippgpswzta`** (`https://ycbesrmtlcippgpswzta.supabase.co`),

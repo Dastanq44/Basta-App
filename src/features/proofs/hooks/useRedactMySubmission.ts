@@ -21,6 +21,8 @@ export type RedactSubmissionInput = {
   existingMediaPath?: string;
   /** Optional new note. Empty string ⇒ cleared. */
   comment?: string;
+  /** "Share to Global" opt-in. Omit to leave the current value unchanged. */
+  isPublic?: boolean;
 };
 
 /**
@@ -57,7 +59,7 @@ export function useRedactMySubmission() {
         throw new Error('No photo to save.');
       }
 
-      await redactMySubmission(input.submissionId, input.title, remotePath, input.comment);
+      await redactMySubmission(input.submissionId, input.title, remotePath, input.comment, input.isPublic);
       return { remotePath };
     },
     onSuccess: (data, input) => {

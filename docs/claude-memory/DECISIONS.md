@@ -177,7 +177,34 @@ Date · Status · Decision · Why · Consequences
   files), and only then. Day-to-day, treat the bootstrap as read-only. The W-### "USER must apply"
   tag convention continues for each new migration file.
 
-## D-012 — UI overhaul (2026-06): indigo theme, additive migrations, post-MVP placeholders   [Accepted]
+## D-014 — Privacy/visibility is server-authoritative; one predicate gates Global   [Accepted]
+- **Date:** 2026-06-13
+- **Decision:** Public/private is a first-class, **server-enforced** property, never a client-side
+  filter. `profiles`/`groups`/`challenges` carry a `visibility` enum (**default `'private'`**) and
+  `submissions` carry `is_public bool` (**default `false`**). A single SECURITY DEFINER function
+  `is_submission_globally_visible(uuid)` encodes the **entire** Global-eligibility predicate
+  (verified + opted-in + author public + challenge public & active + group public & active for group
+  challenges + no block either direction). The future Global feed query AND the proof-media Storage
+  read policy both call this one function so they can never drift. Client carries a uniform
+  `isPublic: boolean` mapped to/from the enum at the API boundary.
+- **Why:** Privacy is a security boundary — it must hold even against a malicious client, so it lives
+  in RLS + SECURITY DEFINER, not in a `.filter()`. Centralizing the predicate prevents the classic
+  bug where the list query and the image-access check disagree (a post shows in the feed but its
+  photo 403s, or worse, leaks). Defaults are private/off so nothing is ever exposed by omission.
+- **Consequences / relationship to D-012:** This migration **deliberately changes existing RPC
+  signatures** (`create_challenge`, `update_challenge`, `update_group_meta`, `submit_proof`,
+  `redact_my_submission`) and **adds the `visibility`/`is_public` columns to base `select` lists**
+  (`PROFILE_SELECT`, group/challenge `COLUMNS`, submission selects). That **relaxes D-012's "additive
+  only / never change a create-RPC signature / don't touch base selects" rule** for this one
+  security feature, because a follow-up-RPC + placeholder approach is more fragile for a privacy gate
+  (extra round-trips, two places the predicate can drift). Safe because: (a) new RPC params use a
+  DEFAULT (old clients still resolve), and the UPDATE RPCs use `default null` + `coalesce(col)` so an
+  old client leaves visibility unchanged during the upgrade window; (b) **the USER must apply this
+  migration BEFORE running the new build** — adding `visibility` to base selects breaks reads if the
+  column doesn't exist yet. D-012 remains the default for ordinary incremental changes; this is the
+  narrow, recorded exception. The same migration-per-change / USER-applies workflow as D-013 holds.
+
+## D-012 — UI overhaul (2026-06): indigo theme, additive migrations, post-MVP placeholders   [Accepted; narrowed by D-014 for the privacy feature]
 - **Date:** 2026-06-05
 - **Decision:** The app's visual language is the "sleek" card/tab system in **INDIGO**
   (`#4F46E5` light / `#6366F1` dark), user-selectable light/dark (persisted locally, no backend).

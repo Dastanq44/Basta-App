@@ -13,12 +13,14 @@ export function useUpdateGroupMeta() {
       name,
       description,
       avatarPath,
+      isPublic,
     }: {
       groupId: string;
       name: string;
       description?: string | null;
       avatarPath?: string | null;
-    }) => updateGroupMeta(groupId, { name, description, avatarPath }),
+      isPublic?: boolean;
+    }) => updateGroupMeta(groupId, { name, description, avatarPath, isPublic }),
     onSuccess: (_d, v) => {
       qc.invalidateQueries({ queryKey: myGroupsQueryKey });
       qc.invalidateQueries({ queryKey: myArchivedGroupsQueryKey });

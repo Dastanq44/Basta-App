@@ -21,6 +21,61 @@
 
 ---
 
+## 2026-06-13 — Claude (fable) / Privacy & visibility foundation for Global discovery
+
+**Did:** Built the server-authoritative public/private foundation so a future Global feed can
+show ONLY explicitly-public content. No Global feed UI yet (per spec). See **D-014**.
+
+- **Migration `supabase/migrations/20260614000000_visibility_foundation.sql`** (new, on top of
+  the frozen bootstrap — D-013):
+  - `visibility` enum (`'private' | 'public'`); `profiles.visibility`, `groups.visibility`,
+    `challenges.visibility` all **default `'private'`**; `submissions.is_public bool default false`.
+  - `is_submission_globally_visible(p_submission_id uuid)` — SECURITY DEFINER, the **single source
+    of truth** for the Global predicate: `status='verified'` AND `is_public` AND author profile
+    public AND challenge public & not archived AND (solo OR group public & not archived) AND no
+    block either direction between `auth.uid()` and the author.
+  - **proof-media Storage SELECT policy** widened: keeps author + participant clauses verbatim,
+    adds `or is_submission_globally_visible(<submission_id from path>)` so Global viewers can load
+    public posts' images. Submission id is parsed NULL-safely from the 3rd path segment.
+  - Write RPCs recreated with new params (drop old signature + create + grant): `submit_proof`
+    (+`p_is_public bool default false`), `create_challenge` (+`p_visibility default 'private'`).
+    UPDATE RPCs use **`default null` + `coalesce(p_x, <existing col>)`** so an old client that omits
+    the arg during the upgrade window leaves visibility UNCHANGED (not silently reset):
+    `update_challenge`, `update_group_meta`, `redact_my_submission`.
+  - Read RPCs recreated to RETURN the new field: `get_my_today_submission`,
+    `list_challenge_submissions`, `get_submission_with_author` (+`is_public`).
+- **Client:** uniform `isPublic: boolean` on `User`/`Group`/`Challenge` entities (maps to/from the
+  `visibility` enum at the API boundary) and `Submission.isPublic?`. Threaded through every mapper
+  (`PROFILE_SELECT`/`COLUMNS`/`SubmissionRow` selects now include the column), all write calls,
+  the offline queue (`SubmitProofPayload.isPublic` → `processor` → `submit_proof`), and the zod
+  schemas (`createChallengeInput`, `updateChallengeInput`, `proofInput`).
+- **UI:** new shared `<VisibilityToggle>` (labelled native `Switch`, themed). Toggles added to:
+  Edit Profile (Public profile), Edit Group (Public group), Create Challenge (new final
+  "Who can see this?" wizard step) + Edit Challenge, and the Proof composer ("Share to Global",
+  **default off**, seeded from existing value in edit mode).
+
+**In progress:** nothing half-finished. Feature is complete end-to-end and committed.
+
+**Next up:** the actual **Global tab** can now be built on top — query verified+public submissions
+gated by `is_submission_globally_visible` (do the gating SERVER-side; never client-filter). Do NOT
+expose invite codes globally.
+
+**Blockers / decisions needed:** **USER must apply the new migration** to the live Supabase project
+(`ycbesrmtlcippgpswzta`) — Dashboard SQL editor or `supabase db push`. It's idempotent. No new
+Storage buckets or secrets required.
+
+**Branch / commit:** `mvp` @ pending push (commit `feat(privacy): add visibility controls for
+global discovery`).
+
+**Notes for next session:**
+- The Global predicate is centralized in `is_submission_globally_visible` — reuse it for the feed
+  query so the image RLS and the list filter can never drift apart.
+- Defaults are private/off everywhere; nothing becomes public without an explicit toggle.
+- `fetchPublicProfile` (other-user profile via friends/leaderboard) was intentionally left as-is —
+  it returns a separate `PublicProfile` and isn't a Global surface yet.
+
+---
+
 ## 2026-06-13 — Claude (opus) / Custom emoji picker replaces rn-emoji-keyboard
 
 **Did:** Replaced the `rn-emoji-keyboard` library (too inflexible — hit walls on

@@ -24,6 +24,7 @@ type SubmissionRow = {
   verified_at: string | null;
   rejected_at: string | null;
   created_at: string;
+  is_public: boolean | null;
 };
 
 /** Row shape returned by list_challenge_submissions / get_submission_with_author RPCs. */
@@ -43,6 +44,7 @@ function toSubmission(r: SubmissionRow): Submission {
     mediaRemotePath: r.media_path ?? undefined,
     status: r.status,
     createdAt: r.created_at,
+    isPublic: r.is_public ?? false,
   };
 }
 
@@ -147,7 +149,7 @@ export async function listUserRecentSubmissions(userId: string, limit = 50): Pro
     const { data, error } = await supabase
       .from('submissions')
       .select(
-        'id, challenge_id, author_id, challenge_day, title, comment, media_path, status, verified_at, rejected_at, created_at, challenges ( title, groups ( name ) )',
+        'id, challenge_id, author_id, challenge_day, title, comment, media_path, status, verified_at, rejected_at, created_at, is_public, challenges ( title, groups ( name ) )',
       )
       .eq('author_id', userId)
       .order('created_at', { ascending: false })
@@ -185,7 +187,7 @@ export async function listMyRecentSubmissions(limit = 50): Promise<Submission[]>
     const { data, error } = await supabase
       .from('submissions')
       .select(
-        'id, challenge_id, author_id, challenge_day, title, comment, media_path, status, verified_at, rejected_at, created_at, challenges ( title, groups ( name ) )',
+        'id, challenge_id, author_id, challenge_day, title, comment, media_path, status, verified_at, rejected_at, created_at, is_public, challenges ( title, groups ( name ) )',
       )
       .eq('author_id', uid)
       .order('created_at', { ascending: false })
@@ -285,6 +287,7 @@ export async function redactMySubmission(
   title: string,
   mediaPath: string,
   comment: string | undefined,
+  isPublic?: boolean,
 ): Promise<void> {
   const c = ctrl();
   try {
@@ -294,6 +297,7 @@ export async function redactMySubmission(
         p_title: title,
         p_media_path: mediaPath,
         p_comment: comment ?? null,
+        p_is_public: isPublic === undefined ? null : isPublic,
       })
       .abortSignal(c.signal);
     if (error) throw new Error(error.message || 'Could not edit submission');

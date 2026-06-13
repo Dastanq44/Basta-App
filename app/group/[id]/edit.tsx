@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Button, Input, Screen, Text, useTheme } from '@/shared/ui';
+import { Button, Input, Screen, Text, useTheme, VisibilityToggle } from '@/shared/ui';
 import { useSession } from '@/features/auth';
 import {
   GroupAvatarPicker,
@@ -29,6 +29,7 @@ export default function EditGroupScreen() {
 
   const [name, setName] = useState(group?.name ?? '');
   const [description, setDescription] = useState('');
+  const [isPublic, setIsPublic] = useState(false);
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
   /** When the user taps "Remove photo": forces avatarPath=null on save (clearing the
    *  existing remote avatar) — separate from the local preview, which is `null` both for
@@ -44,6 +45,7 @@ export default function EditGroupScreen() {
   useEffect(() => {
     if (hydrated || !group) return;
     setName(group.name);
+    setIsPublic(group.isPublic);
     setHydrated(true);
   }, [group, hydrated]);
   useEffect(() => {
@@ -96,6 +98,7 @@ export default function EditGroupScreen() {
         name: parsedName.data,
         description: parsedDesc.data.trim() || null,
         avatarPath: avatarPath ?? undefined,
+        isPublic,
       });
       router.back();
     } catch {
@@ -175,6 +178,27 @@ export default function EditGroupScreen() {
             maxLength={280}
             editable={!busy}
           />
+          <View
+            style={{
+              backgroundColor: t.colors.card,
+              borderRadius: t.radius.xl,
+              borderWidth: 1,
+              borderColor: t.colors.border,
+              padding: t.spacing.lg,
+            }}
+          >
+            <VisibilityToggle
+              value={isPublic}
+              onValueChange={setIsPublic}
+              title="Public group"
+              description={
+                isPublic
+                  ? 'Discoverable in Global. The invite code stays private.'
+                  : 'Private — only members can see this group.'
+              }
+              disabled={busy}
+            />
+          </View>
           {uploadError ? (
             <Text variant="caption" style={{ color: t.colors.destructive }}>
               {uploadError}

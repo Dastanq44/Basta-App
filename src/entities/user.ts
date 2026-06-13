@@ -17,4 +17,7 @@ export type User = {
   onboarded: boolean;
   /** Version of T&S the user has accepted; compared against CURRENT_TERMS_VERSION (T-021). */
   termsVersion?: string;
+  /** Whether the profile is publicly discoverable (Global). Maps to `profiles.visibility`
+   *  ('public' ⇒ true). Default private. */
+  isPublic: boolean;
 };

@@ -10,7 +10,7 @@ import {
   type UpdateChallengeInput,
 } from '@/features/challenges';
 import { useSession } from '@/features/auth';
-import { Button, Input, Screen, Text, useTheme } from '@/shared/ui';
+import { Button, Input, Screen, Text, useTheme, VisibilityToggle } from '@/shared/ui';
 
 type FieldErrors = Partial<Record<keyof UpdateChallengeInput, string>>;
 
@@ -30,6 +30,7 @@ export default function EditChallengeScreen() {
   const [category, setCategory] = useState<ChallengeCategory>('fitness');
   const [durationDays, setDurationDays] = useState('');
   const [proofRequirement, setProofRequirement] = useState('');
+  const [isPublic, setIsPublic] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [hydrated, setHydrated] = useState(false);
 
@@ -40,6 +41,7 @@ export default function EditChallengeScreen() {
     setCategory(challenge.data.category as ChallengeCategory);
     setDurationDays(String(challenge.data.durationDays));
     setProofRequirement(challenge.data.proofRequirement ?? '');
+    setIsPublic(challenge.data.isPublic);
     setHydrated(true);
   }, [challenge.data, hydrated]);
 
@@ -93,6 +95,7 @@ export default function EditChallengeScreen() {
       category,
       durationDays: Number(durationDays),
       proofRequirement: proofRequirement.trim() || undefined,
+      isPublic,
     });
     if (!parsed.success) {
       const errs: FieldErrors = {};
@@ -162,6 +165,27 @@ export default function EditChallengeScreen() {
             error={errors.proofRequirement}
             editable={!update.isPending}
           />
+          <View
+            style={{
+              backgroundColor: t.colors.card,
+              borderRadius: t.radius.xl,
+              borderWidth: 1,
+              borderColor: t.colors.border,
+              padding: t.spacing.lg,
+            }}
+          >
+            <VisibilityToggle
+              value={isPublic}
+              onValueChange={setIsPublic}
+              title="Public challenge"
+              description={
+                isPublic
+                  ? 'Discoverable in Global. Members can choose to share verified proofs publicly.'
+                  : 'Private — only participants can see this challenge.'
+              }
+              disabled={update.isPending}
+            />
+          </View>
           {submitError ? (
             <Text variant="caption" style={{ color: t.colors.destructive }}>{submitError}</Text>
           ) : null}

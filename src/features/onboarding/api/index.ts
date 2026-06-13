@@ -14,6 +14,7 @@ type ProfileRow = {
   timezone: string;
   onboarded: boolean;
   terms_version: string | null;
+  visibility: 'private' | 'public';
 };
 
 function toUser(row: ProfileRow): User {
@@ -26,10 +27,11 @@ function toUser(row: ProfileRow): User {
     timezone: row.timezone,
     onboarded: row.onboarded,
     termsVersion: row.terms_version ?? undefined,
+    isPublic: row.visibility === 'public',
   };
 }
 
-const PROFILE_SELECT = 'id, username, display_name, avatar_url, description, timezone, onboarded, terms_version';
+const PROFILE_SELECT = 'id, username, display_name, avatar_url, description, timezone, onboarded, terms_version, visibility';
 const USER_AVATAR_BUCKET = 'user-avatars';
 
 /** Hard ceiling on a single profile fetch (network or RLS hang). */
@@ -217,6 +219,8 @@ export type UpdateMyProfilePayload = {
   description?: string | null;
   /** `undefined` = leave avatar untouched; `null` = explicit removal; `string` = new path. */
   avatarPath?: string | null;
+  /** `undefined` = leave visibility untouched; otherwise set public/private. */
+  isPublic?: boolean;
 };
 
 /** Update the editable fields on the current user's profile row. RLS allows the user to
@@ -236,6 +240,9 @@ export async function updateMyProfile(payload: UpdateMyProfilePayload): Promise<
     };
     if (payload.avatarPath !== undefined) {
       patch.avatar_url = payload.avatarPath; // string path, or null to remove
+    }
+    if (payload.isPublic !== undefined) {
+      patch.visibility = payload.isPublic ? 'public' : 'private';
     }
 
     const { data, error } = await supabase

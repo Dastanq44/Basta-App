@@ -7,6 +7,8 @@
 ## In progress / next up
 | ID | Status | Phase | Task | Notes |
 |----|--------|-------|------|-------|
+| T-073 | DONE | mvp | **Privacy/visibility foundation for Global (D-014).** `visibility` enum + `submissions.is_public` (defaults private/off); central `is_submission_globally_visible(uuid)` predicate; widened proof-media Storage SELECT; recreated write/read RPCs; uniform client `isPublic` + `<VisibilityToggle>` on profile/group/challenge/proof. Migration `20260614000000_visibility_foundation.sql` — **USER must apply BEFORE running the new build.** Global feed UI NOT built yet. See HANDOFF 2026-06-13 (fable). |
+| T-074 | TODO | mvp | **Global tab** (feed of verified+public submissions). Build on T-073: query gated by `is_submission_globally_visible` SERVER-side (never client-filter). Do NOT expose invite codes. |
 | T-053 | DONE | mvp | UI/UX refinement batch (titles, comment likes, free-form reactions, user profile, leaderboard, streak, refresh, keyboard) | All 5 slices done — W-034..W-038. (Migrations consolidated into BOOTSTRAP 2026-06-11.) See HANDOFF 2026-06-11. |
 | T-054 | DONE | mvp | Bootstrap consolidation: 25 migrations → 1 | `supabase/migrations/20260528000000_bootstrap.sql`. The 25 originals were deleted. USER applies ONLY the bootstrap on a fresh DB. See HANDOFF 2026-06-11 (bootstrap entry). |
 | T-000 | DONE | setup | Create shared-memory & handoff system | This system of files |

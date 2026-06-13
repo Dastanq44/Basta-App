@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { Avatar, Button, Input, Screen, Text, useTheme } from '@/shared/ui';
+import { Avatar, Button, Input, Screen, Text, useTheme, VisibilityToggle } from '@/shared/ui';
 import {
   deleteMyAvatar,
   displayNameSchema,
@@ -27,6 +27,7 @@ export default function EditProfileScreen() {
   const [displayName, setDisplayName] = useState('');
   const [username, setUsername] = useState('');
   const [description, setDescription] = useState('');
+  const [isPublic, setIsPublic] = useState(false);
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [removeAvatar, setRemoveAvatar] = useState(false);
   const [fieldError, setFieldError] = useState<string | null>(null);
@@ -40,6 +41,7 @@ export default function EditProfileScreen() {
     setDisplayName(profile.data.displayName ?? '');
     setUsername(profile.data.username ?? '');
     setDescription(profile.data.description ?? '');
+    setIsPublic(profile.data.isPublic);
     setHydrated(true);
   }, [profile.data, hydrated]);
 
@@ -114,6 +116,7 @@ export default function EditProfileScreen() {
         displayName: parsedName.data,
         description: parsedDesc.data.trim() || null,
         avatarPath: avatarPath ?? undefined,
+        isPublic,
       });
       router.back();
     } catch (e) {
@@ -178,6 +181,28 @@ export default function EditProfileScreen() {
             maxLength={280}
             editable={!busy}
           />
+
+          <View
+            style={{
+              backgroundColor: t.colors.card,
+              borderRadius: t.radius.xl,
+              borderWidth: 1,
+              borderColor: t.colors.border,
+              padding: t.spacing.lg,
+            }}
+          >
+            <VisibilityToggle
+              value={isPublic}
+              onValueChange={setIsPublic}
+              title="Public profile"
+              description={
+                isPublic
+                  ? 'Your profile and shared proofs can appear in Global discovery.'
+                  : 'Private — only people in your groups and challenges can find you.'
+              }
+              disabled={busy}
+            />
+          </View>
 
           {fieldError ? (
             <Text variant="caption" style={{ color: t.colors.destructive }}>

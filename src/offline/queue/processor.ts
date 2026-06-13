@@ -98,6 +98,7 @@ async function handleSubmitProof(jobId: string, payload: SubmitProofPayload): Pr
     p_title: fallbackTitle,
     p_media_path: remotePath,
     p_comment: payload.comment ?? null,
+    p_is_public: payload.isPublic ?? false,
   });
   if (error) {
     // Special-case the "already submitted" unique-violation (mapped to a server exception by

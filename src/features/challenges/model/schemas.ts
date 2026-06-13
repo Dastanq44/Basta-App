@@ -39,6 +39,8 @@ export const createChallengeInput = z.object({
   proofRequirement: challengeProofRequirement,
   /** Required when mode === 'group'. */
   groupId: z.string().uuid().nullable().optional(),
+  /** Opt in to Global discovery. Default private. */
+  isPublic: z.boolean().default(false),
 });
 export type CreateChallengeInput = z.infer<typeof createChallengeInput>;
 
@@ -50,5 +52,7 @@ export const updateChallengeInput = z.object({
   category: challengeCategory,
   durationDays: challengeDurationDays,
   proofRequirement: challengeProofRequirement,
+  /** Opt in to Global discovery. The edit screen seeds this from the loaded challenge. */
+  isPublic: z.boolean().optional(),
 });
 export type UpdateChallengeInput = z.infer<typeof updateChallengeInput>;

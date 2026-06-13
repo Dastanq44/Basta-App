@@ -13,6 +13,29 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
 
 ## Active warnings (not bugs — traps to respect)
 
+## [OPEN] W-040 — Apply the visibility migration BEFORE running the new build (D-014)
+- **Date:** 2026-06-13 · **Area:** backend / Supabase + privacy
+- **What:** `supabase/migrations/20260614000000_visibility_foundation.sql` adds `visibility` to
+  `profiles`/`groups`/`challenges` and `is_public` to `submissions`, and the client now references
+  those columns in **base `select` lists** (`PROFILE_SELECT`, group/challenge `COLUMNS`, submission
+  selects). If the new app runs against a DB where the migration hasn't been applied, **every read of
+  those tables 400s** (`column "visibility" does not exist`) — home, groups, challenges, profile all
+  break. This is the D-012 base-select risk, consciously accepted for this security feature (D-014).
+- **Fix:** USER applies the migration FIRST (Dashboard SQL editor or `supabase db push`), THEN runs
+  the build. It's idempotent (safe to re-run). No new Storage buckets or secrets needed.
+- **Upgrade-window note:** the recreated RPCs are upgrade-safe in the OTHER direction — new params
+  have a DEFAULT, and the UPDATE RPCs (`update_challenge`/`update_group_meta`/`redact_my_submission`)
+  use `default null` + `coalesce(p_x, <existing column>)`, so an OLD client that omits the arg leaves
+  visibility UNCHANGED rather than resetting it. Only the base-select reads are apply-order-sensitive.
+- **Proof-media RLS assumption:** the widened `storage_proof_media_select` policy parses the
+  submission id from the object name's 3rd path segment and casts to `uuid`. This relies on the
+  established path convention `<uid>/<challengeId>/<submissionId>.jpg` (filenames are always the
+  submission UUID). A manually-uploaded object under your own uid folder with a non-UUID filename
+  could error the cast — theoretical only; the INSERT policy already restricts writes to your own
+  folder, and real proof objects always have UUID filenames. Same assumption the bootstrap already
+  makes when it casts the `[2]` challenge-id segment.
+- **Status:** Open until USER confirms the migration is applied on `ycbesrmtlcippgpswzta`.
+
 ## [OPEN] W-039 — Backend moved to a NEW Supabase project; each Claude must reconfigure `.env`
 - **Date:** 2026-06-11 · **Area:** environment / Supabase
 - **What:** The backend was migrated to a fresh project **`ycbesrmtlcippgpswzta`**
