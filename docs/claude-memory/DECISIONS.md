@@ -154,6 +154,29 @@ Date · Status · Decision · Why · Consequences
   (already an exact match). If friendlier sharing is wanted later, add deep-link invite URLs rather
   than shortening the code.
 
+## D-013 — Migration workflow: bootstrap is a frozen snapshot; new work is a separate file   [Accepted]
+- **Date:** 2026-06-13 (user-mandated)
+- **Decision:** `supabase/migrations/20260528000000_bootstrap.sql` is a **frozen consolidation
+  snapshot** of all migrations applied up to and including 2026-06-11. **Do NOT add new schema
+  changes into the bootstrap.** Every new migration after that point is its own dated file
+  (`supabase/migrations/<timestamp>_<name>.sql`), exactly as before the consolidation. The
+  bootstrap exists only to collapse the historical 25-file chain into one applied baseline and
+  save space — it is not the place ongoing work lands.
+  - **One narrow exception:** correctness fixes to the bootstrap *itself* for an environment where
+    it has not yet been applied cleanly (e.g. the 2026-06-13 `generate_invite_code` search_path
+    `pgcrypto` fix). Those edit the bootstrap in place because they change what a *fresh* apply
+    produces. A schema change that adds/alters tables, columns, RPCs, or policies is **never** one
+    of these — it is always a new file.
+- **Why:** The user has already applied every prior migration (the bootstrap + the live
+  `generate_invite_code` patch). Folding new changes back into the bootstrap would (a) make an
+  already-applied file dirty so it can't be cleanly re-run on existing databases, and (b) destroy
+  the reviewable per-change history that separate migration files give. Discrete files keep each
+  change auditable and independently appliable.
+- **Consequences:** When a future consolidation is wanted, repeat the flatten-into-bootstrap step
+  deliberately (read all post-bootstrap files → fold into a fresh snapshot → delete the folded
+  files), and only then. Day-to-day, treat the bootstrap as read-only. The W-### "USER must apply"
+  tag convention continues for each new migration file.
+
 ## D-012 — UI overhaul (2026-06): indigo theme, additive migrations, post-MVP placeholders   [Accepted]
 - **Date:** 2026-06-05
 - **Decision:** The app's visual language is the "sleek" card/tab system in **INDIGO**

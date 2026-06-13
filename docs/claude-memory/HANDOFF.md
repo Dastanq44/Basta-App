@@ -21,6 +21,52 @@
 
 ---
 
+## 2026-06-13 — Claude (opus) / Debugging session: pgcrypto invite-code fix + lint + avatar-RLS root-cause
+
+**Did:** Maintenance/debugging pass. Static checks all green (typecheck, lint 0
+warnings, expo-doctor 18/18).
+
+1. **Bootstrap pgcrypto fix (committed).** `generate_invite_code()` called
+   `gen_random_bytes()` (pgcrypto) under `search_path = public`, but Supabase keeps
+   pgcrypto in the `extensions` schema → group creation failed with
+   `function gen_random_bytes(integer) does not exist`. Added
+   `set search_path = public, extensions` to that function in
+   `supabase/migrations/20260528000000_bootstrap.sql`. **The user already applied the
+   live one-function patch** (CREATE OR REPLACE) to the running project, so group
+   creation works now; the bootstrap edit only matters for a future fresh apply.
+2. **D-013 recorded.** New decision: the bootstrap is a frozen snapshot — new schema
+   changes go in their OWN dated migration files, never folded back into the bootstrap.
+   Only correctness fixes to a not-yet-applied bootstrap edit it in place.
+3. **Lint warning fixed.** `app/challenge/[id].tsx` `ContestantsStreakRibbon` had a
+   `useMemo` with an unused `myUid` dep (Dastan's earlier edit to show all contestants
+   incl. self). Dropped the dep, underscore-prefixed the now-unused prop
+   (`myUid: _myUid`) matching the file's `_challengeId` convention.
+4. **Avatar-upload error messages improved.** `app/group/[id]/edit.tsx` +
+   `app/profile/edit.tsx` dropped the now-defunct `(W-030)`/`(W-031)` tags (folded
+   into the bootstrap) and now name the real causes: bucket not created on this
+   project, or `.env` pointing at a different project.
+5. **Lockfile** picked up transitive patch bumps from the W-013 clean reinstall
+   (`rm -rf node_modules package-lock.json && npm install`) that fixed a
+   `Cannot find module 'react-refresh/babel'` Metro error.
+
+**Live issue still on the USER's side (NOT a code bug):** group/user avatar upload
+fails with `new row violates row-level security policy`. Verified from supabase-js
+internals that the app DOES attach the user's JWT to storage requests (same
+`fetchWithAuth` path as the working `create_group` call), so this is environmental:
+either (a) the 3 Storage buckets were never created on the app's project (buckets are
+a manual Dashboard step, the migration only creates the *policies*), or (b) the SQL
+editor / Dashboard and the app's `EXPO_PUBLIC_SUPABASE_URL` point at DIFFERENT
+projects (the user recently deleted + recreated the project). Resolution is on the
+Supabase side: confirm same project + create `proof-media` (private),
+`group-avatars` + `user-avatars` (public).
+
+**Next up:** user confirms buckets exist on the project the app points at; then retry
+avatar upload. No pending code work.
+
+**Branch / commit:** `mvp` @ pending push.
+
+---
+
 ## 2026-06-11 — Claude / Connect app to NEW Supabase project + apply bootstrap (no code change)
 
 **Did:** Infra/connection session — **no application code was written or changed.**

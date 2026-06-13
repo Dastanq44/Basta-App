@@ -94,7 +94,7 @@ export default function EditProfileScreen() {
         } catch (e) {
           setOpError(
             e instanceof Error
-              ? `Could not upload photo: ${e.message}. Was the user-avatars Storage bucket created (W-031)?`
+              ? `Could not upload photo: ${e.message}. If this says "row-level security", check the Supabase project your app points at (EXPO_PUBLIC_SUPABASE_URL) has the "user-avatars" Storage bucket created — buckets are a manual Dashboard step, not part of the migration.`
               : 'Could not upload photo. Try again.',
           );
           return;

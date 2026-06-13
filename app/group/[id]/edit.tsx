@@ -83,7 +83,7 @@ export default function EditGroupScreen() {
         } catch (e) {
           setUploadError(
             e instanceof Error
-              ? `Could not upload photo: ${e.message}. Did the user-avatars / group-avatars bucket get created in Supabase Storage (W-030)?`
+              ? `Could not upload photo: ${e.message}. If this says "row-level security", check the Supabase project your app points at (EXPO_PUBLIC_SUPABASE_URL) has the "group-avatars" Storage bucket created — buckets are a manual Dashboard step, not part of the migration.`
               : 'Could not upload photo. Try again.',
           );
           return;

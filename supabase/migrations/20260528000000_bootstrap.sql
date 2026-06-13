@@ -50,6 +50,11 @@
 -- ============================================================================
 -- 1. Extensions
 -- ============================================================================
+-- pgcrypto provides gen_random_bytes() (used by generate_invite_code). On Supabase
+-- it is pre-installed in the `extensions` schema; `create extension if not exists`
+-- is then a no-op. On a vanilla Postgres without an `extensions` schema this lands
+-- pgcrypto in the current schema — either way generate_invite_code() sets its
+-- search_path to `public, extensions` so the function resolves.
 create extension if not exists pgcrypto;
 
 -- ============================================================================
@@ -356,9 +361,12 @@ as $$
 $$;
 
 -- Generate a 12-char [A-Za-z0-9] invite code from a cryptographic source.
+-- `search_path` includes `extensions` because Supabase installs pgcrypto there
+-- (so `gen_random_bytes` resolves whether pgcrypto lives in public or extensions).
 create or replace function public.generate_invite_code()
 returns text
 language plpgsql
+set search_path = public, extensions
 as $$
 declare
   alphabet constant text := 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
