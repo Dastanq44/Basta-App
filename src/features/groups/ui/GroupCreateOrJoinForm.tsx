@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
-import { Button, Input, Text, useTheme } from '@/shared/ui';
+import { Button, Input, Text, useTheme, VisibilityToggle } from '@/shared/ui';
 // Relative imports keep this free of a self-cycle once `index.ts` re-exports ui.
 import { createGroupInput, groupDescriptionSchema, INVITE_CODE_LENGTH, joinGroupInput } from '../model';
 import { useCreateGroup, useJoinGroup, useUpdateGroupMeta } from '../hooks';
@@ -37,6 +37,7 @@ export function GroupCreateOrJoinForm({
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
+  const [isPublic, setIsPublic] = useState(false);
   const [code, setCode] = useState('');
   const [fieldError, setFieldError] = useState<string | null>(null);
 
@@ -62,7 +63,7 @@ export function GroupCreateOrJoinForm({
         return;
       }
       try {
-        const group = await create.mutateAsync(parsed.data.name);
+        const group = await create.mutateAsync({ name: parsed.data.name, isPublic });
         // Best-effort: avatar + description need W-030 + the bucket. The group exists either way.
         try {
           let avatarPath: string | null = null;
@@ -128,6 +129,23 @@ export function GroupCreateOrJoinForm({
             maxLength={280}
             editable={!submitting}
           />
+          <View
+            style={{
+              backgroundColor: t.colors.card,
+              borderRadius: t.radius.xl,
+              borderWidth: 1,
+              borderColor: t.colors.border,
+              padding: t.spacing.lg,
+            }}
+          >
+            <VisibilityToggle
+              value={isPublic}
+              onValueChange={setIsPublic}
+              title="Public group"
+              description="Required for group challenge proofs to appear in Global. Invite code stays private."
+              disabled={submitting}
+            />
+          </View>
         </>
       ) : (
         <Input

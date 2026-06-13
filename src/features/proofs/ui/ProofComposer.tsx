@@ -30,6 +30,9 @@ export type ProofComposerProps = {
   initialImageUrl?: string | null;
   /** Pre-fill the "Share to Global" toggle — used by the redact (edit) flow. Default off. */
   initialIsPublic?: boolean;
+  /** Whether the parent challenge is a group challenge — drives the Global-hint wording
+   *  (group challenges also require the group to be public). */
+  isGroupChallenge?: boolean;
 };
 
 const TITLE_MAX = 80;
@@ -51,6 +54,7 @@ export function ProofComposer({
   initialComment,
   initialImageUrl,
   initialIsPublic,
+  isGroupChallenge = false,
 }: ProofComposerProps) {
   const t = useTheme();
   const [title, setTitle] = useState(initialTitle ?? '');
@@ -189,9 +193,9 @@ export function ProofComposer({
               onValueChange={setIsPublic}
               title="Share to Global"
               description={
-                isPublic
-                  ? 'Once verified, this proof can appear in Global discovery.'
-                  : 'Off — only your challenge participants will see this proof.'
+                isGroupChallenge
+                  ? 'This appears in Global only after verification and only if your profile, challenge, and group are public.'
+                  : 'This appears in Global only after verification and only if your profile and challenge are public.'
               }
               disabled={submitting}
             />

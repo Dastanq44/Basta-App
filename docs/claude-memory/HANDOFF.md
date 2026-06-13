@@ -21,6 +21,59 @@
 
 ---
 
+## 2026-06-13 — Claude (fable) / Privacy ENFORCEMENT (fix the foundation; still no Global feed)
+
+**Did:** Closed the gaps in the visibility foundation so private content is actually private and
+globally-visible content is reachable safely. **No Global feed built** (per spec). New migration
+`supabase/migrations/20260615000000_privacy_enforcement.sql` (on top of the frozen bootstrap +
+`20260614`). See **D-014** (updated) and the new `docs/architecture/PRIVACY_MODEL.md`.
+
+- **Profiles were not private** — the bootstrap had `profiles_select_public USING (true)` exposing
+  EVERY profile (all columns) to any authed user. Dropped it. Added `get_viewable_profile(uuid)`
+  (SECURITY DEFINER, safe columns only, gated by self/public/shares-group-or-challenge) +
+  `shares_group_or_challenge(viewer,target)`. Audited the client: only `fetchPublicProfile` read
+  other users directly → switched it to the RPC. Everything else is own-row or SECURITY DEFINER
+  RPCs (leaderboard, member lists, authors) which bypass RLS. No RLS policy subqueries profiles.
+- **Global-readable submissions** — added `can_view_submission(uuid)` = (author/participant) OR
+  `is_submission_globally_visible`. Recreated the 7 submission social RPCs to gate on it instead of
+  `is_challenge_participant`: `get_submission_with_author`, `list_submission_comments`, `add_comment`,
+  `react_to_submission`, `list_submission_reactors`, `like_comment`, `list_comment_likers`. Reads
+  return empty when not allowed (no existence leak); writes raise `not allowed`. `list_challenge_submissions`
+  stays participant-only (private challenge feed).
+- **Proof-media** — hardened `storage_proof_media_select`: UUID-regex-guarded casts (no more
+  W-040 cast-error risk), keeps author+participant+global clauses. Bucket stays private; images load
+  via existing signed-URL flow, which now passes for eligible global viewers and fails for blocked ones.
+- **Avatar removal bug (B)** — client collapsed `null → undefined` (`avatarPath ?? undefined`) so
+  removal became "keep". Fixed in `profile/edit` + `group/edit` (pass the 3-state through). The
+  group RPC's `coalesce(p_avatar_path, avatar_path)` also couldn't clear → added `p_clear_avatar`
+  to `update_group_meta`; `updateGroupMeta` API now sends it (null ⇒ clear=true).
+- **Group creation visibility** — `create_group` gains `p_visibility` (default private); `createGroup`
+  API + `useCreateGroup` + `GroupCreateOrJoinForm` get a "Public group" toggle (default off).
+- **UX copy** — the four toggles now use the exact spec hints; the proof composer's "Share to Global"
+  hint is conditional (solo vs group) via a new `isGroupChallenge` prop (passed from submit/edit-proof
+  using `useChallenge`).
+
+**In progress:** nothing half-finished.
+
+**Next up:** **NOW** the Global tab can be built. Query verified+public submissions gated by
+`is_submission_globally_visible` (server-side). Global v1 = public verified posts only; link
+profiles/challenges/groups *from posts*, not as separate discovery tabs. Don't expose invite codes.
+
+**Blockers / decisions needed:** **USER must apply `20260615000000_privacy_enforcement.sql`**
+(after `20260614`). If applied via the Dashboard SQL editor, the PostgREST schema cache may need a
+reload (Dashboard → API → "Reload schema", or it auto-reloads on DDL). No new buckets/secrets.
+
+**Branch / commit:** `mvp` @ pending (`fix(privacy): enforce visibility access rules`).
+
+**Notes for next session:**
+- Two new migrations are now pending USER apply: `20260614` (foundation) + `20260615` (enforcement),
+  in that order.
+- Manual smoke-test checklist lives in `docs/architecture/PRIVACY_MODEL.md`.
+- Avatars live in a **public** bucket (`user-avatars`) by design — privacy hides the profile *data*
+  and the path, not the public image bytes. Out of scope to change here.
+
+---
+
 ## 2026-06-13 — Claude (fable) / Privacy & visibility foundation for Global discovery
 
 **Did:** Built the server-authoritative public/private foundation so a future Global feed can

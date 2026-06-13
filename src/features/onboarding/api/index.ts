@@ -88,8 +88,26 @@ export type PublicProfile = {
   displayName: string;
   avatarUrl?: string;
   description?: string;
+  /** Whether the viewed profile is itself public (true) or only visible to you because you
+   *  share a group/challenge (false). Lets the UI show a "private" hint if desired. */
+  isPublic: boolean;
 };
 
+/** Row shape returned by the `get_viewable_profile` RPC (safe identity columns only). */
+type ViewableProfileRow = {
+  id: string;
+  username: string | null;
+  display_name: string | null;
+  avatar_url: string | null;
+  description: string | null;
+  visibility: 'private' | 'public';
+};
+
+/** Another user's profile, fetched via the `get_viewable_profile` SECURITY DEFINER RPC.
+ *  Direct `profiles` SELECT no longer exposes other users (the broad `using (true)` policy was
+ *  removed — D-014 privacy enforcement). The RPC returns ONLY safe identity columns and a row
+ *  only when the viewer is allowed (self / public / shares a group or challenge). Returns null
+ *  when the profile doesn't exist OR the viewer isn't allowed to see it (no existence leak). */
 export async function fetchPublicProfile(userId: string): Promise<PublicProfile | null> {
   const ctrl = new AbortController();
   const timeoutId = setTimeout(
@@ -98,26 +116,19 @@ export async function fetchPublicProfile(userId: string): Promise<PublicProfile 
   );
   try {
     const { data, error } = await supabase
-      .from('profiles')
-      .select('id, username, display_name, avatar_url, description')
-      .eq('id', userId)
-      .abortSignal(ctrl.signal)
-      .maybeSingle();
+      .rpc('get_viewable_profile', { p_user_id: userId })
+      .abortSignal(ctrl.signal);
     if (error) throw error;
-    if (!data) return null;
-    const row = data as {
-      id: string;
-      username: string | null;
-      display_name: string | null;
-      avatar_url: string | null;
-      description: string | null;
-    };
+    const rows = (data ?? []) as ViewableProfileRow[];
+    const row = rows[0];
+    if (!row) return null;
     return {
       id: row.id,
       username: row.username ?? undefined,
       displayName: row.display_name ?? row.username ?? 'Member',
       avatarUrl: row.avatar_url ?? undefined,
       description: row.description ?? undefined,
+      isPublic: row.visibility === 'public',
     };
   } catch (e) {
     console.error('[basta] fetchPublicProfile failed:', e);

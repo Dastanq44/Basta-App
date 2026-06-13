@@ -3,7 +3,19 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-06-13 — by: Claude (fable) (privacy/visibility foundation)_
+_Last updated: 2026-06-13 — by: Claude (fable) (privacy ENFORCEMENT)_
+
+> **2026-06-13 privacy ENFORCEMENT (D-014):** second migration
+> `supabase/migrations/20260615000000_privacy_enforcement.sql` makes the foundation correct +
+> safe. Drops the broad `profiles_select_public USING(true)` (private profiles are now actually
+> private) and adds `get_viewable_profile`; adds `can_view_submission` and re-gates the 7 submission
+> social RPCs on it (global viewers can read/interact with verified+public posts; private stays
+> participant-only); hardens proof-media SELECT (UUID-guarded casts); adds `p_clear_avatar` to
+> `update_group_meta` + fixes the client null→undefined avatar-removal bug; adds `p_visibility` to
+> `create_group` + a Public-group toggle at creation. Spec UX copy on all toggles. **Global feed
+> still NOT built.** **USER must apply BOTH `20260614` then `20260615`** (PostgREST schema reload if
+> applied via Dashboard). New `docs/architecture/PRIVACY_MODEL.md` has the model + smoke-test
+> checklist. typecheck + lint + expo-doctor (18/18) green.
 
 > **2026-06-13 privacy/visibility foundation (D-014):** new migration
 > `supabase/migrations/20260614000000_visibility_foundation.sql` adds a `visibility` enum

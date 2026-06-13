@@ -33,14 +33,15 @@ function toGroup(row: GroupRow): Group {
   };
 }
 
-export async function createGroup(name: string): Promise<Group> {
+export async function createGroup(name: string, isPublic = false): Promise<Group> {
   const ctrl = withTimeout();
   try {
     // Use the SECURITY DEFINER RPC instead of a direct INSERT — see migration notes for
     // `create_group`. Avoids the RLS edge case where `owner_id = auth.uid()` evaluates to
     // NULL on the server even when the client has a valid session (PKCE/JWT propagation).
+    // Visibility defaults to private; the invite code is never affected by it.
     const { data: groupId, error: rpcErr } = await supabase
-      .rpc('create_group', { p_name: name })
+      .rpc('create_group', { p_name: name, p_visibility: isPublic ? 'public' : 'private' })
       .abortSignal(ctrl.signal);
     if (rpcErr) throw new Error(rpcErr.message || 'Could not create group');
 
@@ -48,7 +49,7 @@ export async function createGroup(name: string): Promise<Group> {
     // groups_select_member RLS passes.
     const { data, error: selErr } = await supabase
       .from('groups')
-      .select('id, name, owner_id, invite_code')
+      .select(COLUMNS)
       .eq('id', groupId as string)
       .abortSignal(ctrl.signal)
       .single();
@@ -242,20 +243,26 @@ export async function getGroupOverview(groupId: string): Promise<GroupOverview> 
   }
 }
 
-/** Owner updates name + description + avatar path via the W-030 RPC. */
+/** Owner updates name + description + avatar path via the W-030 RPC.
+ *  Avatar semantics (3-state): `avatarPath` undefined = keep existing; `null` = remove;
+ *  string = set new path. `null` is sent as `p_clear_avatar: true` so the RPC clears it
+ *  (a bare null would mean "keep" under the RPC's coalesce). */
 export async function updateGroupMeta(
   groupId: string,
   input: { name: string; description?: string | null; avatarPath?: string | null; isPublic?: boolean },
 ): Promise<void> {
   const c = withTimeout();
   try {
+    const clearAvatar = input.avatarPath === null;
+    const avatarPath = typeof input.avatarPath === 'string' ? input.avatarPath : null;
     const { error } = await supabase
       .rpc('update_group_meta', {
         p_group_id: groupId,
         p_name: input.name,
         p_description: input.description ?? null,
-        p_avatar_path: input.avatarPath ?? null,
+        p_avatar_path: avatarPath,
         p_visibility: input.isPublic === undefined ? null : input.isPublic ? 'public' : 'private',
+        p_clear_avatar: clearAvatar,
       })
       .abortSignal(c.signal);
     if (error) throw new Error(error.message || 'Could not update group');

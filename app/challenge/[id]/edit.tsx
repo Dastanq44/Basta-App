@@ -178,11 +178,7 @@ export default function EditChallengeScreen() {
               value={isPublic}
               onValueChange={setIsPublic}
               title="Public challenge"
-              description={
-                isPublic
-                  ? 'Discoverable in Global. Members can choose to share verified proofs publicly.'
-                  : 'Private — only participants can see this challenge.'
-              }
+              description="Required before proofs from this challenge can appear in Global."
               disabled={update.isPending}
             />
           </View>

@@ -115,7 +115,10 @@ export default function EditProfileScreen() {
         username: parsedUsername.data,
         displayName: parsedName.data,
         description: parsedDesc.data.trim() || null,
-        avatarPath: avatarPath ?? undefined,
+        // Preserve the 3-state: undefined = keep, null = remove, string = set. Collapsing
+        // null to undefined made avatar removal a no-op (the updateMyProfile patch only sets
+        // avatar_url when avatarPath !== undefined).
+        avatarPath,
         isPublic,
       });
       router.back();
@@ -195,11 +198,7 @@ export default function EditProfileScreen() {
               value={isPublic}
               onValueChange={setIsPublic}
               title="Public profile"
-              description={
-                isPublic
-                  ? 'Your profile and shared proofs can appear in Global discovery.'
-                  : 'Private — only people in your groups and challenges can find you.'
-              }
+              description="Required for your posts to appear in Global."
               disabled={busy}
             />
           </View>

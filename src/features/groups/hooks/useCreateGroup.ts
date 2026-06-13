@@ -5,7 +5,8 @@ import { myGroupsQueryKey } from './useMyGroups';
 export function useCreateGroup() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (name: string) => createGroup(name),
+    mutationFn: ({ name, isPublic }: { name: string; isPublic?: boolean }) =>
+      createGroup(name, isPublic ?? false),
     onSuccess: () => qc.invalidateQueries({ queryKey: myGroupsQueryKey }),
   });
 }

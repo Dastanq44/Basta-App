@@ -97,7 +97,9 @@ export default function EditGroupScreen() {
         groupId: id,
         name: parsedName.data,
         description: parsedDesc.data.trim() || null,
-        avatarPath: avatarPath ?? undefined,
+        // Preserve the 3-state: undefined = keep, null = remove, string = set. Do NOT
+        // collapse null to undefined or removal silently becomes "keep" (avatar bug).
+        avatarPath,
         isPublic,
       });
       router.back();
@@ -191,11 +193,7 @@ export default function EditGroupScreen() {
               value={isPublic}
               onValueChange={setIsPublic}
               title="Public group"
-              description={
-                isPublic
-                  ? 'Discoverable in Global. The invite code stays private.'
-                  : 'Private — only members can see this group.'
-              }
+              description="Required for group challenge proofs to appear in Global. Invite code stays private."
               disabled={busy}
             />
           </View>

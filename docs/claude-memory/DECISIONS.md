@@ -203,6 +203,17 @@ Date · Status · Decision · Why · Consequences
   migration BEFORE running the new build** — adding `visibility` to base selects breaks reads if the
   column doesn't exist yet. D-012 remains the default for ordinary incremental changes; this is the
   narrow, recorded exception. The same migration-per-change / USER-applies workflow as D-013 holds.
+- **Enforcement landed separately (2026-06-13, migration `20260615_privacy_enforcement`):** the
+  foundation (`20260614`) only *added* fields. Enforcement then (a) dropped the bootstrap's
+  `profiles_select_public USING (true)` — which had exposed every profile — and added
+  `get_viewable_profile` (safe columns, gated by self/public/shares-group-or-challenge); (b) added
+  `can_view_submission` = `(author/participant) OR is_submission_globally_visible`, and re-gated the
+  7 submission social RPCs (`get_submission_with_author`, comments, reactions, likes) on it so
+  globally-visible posts are readable/interactable by non-blocked viewers while private stays
+  participant-only; (c) UUID-guarded the proof-media casts; (d) gave avatar removal real 3-state
+  semantics (`update_group_meta.p_clear_avatar` + client null-preservation); (e) added
+  `create_group.p_visibility`. Model + manual smoke-test checklist: `docs/architecture/PRIVACY_MODEL.md`.
+  **The Global feed itself remains deliberately unbuilt.**
 
 ## D-012 — UI overhaul (2026-06): indigo theme, additive migrations, post-MVP placeholders   [Accepted; narrowed by D-014 for the privacy feature]
 - **Date:** 2026-06-05

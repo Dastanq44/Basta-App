@@ -168,6 +168,8 @@ app.config.ts  eas.json  package.json                                           
 | Design-system primitives (2026-06 UI refresh) | `src/shared/ui/{StatTile,Chip,SegmentedControl,ProgressBar,ListRow,Avatar,Badge,Icon}.tsx` | live |
 | `VisibilityToggle` (public/private + "Share to Global" Switch row) | `src/shared/ui/VisibilityToggle.tsx` | live (T-073, D-014) |
 | Privacy/visibility foundation (enum + `is_public` + `is_submission_globally_visible` + proof-media RLS + RPC recreations) | `supabase/migrations/20260614000000_visibility_foundation.sql` | written — **USER must apply** (T-073, D-014) |
+| Privacy enforcement (drop broad profiles SELECT + `get_viewable_profile` + `can_view_submission` + social-RPC re-gate + hardened proof-media + `update_group_meta` clear-avatar + `create_group` visibility) | `supabase/migrations/20260615000000_privacy_enforcement.sql` | written — **USER must apply after 20260614** (T-075, D-014) |
+| Privacy model + manual smoke-test checklist | `docs/architecture/PRIVACY_MODEL.md` | live (T-075, D-014) |
 | Theme mode (light/dark/system) + persistence | `src/shared/ui/theme/ThemeProvider.tsx` · `src/shared/lib/themePreference.ts` | live |
 | Reusable group create/join form | `src/features/groups/ui/GroupCreateOrJoinForm.tsx` | live (T-026) |
 | Group create/join modal route | `app/group/join-or-create.tsx` | live (T-026) |

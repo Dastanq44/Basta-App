@@ -13,28 +13,38 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
 
 ## Active warnings (not bugs — traps to respect)
 
-## [OPEN] W-040 — Apply the visibility migration BEFORE running the new build (D-014)
-- **Date:** 2026-06-13 · **Area:** backend / Supabase + privacy
-- **What:** `supabase/migrations/20260614000000_visibility_foundation.sql` adds `visibility` to
-  `profiles`/`groups`/`challenges` and `is_public` to `submissions`, and the client now references
-  those columns in **base `select` lists** (`PROFILE_SELECT`, group/challenge `COLUMNS`, submission
-  selects). If the new app runs against a DB where the migration hasn't been applied, **every read of
-  those tables 400s** (`column "visibility" does not exist`) — home, groups, challenges, profile all
-  break. This is the D-012 base-select risk, consciously accepted for this security feature (D-014).
-- **Fix:** USER applies the migration FIRST (Dashboard SQL editor or `supabase db push`), THEN runs
-  the build. It's idempotent (safe to re-run). No new Storage buckets or secrets needed.
-- **Upgrade-window note:** the recreated RPCs are upgrade-safe in the OTHER direction — new params
-  have a DEFAULT, and the UPDATE RPCs (`update_challenge`/`update_group_meta`/`redact_my_submission`)
-  use `default null` + `coalesce(p_x, <existing column>)`, so an OLD client that omits the arg leaves
-  visibility UNCHANGED rather than resetting it. Only the base-select reads are apply-order-sensitive.
-- **Proof-media RLS assumption:** the widened `storage_proof_media_select` policy parses the
-  submission id from the object name's 3rd path segment and casts to `uuid`. This relies on the
-  established path convention `<uid>/<challengeId>/<submissionId>.jpg` (filenames are always the
-  submission UUID). A manually-uploaded object under your own uid folder with a non-UUID filename
-  could error the cast — theoretical only; the INSERT policy already restricts writes to your own
-  folder, and real proof objects always have UUID filenames. Same assumption the bootstrap already
-  makes when it casts the `[2]` challenge-id segment.
-- **Status:** Open until USER confirms the migration is applied on `ycbesrmtlcippgpswzta`.
+## [OPEN] W-040 — Apply BOTH privacy migrations BEFORE running the new build (D-014)
+- **Date:** 2026-06-13 (updated for the enforcement migration) · **Area:** backend / Supabase + privacy
+- **What:** TWO migrations are pending, apply **in order**:
+  `20260614000000_visibility_foundation.sql` THEN `20260615000000_privacy_enforcement.sql`.
+  `20260614` adds `visibility`/`is_public` columns; the client references them in **base `select`
+  lists** (`PROFILE_SELECT`, group/challenge `COLUMNS`, submission selects), so against an un-migrated
+  DB **every read of those tables 400s** (`column "visibility" does not exist`). `20260615` then drops
+  the broad `profiles_select_public`, recreates `create_group`/`update_group_meta` signatures, and
+  re-gates the social RPCs — the new client expects those (e.g. `get_viewable_profile`, the
+  `create_group` `p_visibility` arg, `update_group_meta` `p_clear_avatar`).
+- **Fix:** USER applies BOTH migrations FIRST (Dashboard SQL editor or `supabase db push`), THEN runs
+  the build. Idempotent. If applied via the Dashboard, reload the PostgREST schema cache afterward
+  (Dashboard → API → Reload schema) so the new RPC signatures are picked up. No new buckets/secrets.
+- **Upgrade-window note:** RPC param additions all have DEFAULTs and UPDATE RPCs coalesce to the
+  existing value, so an OLD client that omits a new arg is non-destructive. Only the base-select reads
+  (20260614) are strictly apply-order-sensitive.
+- **Proof-media casts now hardened:** `20260615` regex-guards the path→uuid casts in
+  `storage_proof_media_select`, so a malformed object name can no longer error the policy (closes the
+  theoretical cast-error noted originally). Bucket stays private; eligible global viewers load images
+  via the existing signed-URL flow.
+- **Status:** Open until USER confirms BOTH migrations are applied on `ycbesrmtlcippgpswzta`.
+
+## [RESOLVED] B-priv1 — Private profiles were world-readable; avatar removal was a no-op
+- **Date:** 2026-06-13 · **Area:** privacy / RLS + client
+- **Was wrong:** (1) `profiles_select_public USING (true)` let any authed user read EVERY profile
+  (all columns) — `visibility='private'` did nothing. (2) Profile + group avatar *removal* silently
+  did nothing: the screens collapsed `null → undefined` (`avatarPath ?? undefined`) so the update
+  meant "keep", and `update_group_meta` used `coalesce(p_avatar_path, avatar_path)` which can't clear.
+- **Fixed by:** `20260615000000_privacy_enforcement.sql` (drop broad policy + `get_viewable_profile`;
+  `update_group_meta.p_clear_avatar`) and client edits (`fetchPublicProfile` → RPC; `profile/edit` +
+  `group/edit` pass the 3-state through; `updateGroupMeta` sends `p_clear_avatar`). See PRIVACY_MODEL.md.
+- **Status:** Resolved in code; verify with the PRIVACY_MODEL.md smoke-test once migrations are applied.
 
 ## [OPEN] W-039 — Backend moved to a NEW Supabase project; each Claude must reconfigure `.env`
 - **Date:** 2026-06-11 · **Area:** environment / Supabase
