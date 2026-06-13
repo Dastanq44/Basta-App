@@ -52,7 +52,7 @@ export default function SubmissionScreen() {
   }, []);
 
   // Extra clearance above the keyboard so the input sits comfortably, not flush against it.
-  const COMPOSER_CLEARANCE = 44;
+  const COMPOSER_CLEARANCE = 36;
 
   if (submission.isPending) {
     return (

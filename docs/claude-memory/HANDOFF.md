@@ -21,6 +21,41 @@
 
 ---
 
+## 2026-06-13 — Claude (opus) / Custom emoji picker replaces rn-emoji-keyboard
+
+**Did:** Replaced the `rn-emoji-keyboard` library (too inflexible — hit walls on
+search position, safe-area gap, right-side scrollbar, and continuous category
+color-follow) with a custom in-app picker. Also trimmed the comment keyboard
+clearance again (44 → 36px).
+
+- **Dependency removed:** `rn-emoji-keyboard` uninstalled. Because `npm uninstall`
+  trips the standing W-013 ERESOLVE (react-dom peer), it was removed from
+  package.json by hand + a clean reinstall (`rm -rf node_modules package-lock.json
+  && npm install`). react-refresh present, expo-doctor 18/18.
+- **Emoji data:** `src/features/social/model/emojis.json` (228KB, the standard
+  grouped dataset — 9 categories, ~1,640 emojis with names + keywords) copied
+  from the old library's assets so we own it. `emojiData.ts` types it + exposes
+  `EMOJI_CATEGORIES` (with a representative emoji icon per tab) and `searchEmojis`.
+- **`src/features/social/ui/EmojiPickerSheet.tsx`:** custom bottom sheet —
+  fixed height (60%, so the keyboard never shoves the search bar up), search at
+  the TOP with a clear (✕), a horizontal paged grid (one page per category), and
+  a category tab bar whose indigo highlight is `Animated.interpolate`d from the
+  pager's `scrollX` — so it follows the swipe CONTINUOUSLY. Category icons are
+  full-color emoji, so nothing snaps. Search filters to a single results grid.
+- `ReactionBar` now renders `<EmojiPickerSheet>` instead of the library.
+
+**Notes for next session:**
+- The W-013 memory note that referenced installing rn-emoji-keyboard via
+  `--legacy-peer-deps` is now moot — the dep is gone.
+- The picker is a fixed-height sheet; if search results feel cramped with the
+  keyboard up, the body already pads by keyboard height (results scroll).
+- Emoji tab icons + the highlight color/contrast are easy theme tweaks in
+  `EmojiPickerSheet.tsx` / `emojiData.ts` if the look needs nudging.
+
+**Branch / commit:** `mvp` @ pending push.
+
+---
+
 ## 2026-06-13 — Claude (opus) / Submission edit RLS fix + reaction/comment UI batch
 
 **Did:** typecheck + lint clean.

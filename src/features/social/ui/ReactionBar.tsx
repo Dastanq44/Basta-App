@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { type LayoutRectangle, Pressable, View } from 'react-native';
-import EmojiPicker from 'rn-emoji-keyboard';
 import { Avatar, BottomSheet, Text, useTheme } from '@/shared/ui';
 import { REACTION_EMOJIS } from '../model';
 import {
@@ -8,6 +7,7 @@ import {
   useReactionReactors,
   useReactions,
 } from '../hooks';
+import { EmojiPickerSheet } from './EmojiPickerSheet';
 
 const PRESET_BTN = 36;
 
@@ -137,47 +137,10 @@ export function ReactionBar({ submissionId }: { submissionId: string }) {
         ) : null}
       </View>
 
-      <EmojiPicker
-        open={pickerOpen}
+      <EmojiPickerSheet
+        visible={pickerOpen}
         onClose={() => setPickerOpen(false)}
-        onEmojiSelected={(e) => choose(e.emoji)}
-        enableSearchBar
-        // 'bottom' keeps the search bar at the TOP and the category bar fixed at the bottom
-        // (a non-floating bar). 'top' would reverse the column and push search to the bottom;
-        // 'floating' would make the category bar "levitate" over the emojis.
-        categoryPosition="bottom"
-        // The library grows the sheet by the keyboard height when typing (so it isn't covered),
-        // which pushes the top-anchored search bar up. A shorter base height keeps the search
-        // bar lower / closer to the keyboard while typing.
-        defaultHeight="45%"
-        expandable={false}
-        // Extend content to the bottom edge — otherwise the safe-area inset leaves an
-        // unfillable gap below the category bar.
-        disableSafeArea
-        // The library's active-category INDICATOR (a box behind the icons) tracks the swipe
-        // continuously when this gesture is on; the icon color still snaps on landing. So we
-        // make the moving box the indicator: indigo box (containerActive) sliding over a gray
-        // bar (container), behind the icons — the indigo "follows" the finger. The active icon
-        // flips to white only once it lands under the box.
-        enableCategoryChangeGesture
-        theme={{
-          backdrop: '#00000066',
-          knob: t.colors.border,
-          container: t.colors.card,
-          header: t.colors.foreground,
-          category: {
-            icon: t.colors.mutedForeground,
-            iconActive: t.colors.primaryForeground,
-            container: t.colors.muted,
-            containerActive: t.colors.primary,
-          },
-          search: {
-            background: t.colors.muted,
-            text: t.colors.foreground,
-            placeholder: t.colors.mutedForeground,
-            icon: t.colors.mutedForeground,
-          },
-        }}
+        onSelect={(emoji) => choose(emoji)}
       />
 
       <ReactorsSheet
