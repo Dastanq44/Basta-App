@@ -36,7 +36,11 @@ export function EmojiPickerSheet({
   const t = useTheme();
   const { width: screenW, height: screenH } = useWindowDimensions();
   const sheetH = Math.round(screenH * SHEET_FRACTION);
-  const cellSize = Math.floor(screenW / COLS);
+  // Cell size + symmetric side padding derived from the ACTUAL device width (useWindowDimensions),
+  // so the grid fills evenly with equal left/right margins on any phone — no hardcoded guess.
+  const GRID_MIN_GAP = t.spacing.sm;
+  const cellSize = Math.floor((screenW - 2 * GRID_MIN_GAP) / COLS);
+  const gridSidePad = Math.max(0, Math.floor((screenW - cellSize * COLS) / 2));
 
   const [query, setQuery] = useState('');
   const searching = query.trim().length > 0;
@@ -171,7 +175,7 @@ export function EmojiPickerSheet({
               numColumns={COLS}
               keyboardShouldPersistTaps="handled"
               renderItem={({ item }) => renderEmoji(item)}
-              contentContainerStyle={{ paddingHorizontal: t.spacing.md, paddingBottom: kbHeight + t.spacing.lg }}
+              contentContainerStyle={{ paddingHorizontal: gridSidePad, paddingBottom: kbHeight + t.spacing.lg }}
               ListEmptyComponent={
                 <Text variant="muted" style={{ textAlign: 'center', marginTop: t.spacing.lg }}>
                   No emoji match “{query.trim()}”.
@@ -180,14 +184,14 @@ export function EmojiPickerSheet({
             />
           ) : (
             <>
-              {/* Category tabs with the continuous follow-highlight behind the icons. */}
-              <View style={{ height: 44, justifyContent: 'center' }}>
+              {/* Category tabs (compact) with the continuous follow-highlight behind the icons. */}
+              <View style={{ height: 36, justifyContent: 'center' }}>
                 <Animated.View
                   style={{
                     position: 'absolute',
                     left: 0,
                     width: tabW,
-                    height: 36,
+                    height: 28,
                     top: 4,
                     borderRadius: t.radius.md,
                     backgroundColor: t.colors.primary,
@@ -201,13 +205,16 @@ export function EmojiPickerSheet({
                       accessibilityRole="button"
                       accessibilityLabel={c.label}
                       onPress={() => pagerRef.current?.scrollToIndex({ index: i, animated: true })}
-                      style={{ width: tabW, height: 44, alignItems: 'center', justifyContent: 'center' }}
+                      style={{ width: tabW, height: 36, alignItems: 'center', justifyContent: 'center' }}
                     >
-                      <Text style={{ fontSize: 20 }}>{c.icon}</Text>
+                      <Text style={{ fontSize: 16 }}>{c.icon}</Text>
                     </Pressable>
                   ))}
                 </View>
               </View>
+
+              {/* Separator between the category bar and the emoji grid. */}
+              <View style={{ height: 1, backgroundColor: t.colors.border, marginTop: t.spacing.xs, marginBottom: t.spacing.xs }} />
 
               {/* Horizontal paged grids — one page per category. */}
               <FlatList
@@ -229,7 +236,7 @@ export function EmojiPickerSheet({
                       numColumns={COLS}
                       showsVerticalScrollIndicator
                       renderItem={({ item: e }) => renderEmoji(e)}
-                      contentContainerStyle={{ paddingHorizontal: t.spacing.md, paddingBottom: t.spacing.xl }}
+                      contentContainerStyle={{ paddingHorizontal: gridSidePad, paddingBottom: t.spacing.xl }}
                     />
                   </View>
                 )}

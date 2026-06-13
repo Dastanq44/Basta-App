@@ -1,4 +1,4 @@
-import { Text as RNText, type TextProps as RNTextProps } from 'react-native';
+import { Text as RNText, StyleSheet, type TextProps as RNTextProps } from 'react-native';
 import { useTheme } from './theme';
 
 type Variant = 'title' | 'heading' | 'subtitle' | 'body' | 'muted' | 'caption' | 'label';
@@ -27,5 +27,18 @@ export function Text({ variant = 'body', style, ...rest }: TextProps) {
     // Small, tracked, uppercase-friendly eyebrow label (e.g. section kickers, stat captions).
     label: { fontFamily: t.fonts.body, fontSize: t.fontSize.xs, color: t.colors.mutedForeground, fontWeight: '700', lineHeight: t.fontSize.xs * 1.3, letterSpacing: 0.4 },
   };
-  return <RNText style={[byVariant[variant], style]} {...rest} />;
+  const base = byVariant[variant];
+
+  // Universal glyph-clipping guard. When a caller overrides `fontSize` (avatar initials, emoji,
+  // icon glyphs) without also setting `lineHeight`, the variant's FIXED lineHeight can be far
+  // smaller than the larger glyph and clip it at the top (e.g. a 128px avatar's ~49px initials
+  // inside a ~23px body lineHeight). Bump lineHeight to fit the glyph — never shrink it — so big
+  // initials/emoji aren't cut off on any device or font.
+  const flat = StyleSheet.flatten(style) as { fontSize?: number; lineHeight?: number } | undefined;
+  const lineHeightGuard =
+    flat?.fontSize != null && flat.lineHeight == null
+      ? { lineHeight: Math.max(base.lineHeight, Math.round(flat.fontSize * 1.3)) }
+      : null;
+
+  return <RNText style={[base, style, lineHeightGuard]} {...rest} />;
 }
