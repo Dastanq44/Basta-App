@@ -21,6 +21,51 @@
 
 ---
 
+## 2026-06-13 — Claude (opus) / Avatar fixes round 2: group-avatar uid-path + profile cache-bust
+
+**Did:** Two avatar bugs the user hit after the new Supabase project.
+
+1. **Profile avatar didn't visibly update (cache).** Avatars uploaded to a FIXED
+   path (`<uid>/avatar.jpg`), so the public URL never changed and the CDN
+   (cacheControl 3600) + RN `<Image>` cache kept serving the old photo. Fix
+   (commit `54ed2c6`): unique filename per upload (`<id>/avatar-<ts>.jpg`) for
+   both user + group avatars; `uploadMyAvatar` cleans up the user's older files
+   best-effort; `deleteMyAvatar` now clears the whole user folder. **User
+   confirmed profile avatars work now.**
+
+2. **Group avatar STILL failed with RLS on create — even with `is_group_owner`
+   applied.** The migration `20260613000000` (is_group_owner SECURITY DEFINER
+   table lookup) was verified live in the policy, yet the owner was still denied.
+   Conclusion: a cross-table read (`select … from public.groups`) from inside a
+   `storage.objects` policy does NOT resolve in this Supabase env, whether inline
+   or via a SECURITY DEFINER helper — even though the same helper pattern works
+   for PostgREST queries, and even though a DIRECT `auth.uid()` comparison in the
+   storage policy works (user avatars prove it).
+
+   **New fix (migration `20260613100000_group_avatar_uid_path.sql`):** gate
+   group-avatar writes the SAME proven way as user avatars — on the uploader's
+   uid prefix (`(storage.foldername(name))[1] = auth.uid()::text`), no table
+   lookup, no function. New path convention:
+   `group-avatars/<uploader_uid>/<groupId>-<ts>.jpg`. Ownership is still enforced
+   by the owner-only `update_group_meta` RPC (it decides which uploaded path
+   becomes the group's avatar), so a non-owner's file is never referenced.
+   `is_group_owner()` is dropped (no longer used). Client `uploadGroupAvatar`
+   updated to the new path.
+
+**USER:** apply `20260613100000_group_avatar_uid_path.sql` (or the SQL block from
+this session). If `create policy on storage.objects` errors with "must be owner",
+use Dashboard → Storage → Policies for the `group-avatars` bucket. Then retry
+group-create-with-avatar.
+
+**Lesson learned (for the bootstrap / future):** do NOT gate storage RLS on a
+cross-table read in this project — gate on the path's uid segment and enforce the
+real authorization in the owner-only RPC. The bootstrap's original group-avatars
+policy (inline subquery) is now superseded by `20260613100000`.
+
+**Branch / commit:** `mvp` @ pending push.
+
+---
+
 ## 2026-06-13 — Claude (opus) / Group-avatar RLS root-caused + fixed (W-039 follow-up)
 
 **Did:** Resolved the long-running group-avatar upload RLS failure. It was a real
