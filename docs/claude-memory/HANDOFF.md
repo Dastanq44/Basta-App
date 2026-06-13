@@ -21,6 +21,37 @@
 
 ---
 
+## 2026-06-13 — Claude (opus) / Group-avatar RLS root-caused + fixed (W-039 follow-up)
+
+**Did:** Resolved the long-running group-avatar upload RLS failure. It was a real
+backend bug, NOT environmental (project + buckets were all correct).
+
+**Root cause:** the `storage_group_avatars_insert/update` policies used an INLINE
+subquery `select 1 from public.groups where id = … and owner_id = auth.uid()`. That
+re-enters the `groups` table's own RLS (`groups_select_member` → `is_group_member` →
+`group_members`) from *inside* a `storage.objects` policy, and that nested RLS read
+does not resolve — so even the group OWNER got `new row violates row-level security
+policy`. Proof of diagnosis: profile-photo upload worked (its policy uses a direct
+`auth.uid()` comparison → confirms storage requests ARE authenticated), and a temporary
+`to public` group policy worked (confirms bucket/path/bytes are fine) — only the inline
+subquery failed.
+
+**Fix:** new migration `supabase/migrations/20260613000000_group_avatar_owner_check.sql`
+adds an `is_group_owner(uuid)` SECURITY DEFINER helper (mirrors `is_group_member`,
+reads `groups` without RLS) and rewrites the two group-avatars policies to use it.
+This matches the pattern the rest of the schema already uses. user-avatars /
+proof-media were never affected (direct uid comparison / existing participant helper).
+Per D-013 this is a NEW migration on top of the frozen bootstrap (adds a function +
+alters policies), not a bootstrap edit.
+
+**USER:** apply `20260613000000_group_avatar_owner_check.sql` (the user already ran the
+identical SQL live during the debugging session, so the running project is fixed; the
+file keeps repo + DB in sync and fixes future fresh applies).
+
+**Branch / commit:** `mvp` @ pending push.
+
+---
+
 ## 2026-06-13 — Claude (opus) / Debugging session: pgcrypto invite-code fix + lint + avatar-RLS root-cause
 
 **Did:** Maintenance/debugging pass. Static checks all green (typecheck, lint 0
