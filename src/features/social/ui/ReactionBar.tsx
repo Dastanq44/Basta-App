@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { type LayoutRectangle, Pressable, View } from 'react-native';
 import EmojiPicker from 'rn-emoji-keyboard';
 import { Avatar, BottomSheet, Text, useTheme } from '@/shared/ui';
 import { REACTION_EMOJIS } from '../model';
@@ -9,11 +9,13 @@ import {
   useReactions,
 } from '../hooks';
 
+const PRESET_BTN = 36;
+
 /**
- * Free-form reactions (T-053-C). Chips show the existing reactions with counts; a `(+)`
- * button on the right opens an inline preset popover with the canonical REACTION_EMOJIS
- * + a `(+)` that opens the full system-style emoji picker. Long-pressing any existing
- * reaction chip pops a sheet of users who reacted with it.
+ * Free-form reactions (T-053-C). Chips show the existing reactions (count only when > 1);
+ * a `(+)` button opens an inline preset popover anchored beside it (opens to the right, flips
+ * left if there's no room) with the canonical REACTION_EMOJIS + a `(+)` that opens the full
+ * bottom-sheet emoji picker. Long-pressing a reaction chip shows who reacted with it.
  */
 export function ReactionBar({ submissionId }: { submissionId: string }) {
   const t = useTheme();
@@ -22,6 +24,8 @@ export function ReactionBar({ submissionId }: { submissionId: string }) {
   const [presetsOpen, setPresetsOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [reactorsForEmoji, setReactorsForEmoji] = useState<string | null>(null);
+  const [barWidth, setBarWidth] = useState(0);
+  const [plusRect, setPlusRect] = useState<LayoutRectangle | null>(null);
 
   const mine = reactions.data?.mine;
   const counts = reactions.data?.counts ?? {};
@@ -36,86 +40,132 @@ export function ReactionBar({ submissionId }: { submissionId: string }) {
     react.mutate(mine === emoji ? null : emoji);
   };
 
+  // Popover geometry: width from its content; anchor beside the (+) button, flip to stay on-screen.
+  const popoverWidth =
+    (REACTION_EMOJIS.length + 1) * PRESET_BTN + REACTION_EMOJIS.length * t.spacing.xs + 2 * t.spacing.sm;
+  const popoverPos = (() => {
+    if (!plusRect) return null;
+    const spaceRight = barWidth - (plusRect.x + plusRect.width);
+    const openRight = spaceRight >= popoverWidth + t.spacing.xs;
+    let left = openRight
+      ? plusRect.x // start at the (+) left edge, extend right
+      : plusRect.x + plusRect.width - popoverWidth; // end at the (+) right edge, extend left
+    left = Math.max(0, Math.min(left, Math.max(0, barWidth - popoverWidth)));
+    return { top: plusRect.y + plusRect.height + t.spacing.xs, left };
+  })();
+
   return (
     <View style={{ gap: t.spacing.sm }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: t.spacing.sm }}>
-        {emojiEntries.map(([emoji, count]) => {
-          const selected = mine === emoji;
-          return (
-            <Pressable
-              key={emoji}
-              accessibilityRole="button"
-              accessibilityLabel={`React ${emoji}`}
-              accessibilityHint="Hold to see who reacted with this"
-              accessibilityState={{ selected }}
-              disabled={react.isPending}
-              hitSlop={6}
-              onPress={() => choose(emoji)}
-              onLongPress={() => setReactorsForEmoji(emoji)}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 6,
-                paddingHorizontal: t.spacing.md,
-                paddingVertical: 8,
-                borderRadius: t.radius.full,
-                backgroundColor: selected ? t.colors.accent : t.colors.muted,
-                borderWidth: selected ? 0 : 1,
-                borderColor: t.colors.border,
-                opacity: react.isPending ? 0.6 : 1,
-              }}
-            >
-              <Text style={{ fontSize: t.fontSize.md }}>{emoji}</Text>
-              <Text
+      <View style={{ position: 'relative' }} onLayout={(e) => setBarWidth(e.nativeEvent.layout.width)}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: t.spacing.sm }}>
+          {emojiEntries.map(([emoji, count]) => {
+            const selected = mine === emoji;
+            return (
+              <Pressable
+                key={emoji}
+                accessibilityRole="button"
+                accessibilityLabel={`React ${emoji}`}
+                accessibilityHint="Hold to see who reacted with this"
+                accessibilityState={{ selected }}
+                disabled={react.isPending}
+                hitSlop={6}
+                onPress={() => choose(emoji)}
+                onLongPress={() => setReactorsForEmoji(emoji)}
                 style={{
-                  fontSize: t.fontSize.sm,
-                  fontWeight: '600',
-                  color: selected ? t.colors.accentForeground : t.colors.mutedForeground,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  paddingHorizontal: t.spacing.md,
+                  paddingVertical: 8,
+                  borderRadius: t.radius.full,
+                  backgroundColor: selected ? t.colors.accent : t.colors.muted,
+                  borderWidth: selected ? 0 : 1,
+                  borderColor: t.colors.border,
+                  opacity: react.isPending ? 0.6 : 1,
                 }}
               >
-                {count}
-              </Text>
-            </Pressable>
-          );
-        })}
+                <Text style={{ fontSize: t.fontSize.md }}>{emoji}</Text>
+                {/* Count only when more than one — a single reaction just shows the emoji. */}
+                {count > 1 ? (
+                  <Text
+                    style={{
+                      fontSize: t.fontSize.sm,
+                      fontWeight: '600',
+                      color: selected ? t.colors.accentForeground : t.colors.mutedForeground,
+                    }}
+                  >
+                    {count}
+                  </Text>
+                ) : null}
+              </Pressable>
+            );
+          })}
 
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Add reaction"
-          disabled={react.isPending}
-          hitSlop={6}
-          onPress={() => setPresetsOpen((v) => !v)}
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: 20,
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderWidth: 1,
-            borderColor: t.colors.border,
-            backgroundColor: t.colors.card,
-          }}
-        >
-          <Text style={{ fontSize: 20, color: t.colors.foreground, lineHeight: 22 }}>+</Text>
-        </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Add reaction"
+            disabled={react.isPending}
+            hitSlop={6}
+            onLayout={(e) => setPlusRect(e.nativeEvent.layout)}
+            onPress={() => setPresetsOpen((v) => !v)}
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderWidth: 1,
+              borderColor: t.colors.border,
+              backgroundColor: t.colors.card,
+            }}
+          >
+            <Text style={{ fontSize: 20, color: t.colors.foreground, lineHeight: 22 }}>+</Text>
+          </Pressable>
+        </View>
+
+        {presetsOpen && popoverPos ? (
+          <PresetsPopover
+            width={popoverWidth}
+            top={popoverPos.top}
+            left={popoverPos.left}
+            onChoose={choose}
+            onOpenFullPicker={() => {
+              setPresetsOpen(false);
+              setPickerOpen(true);
+            }}
+          />
+        ) : null}
       </View>
-
-      {presetsOpen ? (
-        <PresetsPopover
-          onChoose={choose}
-          onOpenFullPicker={() => {
-            setPresetsOpen(false);
-            setPickerOpen(true);
-          }}
-        />
-      ) : null}
 
       <EmojiPicker
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
         onEmojiSelected={(e) => choose(e.emoji)}
         enableSearchBar
-        categoryPosition="top"
+        // 'bottom' keeps the search bar at the TOP and the category bar fixed at the bottom
+        // (a non-floating bar). 'top' would reverse the column and push search to the bottom;
+        // 'floating' would make the category bar "levitate" over the emojis.
+        categoryPosition="bottom"
+        defaultHeight="65%"
+        expandable={false}
+        theme={{
+          backdrop: '#00000066',
+          knob: t.colors.border,
+          container: t.colors.card,
+          header: t.colors.foreground,
+          category: {
+            icon: t.colors.mutedForeground,
+            iconActive: t.colors.primary,
+            container: t.colors.card,
+            containerActive: t.colors.muted,
+          },
+          search: {
+            background: t.colors.muted,
+            text: t.colors.foreground,
+            placeholder: t.colors.mutedForeground,
+            icon: t.colors.mutedForeground,
+          },
+        }}
       />
 
       <ReactorsSheet
@@ -128,9 +178,15 @@ export function ReactionBar({ submissionId }: { submissionId: string }) {
 }
 
 function PresetsPopover({
+  width,
+  top,
+  left,
   onChoose,
   onOpenFullPicker,
 }: {
+  width: number;
+  top: number;
+  left: number;
   onChoose: (emoji: string) => void;
   onOpenFullPicker: () => void;
 }) {
@@ -138,16 +194,26 @@ function PresetsPopover({
   return (
     <View
       style={{
+        position: 'absolute',
+        top,
+        left,
+        width,
         flexDirection: 'row',
         alignItems: 'center',
         gap: t.spacing.xs,
-        alignSelf: 'flex-end',
         paddingHorizontal: t.spacing.sm,
         paddingVertical: 6,
         borderRadius: t.radius.full,
         borderWidth: 1,
         borderColor: t.colors.border,
         backgroundColor: t.colors.card,
+        // Float above the reaction chips.
+        zIndex: 10,
+        elevation: 6,
+        shadowColor: '#000',
+        shadowOpacity: 0.12,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 3 },
       }}
     >
       {REACTION_EMOJIS.map((emoji) => (
@@ -157,13 +223,7 @@ function PresetsPopover({
           accessibilityLabel={`React ${emoji}`}
           hitSlop={6}
           onPress={() => onChoose(emoji)}
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: 18,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
+          style={{ width: PRESET_BTN, height: PRESET_BTN, borderRadius: PRESET_BTN / 2, alignItems: 'center', justifyContent: 'center' }}
         >
           <Text style={{ fontSize: 20 }}>{emoji}</Text>
         </Pressable>
@@ -174,9 +234,9 @@ function PresetsPopover({
         hitSlop={6}
         onPress={onOpenFullPicker}
         style={{
-          width: 36,
-          height: 36,
-          borderRadius: 18,
+          width: PRESET_BTN,
+          height: PRESET_BTN,
+          borderRadius: PRESET_BTN / 2,
           alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: t.colors.muted,

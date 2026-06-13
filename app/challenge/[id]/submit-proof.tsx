@@ -16,7 +16,8 @@ export default function SubmitProofModal() {
         submitting={submit.isPending}
         errorMessage={submit.error instanceof Error ? submit.error.message : null}
         onSubmit={async ({ title, mediaLocalUri, comment }) => {
-          if (!id) return;
+          // New submissions always require a fresh photo (no existing image to keep).
+          if (!id || !mediaLocalUri) return;
           await submit.mutateAsync({ challengeId: id, title, mediaLocalUri, comment });
           router.back();
         }}

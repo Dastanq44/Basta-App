@@ -2,6 +2,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Screen, Text, useTheme } from '@/shared/ui';
 import {
   ProofComposer,
+  useProofSignedUrl,
   useRedactMySubmission,
   useTodaySubmission,
 } from '@/features/proofs';
@@ -14,6 +15,7 @@ export default function EditProofModal() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const today = useTodaySubmission(id);
+  const existingImage = useProofSignedUrl(today.data?.mediaRemotePath);
   const redact = useRedactMySubmission();
 
   if (today.isPending) {
@@ -48,15 +50,17 @@ export default function EditProofModal() {
         errorMessage={redact.error instanceof Error ? redact.error.message : null}
         initialTitle={today.data.title}
         initialComment={today.data.comment}
+        initialImageUrl={existingImage.data}
         ctaLabel={redact.isPending ? 'Saving…' : 'Save changes'}
-        intro="Replace today's photo, retitle, and edit your description. Group voters will re-verify the new content."
+        intro="Edit your title, photo, and description. Changing the photo makes group voters re-verify."
         onSubmit={async ({ title, mediaLocalUri, comment }) => {
           if (!id) return;
           await redact.mutateAsync({
             submissionId,
             challengeId: id,
             title,
-            mediaLocalUri,
+            mediaLocalUri, // omitted ⇒ keep existing photo
+            existingMediaPath: today.data?.mediaRemotePath,
             comment,
           });
           router.back();

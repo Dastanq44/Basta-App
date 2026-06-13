@@ -13,9 +13,12 @@ export type RedactSubmissionInput = {
   challengeId: string;
   /** New title (1..80 chars). Required since W-034. */
   title: string;
-  /** Local file URI from ImagePicker. The hook uploads it (overwriting the deterministic
-   *  storage path) then calls the redact RPC. */
-  mediaLocalUri: string;
+  /** New photo to upload (overwrites the deterministic storage path). Omit to KEEP the
+   *  existing photo — then no storage write happens at all (just title/description edit). */
+  mediaLocalUri?: string;
+  /** The submission's current media_path. Required when `mediaLocalUri` is omitted so the
+   *  redact RPC can keep the existing photo. */
+  existingMediaPath?: string;
   /** Optional new note. Empty string ⇒ cleared. */
   comment?: string;
 };
@@ -37,14 +40,22 @@ export function useRedactMySubmission() {
       const uid = session.session?.user.id;
       if (!uid) throw new Error('You must be signed in to edit a submission.');
 
-      // Re-upload at the deterministic path so the existing media_path stays valid and
-      // the old bytes are overwritten in one shot (no orphaned objects in Storage).
-      const { remotePath } = await uploadProofMedia({
-        userId: uid,
-        challengeId: input.challengeId,
-        submissionId: input.submissionId,
-        localUri: input.mediaLocalUri,
-      });
+      let remotePath: string;
+      if (input.mediaLocalUri) {
+        // New photo: re-upload at the deterministic path so the existing media_path stays
+        // valid and the old bytes are overwritten in one shot (no orphaned objects).
+        ({ remotePath } = await uploadProofMedia({
+          userId: uid,
+          challengeId: input.challengeId,
+          submissionId: input.submissionId,
+          localUri: input.mediaLocalUri,
+        }));
+      } else if (input.existingMediaPath) {
+        // Keep the existing photo — no storage write (a title/description-only edit).
+        remotePath = input.existingMediaPath;
+      } else {
+        throw new Error('No photo to save.');
+      }
 
       await redactMySubmission(input.submissionId, input.title, remotePath, input.comment);
       return { remotePath };

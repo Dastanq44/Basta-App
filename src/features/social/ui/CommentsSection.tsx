@@ -3,7 +3,6 @@ import { Pressable, TextInput, View } from 'react-native';
 import {
   Avatar,
   BottomSheet,
-  Card,
   KEYBOARD_DONE_ACCESSORY_ID,
   Text,
   useTheme,
@@ -86,24 +85,33 @@ function CommentRow({
   const t = useTheme();
   const name = comment.authorName ?? 'Member';
   return (
-    <Card>
-      <View style={{ flexDirection: 'row', gap: t.spacing.sm }}>
-        <Avatar
-          name={comment.authorDisplayName ?? comment.authorUsername ?? null}
-          size={28}
-        />
-        <View style={{ flex: 1, gap: 2 }}>
-          <Text variant="caption">{name}</Text>
-          <Text variant="body">{comment.body}</Text>
-        </View>
-        <HeartButton
-          liked={comment.likedByMe}
-          count={comment.likesCount}
-          onPress={onToggleLike}
-          onLongPress={onLongPressLike}
-        />
+    // Tighter than the default Card (which uses lg padding + xl radius) so a short comment
+    // doesn't sit in an oversized box.
+    <View
+      style={{
+        flexDirection: 'row',
+        gap: t.spacing.sm,
+        alignItems: 'flex-start',
+        backgroundColor: t.colors.card,
+        borderRadius: t.radius.lg,
+        borderWidth: 1,
+        borderColor: t.colors.border,
+        paddingHorizontal: t.spacing.md,
+        paddingVertical: t.spacing.sm,
+      }}
+    >
+      <Avatar name={comment.authorDisplayName ?? comment.authorUsername ?? null} size={32} />
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text variant="caption" style={{ fontWeight: '600' }}>{name}</Text>
+        <Text variant="body">{comment.body}</Text>
       </View>
-    </Card>
+      <HeartButton
+        liked={comment.likedByMe}
+        count={comment.likesCount}
+        onPress={onToggleLike}
+        onLongPress={onLongPressLike}
+      />
+    </View>
   );
 }
 
@@ -178,15 +186,15 @@ function ComposerRow({
     <View
       style={{
         flexDirection: 'row',
-        alignItems: 'center',
+        alignItems: 'flex-end',
         gap: t.spacing.sm,
         borderWidth: 1,
         borderColor: t.colors.border,
         backgroundColor: t.colors.card,
-        borderRadius: t.radius.full,
-        paddingHorizontal: t.spacing.md,
-        paddingVertical: 4,
-        minHeight: 48,
+        borderRadius: t.radius.xl,
+        paddingLeft: t.spacing.md,
+        paddingRight: 6,
+        paddingVertical: 6,
       }}
     >
       <TextInput
@@ -203,10 +211,12 @@ function ComposerRow({
           flex: 1,
           color: t.colors.foreground,
           fontSize: t.fontSize.md,
-          paddingVertical: 6,
+          paddingTop: 8,
+          paddingBottom: 8,
           maxHeight: 120,
         }}
       />
+      {/* Oval (stadium) send button sized to sit snugly inside the pill. */}
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Post comment"
@@ -214,9 +224,9 @@ function ComposerRow({
         onPress={onSend}
         hitSlop={6}
         style={{
-          width: 36,
-          height: 36,
-          borderRadius: 18,
+          width: 46,
+          height: 34,
+          borderRadius: 17,
           alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: canSend ? t.colors.primary : t.colors.muted,
@@ -228,7 +238,7 @@ function ComposerRow({
             fontSize: 18,
             fontWeight: '700',
             color: canSend ? t.colors.primaryForeground : t.colors.mutedForeground,
-            lineHeight: 18,
+            lineHeight: 20,
           }}
         >
           ↑

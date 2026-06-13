@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Image, Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Avatar, Button, Card, Screen, Text, useTheme } from '@/shared/ui';
 import { useSession } from '@/features/auth';
@@ -99,7 +99,16 @@ export default function SubmissionScreen() {
   return (
     <Screen padded={false}>
       <Stack.Screen options={{ title: s.title }} />
-      <ScrollView contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.lg, paddingBottom: t.spacing.xl }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+        // Offset for the navigation header so the comment input clears the keyboard.
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 96 : 0}
+      >
+      <ScrollView
+        contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.lg, paddingBottom: t.spacing.xl }}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: t.spacing.sm }}>
           <View style={{ flex: 1, gap: 2 }}>
             <Text variant="title">{s.title}</Text>
@@ -169,6 +178,7 @@ export default function SubmissionScreen() {
           </View>
         ) : null}
       </ScrollView>
+      </KeyboardAvoidingView>
 
       <ReportSheet
         visible={reportOpen}

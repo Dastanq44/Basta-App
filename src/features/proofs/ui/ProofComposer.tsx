@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Alert, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
+import { Alert, Image, KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Button, Card, Input, Screen, Text, useTheme } from '@/shared/ui';
 
 export type ProofComposerSubmit = (input: {
   title: string;
-  mediaLocalUri: string;
+  /** New photo to upload. Omitted when the user keeps the existing photo (edit mode). */
+  mediaLocalUri?: string;
   comment?: string;
 }) => Promise<void>;
 
@@ -23,15 +24,17 @@ export type ProofComposerProps = {
   initialTitle?: string;
   /** Pre-fill the description field — used by the redact (edit) flow. */
   initialComment?: string;
+  /** Existing photo URL shown in edit mode. Kept unless the user picks a new one. */
+  initialImageUrl?: string | null;
 };
 
 const TITLE_MAX = 80;
 
 /**
  * Photo-first proof composer. Title required (W-034), photo required, description optional.
+ * In edit mode an `initialImageUrl` is shown and kept unless the user picks a new photo —
+ * so a description-only edit doesn't re-upload (and the existing image never disappears).
  * Stays presentational — orchestration (queue + upload) lives in the parent screen.
- * Used by BOTH the submit-proof modal (initial submission via the offline queue) and the
- * edit-proof modal (in-place redact, direct RPC).
  */
 export function ProofComposer({
   onSubmit,
@@ -42,6 +45,7 @@ export function ProofComposer({
   ctaLabel,
   initialTitle,
   initialComment,
+  initialImageUrl,
 }: ProofComposerProps) {
   const t = useTheme();
   const [title, setTitle] = useState(initialTitle ?? '');
@@ -50,6 +54,9 @@ export function ProofComposer({
   const [pickerError, setPickerError] = useState<string | null>(null);
 
   const trimmedTitle = title.trim();
+  // What's shown: a freshly-picked photo wins; otherwise the existing one (edit mode).
+  const shownImage = mediaLocalUri ?? initialImageUrl ?? null;
+  const hasImage = !!shownImage;
 
   const pickFromLibrary = async () => {
     setPickerError(null);
@@ -86,14 +93,15 @@ export function ProofComposer({
       setPickerError('Add a title.');
       return;
     }
-    if (!mediaLocalUri) {
+    if (!hasImage) {
       setPickerError('Pick a photo first.');
       return;
     }
     try {
       await onSubmit({
         title: trimmedTitle,
-        mediaLocalUri,
+        // Omit when keeping the existing image (no new pick).
+        mediaLocalUri: mediaLocalUri ?? undefined,
         comment: comment.trim() || undefined,
       });
     } catch (e) {
@@ -101,10 +109,24 @@ export function ProofComposer({
     }
   };
 
+  const ChangeButtons = (
+    <View style={{ flexDirection: 'row', gap: t.spacing.sm }}>
+      <View style={{ flex: 1 }}>
+        <Button label="Take photo" onPress={takePhoto} disabled={submitting} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Button label="From library" variant="secondary" onPress={pickFromLibrary} disabled={submitting} />
+      </View>
+    </View>
+  );
+
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <Screen padded={false}>
-        <ScrollView contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.lg, paddingBottom: t.spacing.xl }}>
+        <ScrollView
+          contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.lg, paddingBottom: t.spacing.xl }}
+          keyboardShouldPersistTaps="handled"
+        >
           <Text variant="title">{screenTitle ?? "Today's proof"}</Text>
           <Text variant="muted">
             {intro ?? 'Give it a title, snap a photo, and add a description if you want.'}
@@ -120,32 +142,24 @@ export function ProofComposer({
             returnKeyType="done"
           />
 
-          {mediaLocalUri ? (
-            <Card>
-              <Image
-                source={{ uri: mediaLocalUri }}
-                accessibilityLabel="Selected proof photo"
-                style={{ width: '100%', aspectRatio: 1, borderRadius: t.radius.md }}
-                resizeMode="cover"
-              />
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => setMediaLocalUri(null)}
-                disabled={submitting}
-                style={{ alignSelf: 'flex-end', marginTop: t.spacing.sm }}
-              >
-                <Text variant="muted">Replace</Text>
-              </Pressable>
-            </Card>
-          ) : (
-            <View style={{ flexDirection: 'row', gap: t.spacing.sm }}>
-              <View style={{ flex: 1 }}>
-                <Button label="Take photo" onPress={takePhoto} disabled={submitting} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Button label="From library" variant="secondary" onPress={pickFromLibrary} disabled={submitting} />
-              </View>
+          {hasImage ? (
+            <View style={{ gap: t.spacing.sm }}>
+              <Card>
+                <Image
+                  source={{ uri: shownImage! }}
+                  accessibilityLabel="Proof photo"
+                  style={{ width: '100%', aspectRatio: 1, borderRadius: t.radius.md }}
+                  resizeMode="cover"
+                />
+              </Card>
+              {/* Photo is shown but replaceable — the existing one never just disappears. */}
+              <Text variant="caption" style={{ color: t.colors.mutedForeground }}>
+                {mediaLocalUri ? 'New photo selected.' : 'Current photo — change it below if you want.'}
+              </Text>
+              {ChangeButtons}
             </View>
+          ) : (
+            ChangeButtons
           )}
 
           {pickerError ? (
@@ -170,7 +184,7 @@ export function ProofComposer({
             label={ctaLabel ?? (submitting ? 'Saving…' : 'Submit proof')}
             onPress={handleSubmit}
             loading={submitting}
-            disabled={submitting || !trimmedTitle || !mediaLocalUri}
+            disabled={submitting || !trimmedTitle || !hasImage}
           />
         </ScrollView>
       </Screen>

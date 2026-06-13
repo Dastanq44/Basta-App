@@ -21,6 +21,53 @@
 
 ---
 
+## 2026-06-13 — Claude (opus) / Submission edit RLS fix + reaction/comment UI batch
+
+**Did:** typecheck + lint clean.
+
+### Bug — edit submission "new row violates RLS"
+proof-media had only INSERT + SELECT storage policies. Editing re-uploads the photo
+to the same deterministic path with upsert=true → when the object exists (it does on
+edit) that's an UPDATE of storage.objects, which had no policy → denied. New migration
+`20260613300000_proof_media_update_delete.sql` adds own-folder UPDATE + DELETE policies
+(uid path segment, like user-avatars). **USER must apply it.**
+
+Also reworked the edit UX + flow so a description-only edit doesn't even touch storage:
+- `ProofComposer` gains `initialImageUrl` — edit mode shows the existing photo (no longer
+  disappears) with "Take photo / From library" to change it. `ProofComposerSubmit`'s
+  `mediaLocalUri` is now optional (omitted ⇒ keep existing).
+- `useRedactMySubmission`: `mediaLocalUri` optional + `existingMediaPath`; uploads only when
+  a new photo is picked, else reuses the existing media_path (no storage write → no RLS
+  surface for text-only edits).
+- `edit-proof.tsx` passes the existing signed URL (`useProofSignedUrl`) + `existingMediaPath`;
+  `submit-proof.tsx` guards the now-optional uri (new submissions always need a photo).
+
+### Reactions (`ReactionBar`)
+- Count hidden when a reaction has exactly 1 (just the emoji); shown only when > 1.
+- Preset `(+)` popover now measured + absolutely positioned: opens to the RIGHT of the
+  `(+)`, flips LEFT when there's no room, clamped on-screen (was `alignSelf:flex-end`).
+- Full emoji picker: fixed bottom sheet (`defaultHeight="65%"`, `expandable={false}`),
+  `categoryPosition="bottom"` so the SEARCH BAR sits at the TOP and the category bar is a
+  fixed (non-floating) bottom bar — `'top'` reverses the column (search → bottom),
+  `'floating'` makes the category bar levitate. Themed to app colors. Type-to-filter + the
+  clear (X) behavior is the library's default.
+- **Library limit (rn-emoji-keyboard):** no prop for a right-side vertical scroll
+  indicator on the emoji grid (it's a horizontally-paged FlatList with the indicator
+  disabled internally). Not done — would require forking/replacing the library.
+
+### Comments (`CommentsSection`)
+- Comment rows: replaced default `Card` (lg padding + xl radius) with a tighter container
+  (md/sm padding, lg radius) — fixes "big box, tiny content".
+- Send button: oval/stadium (46×34, r17) sitting snug in the pill (was a 36 circle).
+- Submission screen wrapped in `KeyboardAvoidingView` (+ `keyboardShouldPersistTaps`) so the
+  composer rises above the keyboard.
+
+**USER:** apply `20260613300000_proof_media_update_delete.sql`.
+
+**Branch / commit:** `mvp` @ pending push.
+
+---
+
 ## 2026-06-13 — Claude (opus) / Fix: list_submission_comments 42702 ambiguous "id"
 
 **Did:** Comments failed to load on the submission screen — `getComments` threw
