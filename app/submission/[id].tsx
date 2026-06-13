@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useHeaderHeight } from '@react-navigation/elements';
 import { Avatar, Button, Card, Screen, Text, useTheme } from '@/shared/ui';
 import { useSession } from '@/features/auth';
 import { SyncBadge, useProofSignedUrl, useSubmission } from '@/features/proofs';
@@ -24,6 +25,7 @@ const SUBMISSION_DETAIL_DATE_FMT: Intl.DateTimeFormatOptions = {
 export default function SubmissionScreen() {
   const t = useTheme();
   const router = useRouter();
+  const headerHeight = useHeaderHeight();
   const { id } = useLocalSearchParams<{ id: string }>();
   const session = useSession();
   const myUid = session.session?.user.id;
@@ -98,13 +100,15 @@ export default function SubmissionScreen() {
   };
 
   return (
-    <Screen padded={false}>
+    // No 'top' edge — the native header already handles the top safe area; adding the inset
+    // here stacked an empty band below the back button.
+    <Screen padded={false} edges={['bottom']}>
       <Stack.Screen options={{ title: s.title }} />
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
-        // Offset for the navigation header so the comment input clears the keyboard.
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 96 : 0}
+        // Exact header height so the comment input clears the keyboard fully.
+        keyboardVerticalOffset={headerHeight}
       >
       <ScrollView
         ref={scrollRef}

@@ -15,9 +15,9 @@ export type BottomSheetProps = {
   children: ReactNode;
   /** Top hairline-rounded drag handle (40×4 dot at the top). Default true. */
   showHandle?: boolean;
-  /** Lift the sheet off the bottom edge by this many px (rounds the bottom corners too).
-   *  Used by small popover-style sheets (e.g. "Liked by") so they sit higher / more reachable. */
-  bottomInset?: number;
+  /** Minimum sheet height (px). Lets a short sheet (e.g. "Liked by") sit higher while staying
+   *  flush with the bottom edge — the extra space is card-colored, so there's no backdrop gap. */
+  minHeight?: number;
 };
 
 const OPEN_DURATION = 260;
@@ -39,7 +39,7 @@ const BACKDROP_OPACITY = 0.4;
  * Sheet height isn't known in advance; we translate by the window height as a "safe upper
  * bound" so the sheet starts fully off-screen below regardless of content size.
  */
-export function BottomSheet({ visible, onClose, children, showHandle = true, bottomInset = 0 }: BottomSheetProps) {
+export function BottomSheet({ visible, onClose, children, showHandle = true, minHeight }: BottomSheetProps) {
   const t = useTheme();
   const { height: winH } = useWindowDimensions();
   const backdrop = useRef(new Animated.Value(0)).current;
@@ -92,13 +92,11 @@ export function BottomSheet({ visible, onClose, children, showHandle = true, bot
             position: 'absolute',
             left: 0,
             right: 0,
-            bottom: bottomInset,
+            bottom: 0,
+            minHeight,
             backgroundColor: t.colors.card,
             borderTopLeftRadius: t.radius.xl,
             borderTopRightRadius: t.radius.xl,
-            // When lifted off the bottom, round the bottom corners too so it reads as a card.
-            borderBottomLeftRadius: bottomInset > 0 ? t.radius.xl : 0,
-            borderBottomRightRadius: bottomInset > 0 ? t.radius.xl : 0,
             padding: t.spacing.lg,
             paddingBottom: t.spacing.xl,
             // Larger between-children gap so the tinted BottomSheetMenuItem chips

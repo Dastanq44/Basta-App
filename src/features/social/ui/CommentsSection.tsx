@@ -272,7 +272,7 @@ function CommentLikersSheet({
   const likers = useCommentLikers(commentId ?? undefined, !!commentId);
 
   return (
-    <BottomSheet visible={!!commentId} onClose={onClose} bottomInset={96}>
+    <BottomSheet visible={!!commentId} onClose={onClose} minHeight={300}>
       <View style={{ gap: t.spacing.sm }}>
         <Text variant="heading">Liked by</Text>
         {likers.isPending ? (

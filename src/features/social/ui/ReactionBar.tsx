@@ -151,6 +151,9 @@ export function ReactionBar({ submissionId }: { submissionId: string }) {
         // bar lower / closer to the keyboard while typing.
         defaultHeight="45%"
         expandable={false}
+        // Extend content to the bottom edge — otherwise the safe-area inset leaves an
+        // unfillable gap below the category bar.
+        disableSafeArea
         theme={{
           backdrop: '#00000066',
           knob: t.colors.border,
@@ -264,7 +267,7 @@ function ReactorsSheet({
   const reactors = useReactionReactors(submissionId, emoji ?? undefined, !!emoji);
 
   return (
-    <BottomSheet visible={!!emoji} onClose={onClose} bottomInset={96}>
+    <BottomSheet visible={!!emoji} onClose={onClose} minHeight={300}>
       <View style={{ gap: t.spacing.sm }}>
         <Text variant="heading">Reacted {emoji ?? ''}</Text>
         {reactors.isPending ? (
