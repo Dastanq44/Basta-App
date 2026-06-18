@@ -37,7 +37,8 @@ export function GroupCreateOrJoinForm({
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
-  const [isPublic, setIsPublic] = useState(false);
+  // Default public (groups are public unless the user opts out).
+  const [isPublic, setIsPublic] = useState(true);
   const [code, setCode] = useState('');
   const [fieldError, setFieldError] = useState<string | null>(null);
 
@@ -139,10 +140,10 @@ export function GroupCreateOrJoinForm({
             }}
           >
             <VisibilityToggle
-              value={isPublic}
-              onValueChange={setIsPublic}
-              title="Public group"
-              description="Required for group challenge proofs to appear in Global. Invite code stays private."
+              value={!isPublic}
+              onValueChange={(next) => setIsPublic(!next)}
+              title="Private group"
+              description="Private groups do not appear in Global. Invite codes are never shown publicly."
               disabled={submitting}
             />
           </View>

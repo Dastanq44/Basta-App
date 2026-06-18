@@ -19,8 +19,9 @@ export type SubmitProofPayload = {
   /** Path to a file in the app sandbox; the queue processor uploads it. */
   mediaLocalUri: string;
   comment?: string;
-  /** "Share to Global" opt-in captured at compose time. Default false. */
-  isPublic?: boolean;
+  // NOTE: no `isPublic` — submission visibility is inherited from the parent challenge/profile/group
+  // (simplified model, 2026-06). Old queued drafts may still carry an `isPublic` field in their
+  // stored JSON; it is ignored (the processor no longer sends it).
 };
 
 export type QueuedMutation<TPayload = unknown> = {

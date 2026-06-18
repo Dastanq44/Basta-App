@@ -175,10 +175,14 @@ export default function EditChallengeScreen() {
             }}
           >
             <VisibilityToggle
-              value={isPublic}
-              onValueChange={setIsPublic}
-              title="Public challenge"
-              description="Required before proofs from this challenge can appear in Global."
+              value={!isPublic}
+              onValueChange={(next) => setIsPublic(!next)}
+              title="Hide from profile and Global"
+              description={
+                c.mode === 'group'
+                  ? 'When hidden, this challenge is only visible to participants and its proofs will not appear in Global. Group challenge posts also require the group to be public.'
+                  : 'When hidden, this challenge is only visible to participants and its proofs will not appear in Global.'
+              }
               disabled={update.isPending}
             />
           </View>

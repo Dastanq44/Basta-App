@@ -214,6 +214,17 @@ Date · Status · Decision · Why · Consequences
   semantics (`update_group_meta.p_clear_avatar` + client null-preservation); (e) added
   `create_group.p_visibility`. Model + manual smoke-test checklist: `docs/architecture/PRIVACY_MODEL.md`.
   **The Global feed itself remains deliberately unbuilt.**
+- **Model SIMPLIFIED (2026-06-18, migration `20260618_simplify_visibility_model`):** the original
+  model required FOUR separate opt-ins (public profile + public group + public challenge + per-submission
+  `is_public`), which created too much friction — users stayed private and Global felt empty. New
+  product decision (Spotify-playlist style): **defaults flip to public/visible** (profiles/groups/
+  challenges), and **submissions have no public/private toggle** — they *inherit* eligibility from
+  author profile + challenge (+ group) + verification + blocks. The per-submission gate `is_public`
+  is **deprecated** (kept, not dropped) and replaced by an internal `submissions.hidden_from_global`
+  (default false; not surfaced in the composer — for future "hide post"/moderation). UI uses
+  "private/hide" language (opt-out), default OFF. `is_submission_globally_visible` no longer checks
+  `is_public`; it checks `hidden_from_global = false`. Everything else (block both-ways, archive,
+  verified, server-authoritative, no client-side filtering, private proof-media) is unchanged.
 
 ## D-012 — UI overhaul (2026-06): indigo theme, additive migrations, post-MVP placeholders   [Accepted; narrowed by D-014 for the privacy feature]
 - **Date:** 2026-06-05

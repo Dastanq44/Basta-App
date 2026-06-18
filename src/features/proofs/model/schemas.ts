@@ -16,7 +16,5 @@ export const proofInput = z.object({
     .max(500, 'At most 500 characters')
     .optional()
     .transform((v) => (v && v.length > 0 ? v : undefined)),
-  /** "Share to Global" opt-in. Default off — Global must never include content by accident. */
-  isPublic: z.boolean().default(false),
 });
 export type ProofInput = z.infer<typeof proofInput>;

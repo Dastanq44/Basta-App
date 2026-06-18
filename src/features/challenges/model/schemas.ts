@@ -39,8 +39,8 @@ export const createChallengeInput = z.object({
   proofRequirement: challengeProofRequirement,
   /** Required when mode === 'group'. */
   groupId: z.string().uuid().nullable().optional(),
-  /** Opt in to Global discovery. Default private. */
-  isPublic: z.boolean().default(false),
+  /** Visible on profile + eligible for Global by default; the user can hide a challenge. */
+  isPublic: z.boolean().default(true),
 });
 export type CreateChallengeInput = z.infer<typeof createChallengeInput>;
 

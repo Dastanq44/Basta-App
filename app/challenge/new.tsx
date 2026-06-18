@@ -80,7 +80,8 @@ export default function CreateChallengeScreen() {
   const [startDate, setStartDate] = useState(todayISO());
   const [endDate, setEndDate] = useState(addDaysISO(todayISO(), 29));
   const [description, setDescription] = useState('');
-  const [isPublic, setIsPublic] = useState(false);
+  // Default visible/public (challenges show on the profile + Global unless the user hides them).
+  const [isPublic, setIsPublic] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [stepIdx, setStepIdx] = useState(0);
 
@@ -466,10 +467,14 @@ export default function CreateChallengeScreen() {
               }}
             >
               <VisibilityToggle
-                value={isPublic}
-                onValueChange={setIsPublic}
-                title="Public challenge"
-                description="Required before proofs from this challenge can appear in Global."
+                value={!isPublic}
+                onValueChange={(next) => setIsPublic(!next)}
+                title="Hide from profile and Global"
+                description={
+                  mode === 'group'
+                    ? 'When hidden, this challenge is only visible to participants and its proofs will not appear in Global. Group challenge posts also require the group to be public.'
+                    : 'When hidden, this challenge is only visible to participants and its proofs will not appear in Global.'
+                }
                 disabled={create.isPending}
               />
             </View>

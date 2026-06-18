@@ -92,13 +92,14 @@ async function handleSubmitProof(jobId: string, payload: SubmitProofPayload): Pr
   // Title-missing fallback: jobs queued before W-034 don't carry a title; substitute
   // "Untitled" so the upgrade-window job still goes through (server enforces 1..80 chars).
   const fallbackTitle = ((payload.title as string | undefined) ?? '').trim() || 'Untitled';
+  // No p_is_public — submission Global eligibility is inherited (simplified model, 2026-06).
+  // submit_proof still accepts p_is_public with a default for older clients, so omitting it is safe.
   const { error } = await supabase.rpc('submit_proof', {
     p_submission_id: payload.submissionId,
     p_challenge_id: payload.challengeId,
     p_title: fallbackTitle,
     p_media_path: remotePath,
     p_comment: payload.comment ?? null,
-    p_is_public: payload.isPublic ?? false,
   });
   if (error) {
     // Special-case the "already submitted" unique-violation (mapped to a server exception by

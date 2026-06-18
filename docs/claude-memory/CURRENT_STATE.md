@@ -3,7 +3,19 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-06-18 — by: Claude (fable) (Global v1 hardening)_
+_Last updated: 2026-06-18 — by: Claude (fable) (visibility simplification)_
+
+> **2026-06-18 visibility simplification (D-014):** migration
+> `supabase/migrations/20260618000000_simplify_visibility_model.sql` + client. `profiles/groups/
+> challenges.visibility` now default **public**; submissions have **no** public/private toggle
+> (removed "Share to Global" from the proof composer + all write-path `isPublic` plumbing) and
+> inherit Global eligibility from their parents. New `submissions.hidden_from_global` (default
+> false, internal escape hatch) backfilled from the now-**deprecated** `is_public`
+> (`is_public=false → hidden=true`). `is_submission_globally_visible` recreated (drop `is_public`,
+> add `hidden_from_global`). UI toggles flipped to "private/hide" language, default OFF (Profile
+> "Private profile", Group "Private group", Challenge "Hide from profile and Global"). **USER must
+> apply `20260618` (after 14/15/16/17); reload PostgREST schema if via Dashboard.** typecheck +
+> lint + expo-doctor (18/18) green.
 
 > **2026-06-18 Global v1 hardening (T-074):** migration
 > `supabase/migrations/20260617000000_global_feed_hardening.sql` + client fixes — `/user/[id]` now

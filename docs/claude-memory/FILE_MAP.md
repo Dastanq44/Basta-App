@@ -175,6 +175,7 @@ app.config.ts  eas.json  package.json                                           
 | Global post entity | `src/entities/globalPost.ts` | live (T-074) |
 | Global tab screen (FlatList feed; route name kept `explore`) | `app/(tabs)/explore.tsx` | live (T-074) |
 | Global v1 hardening (`is_block_between`, `(created_at,id)` cursor + block-filtered counts, block-filtered social list RPCs, `list_viewable_user_submissions`, social policies → `to authenticated`) | `supabase/migrations/20260617000000_global_feed_hardening.sql` | written — **USER must apply after 20260616** (T-077) |
+| Simplify visibility model (defaults→public, `submissions.hidden_from_global` + backfill, `is_submission_globally_visible` drops `is_public`, create RPCs default public) | `supabase/migrations/20260618000000_simplify_visibility_model.sql` | written — **USER must apply after 20260617** (T-078, D-014) |
 | Theme mode (light/dark/system) + persistence | `src/shared/ui/theme/ThemeProvider.tsx` · `src/shared/lib/themePreference.ts` | live |
 | Reusable group create/join form | `src/features/groups/ui/GroupCreateOrJoinForm.tsx` | live (T-026) |
 | Group create/join modal route | `app/group/join-or-create.tsx` | live (T-026) |

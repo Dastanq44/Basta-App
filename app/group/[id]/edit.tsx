@@ -190,10 +190,10 @@ export default function EditGroupScreen() {
             }}
           >
             <VisibilityToggle
-              value={isPublic}
-              onValueChange={setIsPublic}
-              title="Public group"
-              description="Required for group challenge proofs to appear in Global. Invite code stays private."
+              value={!isPublic}
+              onValueChange={(next) => setIsPublic(!next)}
+              title="Private group"
+              description="Private groups hide group challenge posts from Global. Members can still use the group normally."
               disabled={busy}
             />
           </View>

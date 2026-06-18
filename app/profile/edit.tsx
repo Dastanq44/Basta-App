@@ -195,10 +195,10 @@ export default function EditProfileScreen() {
             }}
           >
             <VisibilityToggle
-              value={isPublic}
-              onValueChange={setIsPublic}
-              title="Public profile"
-              description="Required for your posts to appear in Global."
+              value={!isPublic}
+              onValueChange={(next) => setIsPublic(!next)}
+              title="Private profile"
+              description="When this is on, your profile and posts will not appear in Global."
               disabled={busy}
             />
           </View>

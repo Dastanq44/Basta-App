@@ -1,15 +1,13 @@
 import { useState } from 'react';
 import { Alert, Image, KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { Button, Card, Input, Screen, Text, useTheme, VisibilityToggle } from '@/shared/ui';
+import { Button, Card, Input, Screen, Text, useTheme } from '@/shared/ui';
 
 export type ProofComposerSubmit = (input: {
   title: string;
   /** New photo to upload. Omitted when the user keeps the existing photo (edit mode). */
   mediaLocalUri?: string;
   comment?: string;
-  /** "Share to Global" opt-in. Default off — never shared by accident. */
-  isPublic: boolean;
 }) => Promise<void>;
 
 export type ProofComposerProps = {
@@ -28,11 +26,6 @@ export type ProofComposerProps = {
   initialComment?: string;
   /** Existing photo URL shown in edit mode. Kept unless the user picks a new one. */
   initialImageUrl?: string | null;
-  /** Pre-fill the "Share to Global" toggle — used by the redact (edit) flow. Default off. */
-  initialIsPublic?: boolean;
-  /** Whether the parent challenge is a group challenge — drives the Global-hint wording
-   *  (group challenges also require the group to be public). */
-  isGroupChallenge?: boolean;
 };
 
 const TITLE_MAX = 80;
@@ -53,14 +46,11 @@ export function ProofComposer({
   initialTitle,
   initialComment,
   initialImageUrl,
-  initialIsPublic,
-  isGroupChallenge = false,
 }: ProofComposerProps) {
   const t = useTheme();
   const [title, setTitle] = useState(initialTitle ?? '');
   const [mediaLocalUri, setMediaLocalUri] = useState<string | null>(null);
   const [comment, setComment] = useState(initialComment ?? '');
-  const [isPublic, setIsPublic] = useState(initialIsPublic ?? false);
   const [pickerError, setPickerError] = useState<string | null>(null);
 
   const trimmedTitle = title.trim();
@@ -113,7 +103,6 @@ export function ProofComposer({
         // Omit when keeping the existing image (no new pick).
         mediaLocalUri: mediaLocalUri ?? undefined,
         comment: comment.trim() || undefined,
-        isPublic,
       });
     } catch (e) {
       Alert.alert('Could not save proof', e instanceof Error ? e.message : 'Unknown error');
@@ -187,19 +176,11 @@ export function ProofComposer({
             editable={!submitting}
           />
 
-          <Card>
-            <VisibilityToggle
-              value={isPublic}
-              onValueChange={setIsPublic}
-              title="Share to Global"
-              description={
-                isGroupChallenge
-                  ? 'This appears in Global only after verification and only if your profile, challenge, and group are public.'
-                  : 'This appears in Global only after verification and only if your profile and challenge are public.'
-              }
-              disabled={submitting}
-            />
-          </Card>
+          {/* No per-submission public/private control — visibility is inherited from the profile,
+              challenge, and group (Spotify-playlist model). Server is the source of truth. */}
+          <Text variant="caption" style={{ color: t.colors.mutedForeground }}>
+            Verified proofs from visible challenges and public profiles can appear in Global.
+          </Text>
 
           {errorMessage ? (
             <Text variant="caption" style={{ color: t.colors.destructive }}>{errorMessage}</Text>

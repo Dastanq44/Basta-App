@@ -6,7 +6,6 @@ import {
   useRedactMySubmission,
   useTodaySubmission,
 } from '@/features/proofs';
-import { useChallenge } from '@/features/challenges';
 
 // Thin route: edit today's submission in place. Reuses the ProofComposer in "redact" mode;
 // orchestration goes through useRedactMySubmission (direct upload + RPC, NOT the offline
@@ -18,7 +17,6 @@ export default function EditProofModal() {
   const today = useTodaySubmission(id);
   const existingImage = useProofSignedUrl(today.data?.mediaRemotePath);
   const redact = useRedactMySubmission();
-  const challenge = useChallenge(id);
 
   if (today.isPending) {
     return (
@@ -53,11 +51,9 @@ export default function EditProofModal() {
         initialTitle={today.data.title}
         initialComment={today.data.comment}
         initialImageUrl={existingImage.data}
-        initialIsPublic={today.data.isPublic}
-        isGroupChallenge={challenge.data?.mode === 'group'}
         ctaLabel={redact.isPending ? 'Saving…' : 'Save changes'}
         intro="Edit your title, photo, and description. Changing the photo makes group voters re-verify."
-        onSubmit={async ({ title, mediaLocalUri, comment, isPublic }) => {
+        onSubmit={async ({ title, mediaLocalUri, comment }) => {
           if (!id) return;
           await redact.mutateAsync({
             submissionId,
@@ -66,7 +62,6 @@ export default function EditProofModal() {
             mediaLocalUri, // omitted ⇒ keep existing photo
             existingMediaPath: today.data?.mediaRemotePath,
             comment,
-            isPublic,
           });
           router.back();
         }}

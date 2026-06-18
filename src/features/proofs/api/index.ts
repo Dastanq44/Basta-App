@@ -281,17 +281,18 @@ export async function redactMySubmission(
   title: string,
   mediaPath: string,
   comment: string | undefined,
-  isPublic?: boolean,
 ): Promise<void> {
   const c = ctrl();
   try {
+    // No p_is_public — submission visibility is inherited (simplified model). redact_my_submission
+    // still accepts p_is_public (default null = leave unchanged) for older clients, so omitting
+    // it is safe and no longer changes any Global gate.
     const { error } = await supabase
       .rpc('redact_my_submission', {
         p_submission_id: submissionId,
         p_title: title,
         p_media_path: mediaPath,
         p_comment: comment ?? null,
-        p_is_public: isPublic === undefined ? null : isPublic,
       })
       .abortSignal(c.signal);
     if (error) throw new Error(error.message || 'Could not edit submission');

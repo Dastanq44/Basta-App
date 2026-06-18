@@ -21,6 +21,57 @@
 
 ---
 
+## 2026-06-18 — Claude (fable) / Simplify the visibility model (Spotify-playlist style)
+
+**Did:** Product decision — the multi-toggle visibility model had too much friction (users stayed
+private, Global felt empty). Simplified it. New migration
+`supabase/migrations/20260618000000_simplify_visibility_model.sql` + client. Updates **D-014** and
+`docs/architecture/PRIVACY_MODEL.md`. No new discovery surfaces.
+
+- **Defaults flipped to PUBLIC.** `profiles/groups/challenges.visibility` columns now
+  `set default 'public'`; `create_group`/`create_challenge` fallback to `'public'` (create-or-replace,
+  same signatures). Existing rows untouched (explicit private stays private; columns are NOT NULL so
+  no nulls to coerce). Users opt OUT.
+- **Submissions no longer have a public/private toggle.** Removed "Share to Global" from the proof
+  composer and the whole write-path `isPublic` plumbing (`ProofComposer`, `submit-proof`,
+  `edit-proof`, `useSubmitProof`, `useRedactMySubmission`, `redactMySubmission` API,
+  `SubmitProofPayload`, queue `processor` `p_is_public`, `proofInput`). Submissions inherit Global
+  eligibility from author profile + challenge (+ group) + verification + blocks.
+- **New gate `submissions.hidden_from_global` (bool default false)** — internal escape hatch (future
+  "hide post"/moderation), NOT in the composer. Backfilled from the deprecated `is_public`
+  (`is_public=false → hidden_from_global=true`) to preserve old private intent — so existing proofs
+  stay out of Global; only NEW submissions flow in. `is_public` kept but **deprecated** (not dropped;
+  read RPCs still return it, client ignores it).
+- **`is_submission_globally_visible` recreated:** dropped `s.is_public = true`, added
+  `s.hidden_from_global = false`. Everything downstream (`can_view_submission`, proof-media policy,
+  `list_global_submissions`, `list_viewable_user_submissions`) updates transitively — no other RPC
+  touched.
+- **UI toggles inverted to "private/hide" language, default OFF** (kept the `isPublic` entity
+  plumbing, inverted only at the UI boundary `value={!isPublic}`): Profile → "Private profile";
+  Group create+edit → "Private group"; Challenge create+edit → "Hide from profile and Global"
+  (with a group-challenge note). Create flows default `isPublic=true`; `createChallengeInput`
+  default `true`. Onboarding has no toggle (new profiles default public via the column).
+
+**In progress:** nothing half-finished.
+
+**Next up (still deferred):** public challenge/group directories, profile search, leaderboards,
+ranking/trending. None in scope.
+
+**Blockers / decisions needed:** **USER must apply `20260618000000_simplify_visibility_model.sql`**
+(after 14/15/16/17). Reload PostgREST schema if via Dashboard. No new buckets/secrets.
+**Testing note:** existing test profiles/challenges stay at their old (private) value, and all
+existing proofs are backfilled hidden — so to see content in Global, toggle a profile public + a
+challenge visible and submit a NEW proof (or flip existing test rows public in the dashboard).
+
+**Branch / commit:** `mvp` @ pending (`feat(visibility): simplify global privacy model`).
+
+**Notes for next session:**
+- FIVE migrations pending USER apply, in order: `20260614` → `15` → `16` → `17` → `18`.
+- `is_public` is deprecated, not removed. `Submission.isPublic` (entity) + the read RPCs still carry
+  it; it no longer gates anything. A future cleanup could drop it once nothing references it.
+
+---
+
 ## 2026-06-18 — Claude (fable) / Global v1 hardening (interactions, pagination, blocks)
 
 **Did:** Hardened Global v1 before any new discovery features. New migration

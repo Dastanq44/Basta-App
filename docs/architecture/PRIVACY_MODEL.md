@@ -6,37 +6,43 @@
 > Still deferred: public challenge/group directories, profile search, global leaderboards, ranking.
 > See DECISIONS **D-014**. Migrations: `20260614000000_visibility_foundation.sql` +
 > `20260615000000_privacy_enforcement.sql` + `20260616000000_global_feed_v1.sql` +
-> `20260617000000_global_feed_hardening.sql` (the last two widen the submission-social SELECT
-> policies to `can_view_submission`/`to authenticated`, block-filter the social list RPCs + Global
-> counts via `is_block_between`, and add `list_viewable_user_submissions`).
+> `20260617000000_global_feed_hardening.sql` +
+> `20260618000000_simplify_visibility_model.sql` (the last flips defaults to public, replaces the
+> per-submission `is_public` gate with `hidden_from_global`, and removes the proof-composer toggle).
 
-## Principles
+## Principles (simplified model, 2026-06)
 
-- **Default private / off.** `profiles.visibility`, `groups.visibility`, `challenges.visibility`
-  default `'private'`; `submissions.is_public` defaults `false`. Nothing is exposed by omission.
+- **Default public / visible.** `profiles.visibility`, `groups.visibility`, `challenges.visibility`
+  default `'public'`. Users opt **out** (Private profile / Private group / Hide challenge). The point
+  is to avoid the "everything's accidentally private and Global feels empty" problem.
+- **Submissions have NO user-facing visibility toggle.** A submission **inherits** Global
+  eligibility from its author profile + challenge (+ group) + verification + blocks. There is no
+  "Share to Global" control in the proof composer. The old per-submission `submissions.is_public`
+  is **deprecated** (kept, not dropped); the only submission-level gate is the internal escape hatch
+  `submissions.hidden_from_global` (not surfaced in the normal composer — for future "hide this post"
+  / moderation).
 - **Privacy is enforced on the server**, never by client-side filtering. RLS policies +
   SECURITY DEFINER functions are the boundary.
 - **One predicate gates Global.** `is_submission_globally_visible(uuid)` is the single source of
-  truth; both the feed query (future) and the proof-media image policy call it, so they can't drift.
+  truth; the feed query and the proof-media image policy both call it, so they can't drift.
 - **No service-role key in the app.** Only the anon key ships; privileged logic is SECURITY DEFINER
   RPCs or (future) Edge Functions.
 
-## What "public" means
+## What "public / visible" means
 
-`public` makes content **eligible** for Global display later. It does **not**:
+It makes content **eligible** for Global display. It does **not**:
 - auto-join anyone to a group, or
 - expose a group's **invite code** (always private), or
-- create discovery tabs for profiles/groups/challenges. **Global v1 should be public verified
-  submissions/posts only**; profiles/challenges/groups are *linked from posts*, not separately
-  browsable.
+- create discovery tabs for profiles/groups/challenges. **Global v1 is public verified
+  submissions only**; profiles/challenges/groups are *linked from posts*, not separately browsable.
 
 ## The Global predicate — `is_submission_globally_visible(submission_id)`
 
 A submission is globally visible only when **all** hold:
 1. `submission.status = 'verified'`
-2. `submission.is_public = true`
+2. `submission.hidden_from_global = false`  *(was: `is_public = true` — removed)*
 3. author `profile.visibility = 'public'`
-4. `challenge.visibility = 'public'` and `challenge.archived_at is null`
+4. `challenge.visibility = 'public'` (not hidden) and `challenge.archived_at is null`
 5. if a group challenge: host `group.visibility = 'public'` and `group.archived_at is null`
 6. no `blocks` row between the viewer (`auth.uid()`) and the author, **either direction**
 
