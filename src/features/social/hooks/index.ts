@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSession } from '@/features/auth';
+import { globalFeedQueryKey } from '@/features/global';
 import {
   addComment,
   getComments,
@@ -33,7 +34,11 @@ export function useReactToSubmission(submissionId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (emoji: string | null) => reactToSubmission(submissionId, emoji),
-    onSuccess: () => qc.invalidateQueries({ queryKey: reactionsQueryKey(submissionId) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: reactionsQueryKey(submissionId) });
+      // Global feed cards show a reaction count — refresh it.
+      qc.invalidateQueries({ queryKey: globalFeedQueryKey });
+    },
   });
 }
 
@@ -52,7 +57,11 @@ export function useAddComment(submissionId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: string) => addComment(submissionId, body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: commentsQueryKey(submissionId) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: commentsQueryKey(submissionId) });
+      // Global feed cards show a comment count — refresh it.
+      qc.invalidateQueries({ queryKey: globalFeedQueryKey });
+    },
   });
 }
 

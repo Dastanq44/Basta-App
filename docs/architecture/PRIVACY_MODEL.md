@@ -5,8 +5,10 @@
 > `src/features/global/`, gated by `list_global_submissions` → `is_submission_globally_visible`).
 > Still deferred: public challenge/group directories, profile search, global leaderboards, ranking.
 > See DECISIONS **D-014**. Migrations: `20260614000000_visibility_foundation.sql` +
-> `20260615000000_privacy_enforcement.sql` + `20260616000000_global_feed_v1.sql` (the last also
-> widens the submission-social SELECT policies to `can_view_submission`).
+> `20260615000000_privacy_enforcement.sql` + `20260616000000_global_feed_v1.sql` +
+> `20260617000000_global_feed_hardening.sql` (the last two widen the submission-social SELECT
+> policies to `can_view_submission`/`to authenticated`, block-filter the social list RPCs + Global
+> counts via `is_block_between`, and add `list_viewable_user_submissions`).
 
 ## Principles
 

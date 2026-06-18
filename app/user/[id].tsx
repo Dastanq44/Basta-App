@@ -9,7 +9,8 @@ import { useSession } from '@/features/auth';
 import type { Submission } from '@/entities';
 
 // Read-only public profile (T-053-D). Avatar + name + bio + heatmap + recent submissions.
-// RLS limits the submissions list to challenges the caller co-participates in.
+// The submissions list (list_viewable_user_submissions) is gated by can_view_submission — so it
+// shows the author's globally-visible posts plus submissions from challenges the caller shares.
 export default function UserProfileScreen() {
   const t = useTheme();
   const router = useRouter();
@@ -59,7 +60,8 @@ export default function UserProfileScreen() {
   const usernameTag = p.username ? `@${p.username}` : null;
 
   return (
-    <Screen padded={false}>
+    // No 'top' edge — the native header (registered in app/_layout.tsx) owns the top inset.
+    <Screen padded={false} edges={['bottom']}>
       <Stack.Screen options={{ title: p.displayName }} />
       <ScrollView contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.lg, paddingBottom: t.spacing.xl }}>
         <View style={{ alignItems: 'center', gap: t.spacing.sm, paddingVertical: t.spacing.md }}>
@@ -95,7 +97,7 @@ export default function UserProfileScreen() {
             <Card>
               <Text variant="subtitle">No visible submissions</Text>
               <Text variant="muted">
-                You only see submissions from challenges you both participate in.
+                Public posts and submissions from challenges you share will appear here.
               </Text>
             </Card>
           ) : (

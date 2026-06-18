@@ -21,6 +21,51 @@
 
 ---
 
+## 2026-06-18 — Claude (fable) / Global v1 hardening (interactions, pagination, blocks)
+
+**Did:** Hardened Global v1 before any new discovery features. New migration
+`supabase/migrations/20260617000000_global_feed_hardening.sql` + client fixes. **Still no new
+discovery** (challenge/group directories, profile search, leaderboards, ranking all deferred).
+
+- **#1 `/user/[id]` had no header/back** — it wasn't registered in the root stack (`app/_layout.tsx`),
+  so it inherited `headerShown:false`. Registered it (`headerShown:true, title:'Profile'`); the global
+  `headerLeft` gives the back button. Set its `Screen` to `edges={['bottom']}` (header owns the top).
+- **#2 Card double-tap** — `GlobalFeedCard` nested the author Pressable inside the card Pressable, so
+  tapping the author also opened the submission. Restructured to **sibling** Pressables under `Card`
+  (author → profile, content → submission). No nesting → no double-fire.
+- **#3 `list_viewable_user_submissions(user, limit)`** (SECURITY DEFINER, `can_view_submission`-gated)
+  — `/user/[id]` now shows the author's globally-visible posts too, not just shared-challenge ones.
+  `listUserRecentSubmissions` repointed from the direct RLS select to this RPC (same `Submission[]`
+  shape). Empty-state copy updated.
+- **#4 Stale Global counts** — `useReactToSubmission` + `useAddComment` now also invalidate
+  `globalFeedQueryKey` so card reaction/comment counts refresh. (social → global import, verified acyclic.)
+- **#5 Block-filtering** — new `is_block_between(other)` (both-direction). `list_submission_comments`,
+  `list_submission_reactors`, `list_comment_likers` now drop rows from blocked users; the Global
+  feed reaction/comment **counts** exclude blocked reactors/commenters. (The feed already excluded
+  blocked authors via `is_submission_globally_visible`.)
+- **#6** — the 3 submission-social SELECT policies from `20260616` were role-less (applied to PUBLIC);
+  recreated them `to authenticated`.
+- **#7 Stable pagination** — Global feed upgraded to a `(created_at, id)` keyset cursor (RPC params
+  `p_before_created_at` + `p_before_id`; `order by created_at desc, id desc`). No more skip/dup on
+  equal timestamps. Client `listGlobalSubmissions(cursor)` + `useGlobalFeed` pass `{createdAt, id}`.
+
+**In progress:** nothing half-finished.
+
+**Next up (still deferred — needs an explicit ask):** public challenge/group directories, profile
+search, global leaderboards, ranking/trending/recommendations.
+
+**Blockers / decisions needed:** **USER must apply `20260617000000_global_feed_hardening.sql`**
+(after `20260614`/`20260615`/`20260616`). It recreates `list_global_submissions` with a new signature
+— reload the PostgREST schema if applied via the Dashboard. No new buckets/secrets.
+
+**Branch / commit:** `mvp` @ pending (`fix(global): harden public feed interactions`).
+
+**Notes for next session:**
+- FOUR migrations now pending USER apply, in order: `20260614` → `20260615` → `20260616` → `20260617`.
+- The `(created_at, id)` cursor superseded the `created_at`-only follow-up noted last entry — done.
+
+---
+
 ## 2026-06-18 — Claude (fable) / Global v1 — public verified submissions feed
 
 **Did:** Built the first real Global tab: a chronological feed of PUBLIC, VERIFIED submissions.

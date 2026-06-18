@@ -30,31 +30,34 @@ export function GlobalFeedCard({ post, onPress, onPressAuthor }: GlobalFeedCardP
     ? `${post.challengeTitle} · ${post.groupName}`
     : post.challengeTitle;
 
+  // Author and content are SIBLING Pressables (not nested) so tapping the author opens the
+  // profile WITHOUT also firing the card's submission tap.
   return (
-    <Pressable accessibilityRole="button" onPress={onPress}>
-      <Card style={{ gap: t.spacing.md }}>
-        {/* Author — its own tap target → profile. */}
-        <Pressable
-          accessibilityRole="button"
-          onPress={onPressAuthor}
-          style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm }}
-          hitSlop={4}
-        >
-          {avatarUrl ? (
-            <Image source={{ uri: avatarUrl }} style={{ width: 40, height: 40, borderRadius: 20 }} />
-          ) : (
-            <Avatar name={post.authorDisplayName ?? post.authorUsername ?? null} size={40} />
-          )}
-          <View style={{ flex: 1, gap: 1 }}>
-            <Text variant="heading" numberOfLines={1}>{authorName}</Text>
-            {post.authorUsername && post.authorDisplayName ? (
-              <Text variant="caption" style={{ color: t.colors.mutedForeground }} numberOfLines={1}>
-                @{post.authorUsername}
-              </Text>
-            ) : null}
-          </View>
-        </Pressable>
+    <Card style={{ gap: t.spacing.md }}>
+      {/* Author → profile. */}
+      <Pressable
+        accessibilityRole="button"
+        onPress={onPressAuthor}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm }}
+        hitSlop={4}
+      >
+        {avatarUrl ? (
+          <Image source={{ uri: avatarUrl }} style={{ width: 40, height: 40, borderRadius: 20 }} />
+        ) : (
+          <Avatar name={post.authorDisplayName ?? post.authorUsername ?? null} size={40} />
+        )}
+        <View style={{ flex: 1, gap: 1 }}>
+          <Text variant="heading" numberOfLines={1}>{authorName}</Text>
+          {post.authorUsername && post.authorDisplayName ? (
+            <Text variant="caption" style={{ color: t.colors.mutedForeground }} numberOfLines={1}>
+              @{post.authorUsername}
+            </Text>
+          ) : null}
+        </View>
+      </Pressable>
 
+      {/* Everything else → submission. */}
+      <Pressable accessibilityRole="button" onPress={onPress} style={{ gap: t.spacing.md }}>
         <Text variant="heading" numberOfLines={2}>{post.title}</Text>
 
         {/* Proof image. */}
@@ -103,7 +106,7 @@ export function GlobalFeedCard({ post, onPress, onPressAuthor }: GlobalFeedCardP
             {post.commentCount} {post.commentCount === 1 ? 'comment' : 'comments'}
           </Text>
         </View>
-      </Card>
-    </Pressable>
+      </Pressable>
+    </Card>
   );
 }

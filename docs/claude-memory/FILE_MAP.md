@@ -174,6 +174,7 @@ app.config.ts  eas.json  package.json                                           
 | Global feed feature (api + `useGlobalFeed` infinite query + `GlobalFeedCard`) | `src/features/global/` | live (T-074) |
 | Global post entity | `src/entities/globalPost.ts` | live (T-074) |
 | Global tab screen (FlatList feed; route name kept `explore`) | `app/(tabs)/explore.tsx` | live (T-074) |
+| Global v1 hardening (`is_block_between`, `(created_at,id)` cursor + block-filtered counts, block-filtered social list RPCs, `list_viewable_user_submissions`, social policies → `to authenticated`) | `supabase/migrations/20260617000000_global_feed_hardening.sql` | written — **USER must apply after 20260616** (T-077) |
 | Theme mode (light/dark/system) + persistence | `src/shared/ui/theme/ThemeProvider.tsx` · `src/shared/lib/themePreference.ts` | live |
 | Reusable group create/join form | `src/features/groups/ui/GroupCreateOrJoinForm.tsx` | live (T-026) |
 | Group create/join modal route | `app/group/join-or-create.tsx` | live (T-026) |

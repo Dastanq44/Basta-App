@@ -3,7 +3,17 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-06-18 — by: Claude (fable) (Global v1 feed)_
+_Last updated: 2026-06-18 — by: Claude (fable) (Global v1 hardening)_
+
+> **2026-06-18 Global v1 hardening (T-074):** migration
+> `supabase/migrations/20260617000000_global_feed_hardening.sql` + client fixes — `/user/[id]` now
+> has a header/back (registered in `app/_layout.tsx`) and shows globally-visible posts via the new
+> `list_viewable_user_submissions` RPC; `GlobalFeedCard` author tap no longer also opens the
+> submission (sibling Pressables); Global counts refresh after react/comment; comments/reactors/
+> likers + Global counts are block-filtered (`is_block_between`); the 3 social SELECT policies are
+> now `to authenticated`; Global pagination uses a stable `(created_at, id)` keyset cursor.
+> **USER must apply `20260617` (after 20260614/15/16); reload PostgREST schema if via Dashboard.**
+> No new discovery surfaces. typecheck + lint + expo-doctor (18/18) green.
 
 > **2026-06-18 Global v1 (T-074):** the Explore tab is now **Global** — a chronological feed of
 > PUBLIC, VERIFIED submissions (submissions only; challenge/group/profile discovery + leaderboards

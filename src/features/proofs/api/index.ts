@@ -137,36 +137,30 @@ function pickOne<T>(v: T | T[] | null | undefined): T | undefined {
   return Array.isArray(v) ? v[0] : v;
 }
 
+type ViewableUserSubmissionRow = SubmissionRow & {
+  challenge_title: string | null;
+  challenge_group_name: string | null;
+};
+
 /**
- * Recent submissions for ANY user that the caller is allowed to see. RLS already
- * limits `submissions` SELECTs to challenge participants, so a direct query with an
- * `author_id` filter returns exactly the rows that the caller can see — no extra
- * gate. Used by the read-only user profile route (T-053-D).
+ * Recent submissions of ANY user that the caller is allowed to see — via the
+ * `list_viewable_user_submissions` SECURITY DEFINER RPC, which gates each row on
+ * `can_view_submission`. So this returns the target's shared-challenge (private) submissions AND
+ * their globally-visible ones — a public profile page shows public posts even when the viewer
+ * shares no challenge with the author. Used by the read-only user profile route (T-053-D).
  */
 export async function listUserRecentSubmissions(userId: string, limit = 50): Promise<Submission[]> {
   const c = ctrl();
   try {
     const { data, error } = await supabase
-      .from('submissions')
-      .select(
-        'id, challenge_id, author_id, challenge_day, title, comment, media_path, status, verified_at, rejected_at, created_at, is_public, challenges ( title, groups ( name ) )',
-      )
-      .eq('author_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(limit)
+      .rpc('list_viewable_user_submissions', { p_user_id: userId, p_limit: limit })
       .abortSignal(c.signal);
     if (error) throw error;
-    return (data ?? []).map((raw) => {
-      const r = raw as unknown as SubmissionWithContextRow;
-      const base = toSubmission(r);
-      const challenge = pickOne(r.challenges);
-      const group = pickOne(challenge?.groups);
-      return {
-        ...base,
-        challengeTitle: challenge?.title ?? undefined,
-        challengeGroupName: group?.name ?? undefined,
-      };
-    });
+    return ((data ?? []) as ViewableUserSubmissionRow[]).map((r) => ({
+      ...toSubmission(r),
+      challengeTitle: r.challenge_title ?? undefined,
+      challengeGroupName: r.challenge_group_name ?? undefined,
+    }));
   } catch (e) {
     console.error('[basta] listUserRecentSubmissions failed:', e);
     throw e;

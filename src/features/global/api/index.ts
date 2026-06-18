@@ -55,16 +55,24 @@ function toGlobalPost(r: GlobalRow): GlobalPost {
 
 export const GLOBAL_FEED_PAGE_SIZE = 20;
 
-/** One chronological page of public verified submissions. `before` is the `createdAt` of the last
- *  item from the previous page (cursor); omit for the first page. */
+/** Keyset cursor — the `createdAt` + `id` of the last item from the previous page. */
+export type GlobalFeedCursor = { createdAt: string; id: string };
+
+/** One chronological page of public verified submissions. Pass the previous page's last
+ *  `{ createdAt, id }` as the cursor (stable `(created_at, id)` keyset — no skips on ties);
+ *  omit for the first page. */
 export async function listGlobalSubmissions(
-  before?: string,
+  cursor?: GlobalFeedCursor,
   limit = GLOBAL_FEED_PAGE_SIZE,
 ): Promise<GlobalPost[]> {
   const c = ctrl();
   try {
     const { data, error } = await supabase
-      .rpc('list_global_submissions', { p_limit: limit, p_before: before ?? null })
+      .rpc('list_global_submissions', {
+        p_limit: limit,
+        p_before_created_at: cursor?.createdAt ?? null,
+        p_before_id: cursor?.id ?? null,
+      })
       .abortSignal(c.signal);
     if (error) throw error;
     return ((data ?? []) as GlobalRow[]).map(toGlobalPost);
