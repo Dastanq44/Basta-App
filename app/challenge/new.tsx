@@ -72,9 +72,11 @@ export default function CreateChallengeScreen() {
   const params = useLocalSearchParams<{ groupId?: string }>();
   const presetGroupId = typeof params.groupId === 'string' ? params.groupId : null;
 
-  const [mode, setMode] = useState<'solo' | 'group'>(presetGroupId ? 'group' : 'solo');
+  // Decision steps (type / group / category) start UNSELECTED — no chip is highlighted until the
+  // user actually taps one. (Preset-group entry still forces 'group'.)
+  const [mode, setMode] = useState<'solo' | 'group' | null>(presetGroupId ? 'group' : null);
   const [groupId, setGroupId] = useState<string | null>(presetGroupId);
-  const [category, setCategory] = useState<ChallengeCategory>('fitness');
+  const [category, setCategory] = useState<ChallengeCategory | null>(null);
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState('💪');
   const [startDate, setStartDate] = useState(todayISO());

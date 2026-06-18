@@ -21,6 +21,83 @@
 
 ---
 
+## 2026-06-18 — Claude (fable) / Follow-up tweaks (delete challenge, activity calendar, etc.)
+
+**Did:** A second small batch on top of the polish batch below (both still in the same uncommitted
+working tree at the time of writing). New migration
+`supabase/migrations/20260621000000_delete_challenge.sql`.
+
+1. **Delete challenge** (replaces the just-removed archive): creator-only HARD delete. New
+   `delete_challenge(uuid)` RPC (cascades via existing FKs) + `deleteChallenge` API +
+   `useDeleteChallenge` + a destructive "Delete challenge" item in the challenge settings sheet
+   (confirm dialog → `router.replace('/(tabs)/challenges')`). Orphaned proof-media storage objects
+   are left (harmless).
+2. **Submission user box** now shows the `@username` (non-bold) under the display name.
+3. **Profile stat card labels** are now non-bold + smaller (`sm`, weight 500, one line).
+4. **Activity calendar** reworked again: days are laid out **sequentially** (not weekday-aligned);
+   **future days are non-clickable**, light, and diagonally hatched; the click highlight is now a
+   ring that's visible on ANY fill and never black (white ring on indigo cells, indigo ring
+   otherwise); an **arrow** is drawn after the last day; the date+count message is no longer tappable
+   and is cleared by the parent on scroll / re-tap (lifted `selected` state into `ProfileScreen`,
+   cleared on `onScrollBeginDrag`).
+
+**Blockers:** **USER must apply `20260621000000_delete_challenge.sql`** (after 20260620). No new
+buckets/secrets. (Eight migrations now pending: `20260614` … `20260621`.)
+
+**Notes:** the "dismiss the activity message on any action" is implemented as scroll + re-tap (a true
+any-tap-anywhere global dismiss isn't practical in the scroll); the message itself is non-tappable.
+
+---
+
+## 2026-06-18 — Claude (fable) / Profile/submission/wizard polish batch (10 items)
+
+**Did:** A batch of UX fixes. New migration `supabase/migrations/20260620000000_submission_detail_context.sql`
+(extends `get_submission_with_author`). Confirmed 4 decisions with the user up front (see below).
+
+1. **Removed challenge archiving** (UI only — kept `challenges.archived_at`, which the visibility
+   predicates still read). Deleted `useArchiveChallenge` + `archiveChallenge` API + the detail-screen
+   archive button. The read-only `isArchived` banner/guard stays (defensive for any legacy archived
+   row). Group archiving untouched. (DB `archive_challenge` RPC left dormant.)
+2. **Challenge wizard**: decision steps (type/group/category) no longer pre-highlight the first
+   option — `mode`/`category` start `null`; a chip highlights only once tapped.
+3. **Submission detail context boxes**: under the title, 3 small boxes — User / Challenge (with
+   "Day N") / Group (group challenges only). User box → `/user/[id]` always; challenge/group boxes
+   link out **only when the viewer can open them** (participant/member) else non-clickable (per the
+   user's choice). Needed `get_submission_with_author` to also return `challenge_title`, `group_id`,
+   `group_name`, `can_open_challenge`, `can_open_group` (migration `20260620`). Date now sits under
+   the title.
+4. **Submission detail**: photo + description are now ONE continuous card (description continues the
+   photo, no separate floating card).
+5. **Profile header** enlarged (avatar 88→112; name xxl/800; username + bio → md).
+6/7/8. **Activity preview** reworked: shows the **current calendar month** grid labeled with the
+   month name (was a rolling 30 days); **today** is ringed (direction indicator); tapping a day shows
+   a **persistent** date+count message (dismissed by tapping it / another day).
+9. **"View full activity"** now opens a **BottomSheet** with the full 90-day `ActivityHeatmap`
+   (its own day-tap detail) instead of navigating. Removed the `app/activity/[id].tsx` route + its
+   stack registration.
+10. **Profile stat cards** redesigned: emoji + a **bold, larger label** ("Current Streak", "Best
+    Streak", "Challenges", "Groups") on the top row, counter sized to match below. Uses a new
+    profile-local card (the shared `StatTile` on the Home tab is untouched).
+
+**User decisions (asked before coding):** archiving = UI-only (keep column); "last month" = current
+calendar month; inaccessible challenge/group box = show-but-not-clickable; items 3 & 4 = the single
+submission detail page.
+
+**In progress:** nothing half-finished.
+
+**Blockers / decisions needed:** **USER must apply `20260620000000_submission_detail_context.sql`**
+(after 14…19). Reload PostgREST schema if via Dashboard. No new buckets/secrets.
+
+**Branch / commit:** `mvp` @ pending (`feat(profile): add challenges and groups layout` follow-up —
+committed under the polish batch).
+
+**Notes for next session:**
+- SEVEN migrations pending USER apply, in order: `20260614` → `15` → `16` → `17` → `18` → `19` → `20`.
+- Activity message dismiss is "tap the message / another day" (a true any-tap-anywhere global
+  dismiss isn't practical inside the scroll; this is the pragmatic version).
+
+---
+
 ## 2026-06-18 — Claude (fable) / Redesigned profile layout (stats + Challenges/Groups tabs)
 
 **Did:** Reworked the profile to be compact + content-first. New migration

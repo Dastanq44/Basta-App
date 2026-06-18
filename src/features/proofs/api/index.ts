@@ -27,10 +27,17 @@ type SubmissionRow = {
   is_public: boolean | null;
 };
 
-/** Row shape returned by list_challenge_submissions / get_submission_with_author RPCs. */
+/** Row shape returned by list_challenge_submissions / get_submission_with_author RPCs.
+ *  The challenge/group context fields are returned ONLY by get_submission_with_author (the detail
+ *  page) — they're absent (undefined) on list_challenge_submissions rows. */
 type SubmissionWithAuthorRow = SubmissionRow & {
   author_username: string | null;
   author_display_name: string | null;
+  challenge_title?: string | null;
+  group_id?: string | null;
+  group_name?: string | null;
+  can_open_challenge?: boolean | null;
+  can_open_group?: boolean | null;
 };
 
 function toSubmission(r: SubmissionRow): Submission {
@@ -53,6 +60,11 @@ function toSubmissionWithAuthor(r: SubmissionWithAuthorRow): Submission {
     ...toSubmission(r),
     authorUsername: r.author_username ?? undefined,
     authorDisplayName: r.author_display_name ?? undefined,
+    challengeTitle: r.challenge_title ?? undefined,
+    challengeGroupId: r.group_id ?? undefined,
+    challengeGroupName: r.group_name ?? undefined,
+    canOpenChallenge: r.can_open_challenge ?? undefined,
+    canOpenGroup: r.can_open_group ?? undefined,
   };
 }
 

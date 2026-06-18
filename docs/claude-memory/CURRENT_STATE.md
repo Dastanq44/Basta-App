@@ -3,7 +3,21 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-06-18 — by: Claude (fable) (profile redesign)_
+_Last updated: 2026-06-18 — by: Claude (fable) (profile/submission polish batch)_
+
+> **2026-06-18 polish batch (T-082):** removed challenge **archiving UI** (kept the `archived_at`
+> column); challenge wizard no longer pre-highlights the first decision chip; submission detail
+> gained 3 context boxes (user/challenge/group, link out when openable) + merged photo/description
+> into one card (migration `20260620000000_submission_detail_context.sql` extends
+> `get_submission_with_author`); profile header enlarged; activity preview now shows the **current
+> month** (labeled) with a **today ring** + persistent tap-a-day message; "View full activity" opens
+> a **BottomSheet** (removed `app/activity/[id].tsx`); profile stat cards redesigned (bold label +
+> sized counter). **Follow-up tweaks:** delete-challenge feature
+> (`20260621000000_delete_challenge.sql` + settings-sheet item); submission user box shows @username;
+> stat labels non-bold/one-line; activity calendar reworked = sequential days + hatched non-clickable
+> future days + visible non-black click ring + arrow after last day + dismiss-on-scroll. **USER must
+> apply `20260620` then `20260621` (after 14…19); reload PostgREST schema if via Dashboard.**
+> typecheck + lint + expo-doctor (18/18) green.
 
 > **2026-06-18 profile redesign (T-080):** the profile (own tab + `/user/[id]`) was reworked to be
 > compact + content-first: Header → 2×2 Stats grid (streaks + active Challenges + Groups) → small

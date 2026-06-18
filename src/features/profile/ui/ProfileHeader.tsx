@@ -13,22 +13,28 @@ export type ProfileHeaderProps = {
 export function ProfileHeader({ avatarUrl, displayName, username, description }: ProfileHeaderProps) {
   const t = useTheme();
   return (
-    <View style={{ alignItems: 'center', gap: 2, paddingVertical: t.spacing.sm }}>
+    <View style={{ alignItems: 'center', gap: 3, paddingVertical: t.spacing.md }}>
       {avatarUrl ? (
-        <Image source={{ uri: avatarUrl }} style={{ width: 88, height: 88, borderRadius: 44 }} />
+        <Image source={{ uri: avatarUrl }} style={{ width: 112, height: 112, borderRadius: 56 }} />
       ) : (
-        <Avatar name={displayName} size={88} />
+        <Avatar name={displayName} size={112} />
       )}
-      <Text variant="heading" style={{ textAlign: 'center', marginTop: t.spacing.xs }} numberOfLines={1}>
+      <Text
+        style={{ textAlign: 'center', marginTop: t.spacing.sm, fontSize: t.fontSize.xxl, fontWeight: '800', color: t.colors.foreground }}
+        numberOfLines={1}
+      >
         {displayName}
       </Text>
       {username ? (
-        <Text variant="muted" style={{ textAlign: 'center' }} numberOfLines={1}>
+        <Text style={{ textAlign: 'center', fontSize: t.fontSize.md, color: t.colors.mutedForeground }} numberOfLines={1}>
           {username}
         </Text>
       ) : null}
       {description ? (
-        <Text variant="body" style={{ textAlign: 'center', paddingHorizontal: t.spacing.md, marginTop: 2 }} numberOfLines={4}>
+        <Text
+          style={{ textAlign: 'center', paddingHorizontal: t.spacing.md, marginTop: 4, fontSize: t.fontSize.md, color: t.colors.foreground }}
+          numberOfLines={4}
+        >
           {description}
         </Text>
       ) : null}

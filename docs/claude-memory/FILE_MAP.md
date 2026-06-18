@@ -180,6 +180,8 @@ app.config.ts  eas.json  package.json                                           
 | Redesigned profile (shared `ProfileScreen` + header/stats/world-rank/activity-preview/cards + api/hooks) | `src/features/profile/` | live (T-080) |
 | Full 90-day activity route | `app/activity/[id].tsx` | live (T-080) |
 | Profile routes (thin wrappers around `ProfileScreen`) | `app/(tabs)/profile.tsx` · `app/user/[id].tsx` | live (T-080) |
+| Submission-detail context (extends `get_submission_with_author` w/ challenge/group + can-open flags) | `supabase/migrations/20260620000000_submission_detail_context.sql` | written — **USER must apply after 20260619** (T-082) |
+| Delete-challenge RPC (`delete_challenge`, creator-only hard delete) | `supabase/migrations/20260621000000_delete_challenge.sql` | written — **USER must apply after 20260620** (T-083) |
 | Theme mode (light/dark/system) + persistence | `src/shared/ui/theme/ThemeProvider.tsx` · `src/shared/lib/themePreference.ts` | live |
 | Reusable group create/join form | `src/features/groups/ui/GroupCreateOrJoinForm.tsx` | live (T-026) |
 | Group create/join modal route | `app/group/join-or-create.tsx` | live (T-026) |

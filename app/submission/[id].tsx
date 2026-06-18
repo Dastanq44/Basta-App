@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Keyboard, Platform, Pressable, ScrollView, View } from 'react-native';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Avatar, Button, Card, Screen, Text, useTheme } from '@/shared/ui';
+import { type Href, Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Button, Screen, Text, useTheme } from '@/shared/ui';
 import { useSession } from '@/features/auth';
 import { SyncBadge, useProofSignedUrl, useSubmission } from '@/features/proofs';
 import { CommentsSection, ReactionBar } from '@/features/social';
@@ -134,55 +134,75 @@ export default function SubmissionScreen() {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
       >
+        {/* Title + date + sync badge. */}
         <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: t.spacing.sm }}>
-          <View style={{ flex: 1, gap: 2 }}>
+          <View style={{ flex: 1, gap: 4 }}>
             <Text variant="title">{s.title}</Text>
+            <Text variant="muted">
+              {new Date(s.createdAt).toLocaleString(undefined, SUBMISSION_DETAIL_DATE_FMT)}
+            </Text>
           </View>
           <SyncBadge status={s.status} />
         </View>
 
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm }}>
-          <Avatar
-            name={s.authorDisplayName ?? s.authorUsername ?? null}
-            size={36}
+        {/* Context boxes: user · challenge (with day) · group. Clickable when openable. */}
+        <View style={{ flexDirection: 'row', gap: t.spacing.sm }}>
+          <ContextBox
+            label="User"
+            value={s.authorDisplayName || (s.authorUsername ? `@${s.authorUsername}` : 'Member')}
+            sub={s.authorDisplayName && s.authorUsername ? `@${s.authorUsername}` : undefined}
+            onPress={() => router.push(`/user/${s.authorId}` as Href)}
           />
-          <View style={{ flex: 1, gap: 2 }}>
-            <Text variant="heading">
-              {s.authorDisplayName || (s.authorUsername ? `@${s.authorUsername}` : 'Member')}
-            </Text>
-            <Text variant="muted">
-              Day {s.challengeDay + 1} · {new Date(s.createdAt).toLocaleString(undefined, SUBMISSION_DETAIL_DATE_FMT)}
-            </Text>
-          </View>
+          <ContextBox
+            label="Challenge"
+            value={s.challengeTitle ?? 'Challenge'}
+            sub={`Day ${s.challengeDay + 1}`}
+            onPress={s.canOpenChallenge ? () => router.push(`/challenge/${s.challengeId}` as Href) : undefined}
+          />
+          {s.challengeGroupId ? (
+            <ContextBox
+              label="Group"
+              value={s.challengeGroupName ?? 'Group'}
+              onPress={s.canOpenGroup ? () => router.push(`/group/${s.challengeGroupId}` as Href) : undefined}
+            />
+          ) : null}
         </View>
 
+        {/* Merged photo + description — the description card continues the photo as one unit. */}
         <View
           style={{
-            width: '100%',
-            aspectRatio: 1,
             borderRadius: t.radius.xl,
-            backgroundColor: t.colors.muted,
+            borderWidth: 1,
+            borderColor: t.colors.border,
             overflow: 'hidden',
-            alignItems: 'center',
-            justifyContent: 'center',
+            backgroundColor: t.colors.card,
           }}
         >
-          {media.data ? (
-            <Image source={{ uri: media.data }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-          ) : media.isError ? (
-            <Text variant="muted">Couldn't load the photo.</Text>
-          ) : s.mediaRemotePath ? (
-            <ActivityIndicator color={t.colors.primary} />
-          ) : (
-            <Text variant="muted">No photo attached.</Text>
-          )}
+          <View
+            style={{
+              width: '100%',
+              aspectRatio: 1,
+              backgroundColor: t.colors.muted,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {media.data ? (
+              <Image source={{ uri: media.data }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+            ) : media.isError ? (
+              <Text variant="muted">Couldn&apos;t load the photo.</Text>
+            ) : s.mediaRemotePath ? (
+              <ActivityIndicator color={t.colors.primary} />
+            ) : (
+              <Text variant="muted">No photo attached.</Text>
+            )}
+          </View>
+          {s.comment ? (
+            <View style={{ padding: t.spacing.md }}>
+              <Text variant="body">{s.comment}</Text>
+            </View>
+          ) : null}
         </View>
-
-        {s.comment ? (
-          <Card>
-            <Text variant="body">{s.comment}</Text>
-          </Card>
-        ) : null}
 
         <ReactionBar submissionId={s.id} />
 
@@ -218,5 +238,48 @@ export default function SubmissionScreen() {
         targetLabel="this proof"
       />
     </Screen>
+  );
+}
+
+/** Small context box (user / challenge / group) shown under the submission title. Clickable when
+ *  `onPress` is provided; otherwise a plain, non-interactive box (the viewer can't open that target). */
+function ContextBox({
+  label,
+  value,
+  sub,
+  onPress,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  onPress?: () => void;
+}) {
+  const t = useTheme();
+  const inner = (
+    <View
+      style={{
+        flex: 1,
+        padding: t.spacing.sm,
+        borderRadius: t.radius.md,
+        borderWidth: 1,
+        borderColor: t.colors.border,
+        backgroundColor: t.colors.card,
+        gap: 2,
+        minHeight: 58,
+      }}
+    >
+      <Text variant="caption" style={{ color: t.colors.mutedForeground, fontSize: t.fontSize.xs }}>
+        {label.toUpperCase()}
+      </Text>
+      <Text variant="subtitle" numberOfLines={1}>{value}</Text>
+      {sub ? (
+        <Text variant="caption" style={{ color: t.colors.mutedForeground }}>{sub}</Text>
+      ) : null}
+    </View>
+  );
+  return onPress ? (
+    <Pressable style={{ flex: 1 }} accessibilityRole="button" onPress={onPress}>{inner}</Pressable>
+  ) : (
+    <View style={{ flex: 1 }}>{inner}</View>
   );
 }

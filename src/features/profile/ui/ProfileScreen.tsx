@@ -9,7 +9,7 @@ import { useProfileOverview, useViewableUserChallenges, useViewableUserGroups } 
 import { ProfileHeader } from './ProfileHeader';
 import { ProfileStatsGrid } from './ProfileStatsGrid';
 import { WorldRankCard } from './WorldRankCard';
-import { ActivityPreview } from './ActivityPreview';
+import { ActivityPreview, type ActivityDay } from './ActivityPreview';
 import { ProfileSubmissionRow } from './ProfileSubmissionRow';
 import { ProfileChallengeCard } from './ProfileChallengeCard';
 import { ProfileGroupCard } from './ProfileGroupCard';
@@ -42,6 +42,8 @@ export function ProfileScreen({ userId, isOwn = false, onOpenSettings }: Profile
   const groups = useViewableUserGroups(userId);
 
   const [tab, setTab] = useState<Tab>('submissions');
+  // Selected activity day lives here so it can be cleared on scroll / other interactions.
+  const [activityDay, setActivityDay] = useState<ActivityDay | null>(null);
 
   const avatarRemoteUrl = useMemo(
     () => userAvatarUrl(profile.data?.avatarUrl ?? null),
@@ -136,10 +138,7 @@ export function ProfileScreen({ userId, isOwn = false, onOpenSettings }: Profile
         groups={overview.data?.groupCount ?? 0}
       />
       <WorldRankCard />
-      <ActivityPreview
-        submissions={submissions.data ?? []}
-        onViewFull={() => router.push(`/activity/${userId}` as Href)}
-      />
+      <ActivityPreview submissions={submissions.data ?? []} selected={activityDay} onSelect={setActivityDay} />
       <SegmentedControl
         options={
           [
@@ -190,6 +189,8 @@ export function ProfileScreen({ userId, isOwn = false, onOpenSettings }: Profile
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListHeaderComponent={header}
         showsVerticalScrollIndicator={false}
+        // Any scroll dismisses the activity day message (it isn't dismissed by tapping itself).
+        onScrollBeginDrag={() => setActivityDay(null)}
         ListEmptyComponent={
           activePending ? (
             <View style={{ paddingVertical: t.spacing.lg, alignItems: 'center' }}>

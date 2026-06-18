@@ -60,4 +60,10 @@ export type Submission = {
    */
   challengeTitle?: string;
   challengeGroupName?: string;
+  /** Host group id (group challenges only) — for the submission-detail group context box. */
+  challengeGroupId?: string;
+  /** Whether the viewer may open the parent challenge's detail (participant). Drives box tappability. */
+  canOpenChallenge?: boolean;
+  /** Whether the viewer may open the host group's detail (member). Drives box tappability. */
+  canOpenGroup?: boolean;
 };

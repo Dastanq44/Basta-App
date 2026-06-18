@@ -24,7 +24,7 @@ import {
   Text,
   useTheme,
 } from '@/shared/ui';
-import { useArchiveChallenge, useChallenge, useChallengeStreak } from '@/features/challenges';
+import { useChallenge, useChallengeStreak, useDeleteChallenge } from '@/features/challenges';
 import { useSession } from '@/features/auth';
 import { useMyGroups } from '@/features/groups';
 import { ReportSheet, useBlockedUserIds } from '@/features/moderation';
@@ -60,7 +60,7 @@ export default function ChallengeDetailScreen() {
   const submissions = useSubmissions(id);
   const streaks = useChallengeStreaks(id);
   const groups = useMyGroups();
-  const archive = useArchiveChallenge();
+  const del = useDeleteChallenge();
   const blockedIds = useBlockedUserIds();
   const [reportOpen, setReportOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -121,20 +121,21 @@ export default function ChallengeDetailScreen() {
     queuedStatus,
   });
 
-  const confirmArchive = () => {
+  const confirmDelete = () => {
     Alert.alert(
-      'Archive this challenge?',
-      'It disappears from active lists. Existing submissions are preserved.',
+      'Delete this challenge?',
+      'This permanently deletes the challenge and ALL its submissions, comments, and streaks for ' +
+        'everyone. This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Archive',
+          text: 'Delete',
           style: 'destructive',
           onPress: () =>
-            archive.mutate(c.id, {
+            del.mutate(c.id, {
               onSuccess: () => router.replace('/(tabs)/challenges'),
               onError: (e: unknown) =>
-                Alert.alert('Could not archive', e instanceof Error ? e.message : 'Unknown error'),
+                Alert.alert('Could not delete', e instanceof Error ? e.message : 'Unknown error'),
             }),
         },
       ],
@@ -270,7 +271,7 @@ export default function ChallengeDetailScreen() {
         // behind the headerRight 3-dot button + BottomSheet below.
       />
 
-      {/* Challenge settings sheet (Edit / Archive for creator; Report for others). */}
+      {/* Challenge settings sheet (Edit for creator; Report for others). */}
       <BottomSheet visible={menuOpen} onClose={() => setMenuOpen(false)}>
         {isCreator && !isArchived ? (
           <>
@@ -282,11 +283,11 @@ export default function ChallengeDetailScreen() {
               }}
             />
             <BottomSheetMenuItem
-              label={archive.isPending ? 'Archiving…' : 'Archive challenge'}
+              label={del.isPending ? 'Deleting…' : 'Delete challenge'}
               destructive
               onPress={() => {
                 setMenuOpen(false);
-                confirmArchive();
+                confirmDelete();
               }}
             />
           </>

@@ -128,16 +128,17 @@ export async function updateChallenge(
   }
 }
 
-/** Creator archives a challenge (soft-delete; submissions/streaks preserved). */
-export async function archiveChallenge(challengeId: string): Promise<void> {
+/** Creator permanently deletes a challenge via the `delete_challenge` RPC. Cascades to its
+ *  submissions/participants/verifications/comments/reactions (FK on delete cascade). Irreversible. */
+export async function deleteChallenge(challengeId: string): Promise<void> {
   const c = ctrl();
   try {
     const { error } = await supabase
-      .rpc('archive_challenge', { p_challenge_id: challengeId })
+      .rpc('delete_challenge', { p_challenge_id: challengeId })
       .abortSignal(c.signal);
-    if (error) throw new Error(error.message || 'Could not archive challenge');
+    if (error) throw new Error(error.message || 'Could not delete challenge');
   } catch (e) {
-    console.error('[basta] archiveChallenge failed:', e);
+    console.error('[basta] deleteChallenge failed:', e);
     throw e;
   }
 }
