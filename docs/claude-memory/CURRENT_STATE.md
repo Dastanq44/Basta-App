@@ -3,7 +3,18 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-06-18 — by: Claude (fable) (visibility simplification)_
+_Last updated: 2026-06-18 — by: Claude (fable) (profile redesign)_
+
+> **2026-06-18 profile redesign (T-080):** the profile (own tab + `/user/[id]`) was reworked to be
+> compact + content-first: Header → 2×2 Stats grid (streaks + active Challenges + Groups) → small
+> World Rank card → **30-day** activity preview (full 90-day moved behind "View full activity →" =
+> `app/activity/[id].tsx`) → tabs **Submissions | Challenges | Groups**. Shared
+> `src/features/profile/ui/ProfileScreen.tsx` powers both routes (now thin wrappers). New migration
+> `supabase/migrations/20260619000000_profile_layout_data.sql`: `get_profile_overview`,
+> `list_viewable_user_challenges`, `list_viewable_user_groups` (+ 3 visibility helpers), all
+> SECURITY DEFINER + visibility-aware (no invite codes). Privacy model + Global feed unchanged.
+> **USER must apply `20260619` (after 14/15/16/17/18); reload PostgREST schema if via Dashboard.**
+> typecheck + lint + expo-doctor (18/18) green.
 
 > **2026-06-18 visibility simplification (D-014):** migration
 > `supabase/migrations/20260618000000_simplify_visibility_model.sql` + client. `profiles/groups/

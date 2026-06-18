@@ -21,6 +21,55 @@
 
 ---
 
+## 2026-06-18 — Claude (fable) / Redesigned profile layout (stats + Challenges/Groups tabs)
+
+**Did:** Reworked the profile to be compact + content-first. New migration
+`supabase/migrations/20260619000000_profile_layout_data.sql` + a shared `ProfileScreen`. Did NOT
+touch the privacy model or Global feed; no discovery/search/ranking added.
+
+- **New order:** Header → 2×2 Stats grid (Current/Best streak, active Challenges, joined Groups) →
+  small World Rank card → compact **30-day** activity preview (was a full 90-day calendar dominating
+  the page) → SegmentedControl tabs **Submissions | Challenges | Groups** (Submissions default).
+- **Shared component** `src/features/profile/ui/ProfileScreen.tsx` powers BOTH the own tab and
+  `/user/[id]` (`<ProfileScreen userId isOwn? onOpenSettings? />`). Both route files are now thin
+  wrappers. Own keeps the settings BottomSheet (edit/appearance/blocked/delete/sign-out).
+- **New full-activity route** `app/activity/[id].tsx` (reuses `ActivityHeatmap`, 90-day), opened via
+  "View full activity →". Registered in the root stack.
+- **Backend (`20260619`, all SECURITY DEFINER, visibility-aware, no invite codes):**
+  `get_profile_overview(user)` (gated by viewability; streaks via a parameterized copy of the
+  streak day-walk + visible active-challenge/group counts), `list_viewable_user_challenges(user,lim)`,
+  `list_viewable_user_groups(user,lim)`. Plus 3 reusable helpers
+  (`user_participates_in_challenge`, `viewer_can_see_user_challenge`, `viewer_can_see_user_group`).
+- **Privacy:** private/unrelated profile → `get_viewable_profile`/`get_profile_overview` return
+  nothing → graceful "This profile is private" (no stats/tabs/activity). Challenge/group cards are
+  **tappable only when the viewer can open them** (participant / member) — public non-participant
+  cards are info-only (challenge/group detail RLS stays member/participant-only). "Hidden"/"Private"
+  badges show **only on own profile**.
+
+**In progress:** nothing half-finished.
+
+**Deliberate simplifications (within the spec's fallbacks):** profile submission rows reuse the
+existing compact text row (no thumbnail / reaction-comment counts — that data isn't on
+`list_viewable_user_submissions` and per-row fetch would be N+1); Challenges tab is a flat list with
+Active/Completed/Upcoming **status pills** (no nested Active/Completed sub-filter); per-challenge
+shows "Day N of M" progress (not a per-challenge streak); World Rank stays a "Coming soon"
+placeholder (no ranking system).
+
+**Next up (deferred):** real world-rank data; richer submission cards w/ counts (needs an RPC field);
+discovery surfaces (still out of scope).
+
+**Blockers / decisions needed:** **USER must apply `20260619000000_profile_layout_data.sql`**
+(after 14/15/16/17/18). Reload PostgREST schema if via Dashboard. No new buckets/secrets.
+
+**Branch / commit:** `mvp` @ pending (`feat(profile): add challenges and groups layout`).
+
+**Notes for next session:**
+- SIX migrations pending USER apply, in order: `20260614` → `15` → `16` → `17` → `18` → `19`.
+- The own tab now fetches its header via `usePublicProfile(myUid)` (get_viewable_profile self-row) +
+  `get_profile_overview` — streaks match the home tab (same day-walk logic).
+
+---
+
 ## 2026-06-18 — Claude (fable) / Simplify the visibility model (Spotify-playlist style)
 
 **Did:** Product decision — the multi-toggle visibility model had too much friction (users stayed

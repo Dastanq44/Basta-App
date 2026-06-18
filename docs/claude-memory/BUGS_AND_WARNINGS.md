@@ -15,10 +15,12 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
 
 ## [OPEN] W-040 — Apply the THREE privacy/Global migrations BEFORE running the new build (D-014)
 - **Date:** 2026-06-13 (updated 2026-06-18 for the Global feed migration) · **Area:** backend / Supabase
-- **What:** FIVE migrations are pending, apply **in order**:
+- **What:** SIX migrations are pending, apply **in order**:
   `20260614000000_visibility_foundation.sql` → `20260615000000_privacy_enforcement.sql` →
   `20260616000000_global_feed_v1.sql` → `20260617000000_global_feed_hardening.sql` →
-  `20260618000000_simplify_visibility_model.sql`. `20260616`/`20260617` build the Global feed +
+  `20260618000000_simplify_visibility_model.sql` → `20260619000000_profile_layout_data.sql`
+  (the last adds the profile-redesign RPCs `get_profile_overview` / `list_viewable_user_challenges` /
+  `list_viewable_user_groups` + 3 visibility helpers — the new profile screen expects them). `20260616`/`20260617` build the Global feed +
   hardening. `20260618` **simplifies the model**: flips `profiles/groups/challenges.visibility`
   defaults to `'public'`, adds `submissions.hidden_from_global` (backfilled from the now-deprecated
   `is_public`), recreates `is_submission_globally_visible` (no `is_public` gate; uses
