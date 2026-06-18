@@ -3,7 +3,19 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-06-13 — by: Claude (fable) (privacy ENFORCEMENT)_
+_Last updated: 2026-06-18 — by: Claude (fable) (Global v1 feed)_
+
+> **2026-06-18 Global v1 (T-074):** the Explore tab is now **Global** — a chronological feed of
+> PUBLIC, VERIFIED submissions (submissions only; challenge/group/profile discovery + leaderboards
+> still deferred). New migration `supabase/migrations/20260616000000_global_feed_v1.sql`:
+> `list_global_submissions(p_limit, p_before)` (verified + `is_submission_globally_visible`, cursor
+> on `created_at`, +reaction/comment counts) and widens the 3 submission-social SELECT policies to
+> `can_view_submission` (fixes a Global viewer seeing zero reactions — reactions are read via a
+> direct select). New `src/features/global/` (api + `useGlobalFeed` infinite query + `GlobalFeedCard`)
+> + `src/entities/globalPost.ts`; `app/(tabs)/explore.tsx` is a FlatList feed (route name kept
+> `explore`). Cards tap → `/submission/[id]`, author → `/user/[id]`. **USER must apply
+> `20260616` (after 20260614 + 20260615)**; reload PostgREST schema if via Dashboard. typecheck +
+> lint + expo-doctor (18/18) green.
 
 > **2026-06-13 privacy ENFORCEMENT (D-014):** second migration
 > `supabase/migrations/20260615000000_privacy_enforcement.sql` makes the foundation correct +

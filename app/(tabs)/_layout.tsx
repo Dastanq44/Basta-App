@@ -31,7 +31,7 @@ export default function TabsLayout() {
       />
       <Tabs.Screen
         name="explore"
-        options={{ title: 'Explore', tabBarIcon: ({ color }) => <Icon name="explore" color={color} size={22} /> }}
+        options={{ title: 'Global', tabBarIcon: ({ color }) => <Icon name="explore" color={color} size={22} /> }}
       />
       <Tabs.Screen
         name="groups"

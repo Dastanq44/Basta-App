@@ -13,10 +13,13 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
 
 ## Active warnings (not bugs — traps to respect)
 
-## [OPEN] W-040 — Apply BOTH privacy migrations BEFORE running the new build (D-014)
-- **Date:** 2026-06-13 (updated for the enforcement migration) · **Area:** backend / Supabase + privacy
-- **What:** TWO migrations are pending, apply **in order**:
-  `20260614000000_visibility_foundation.sql` THEN `20260615000000_privacy_enforcement.sql`.
+## [OPEN] W-040 — Apply the THREE privacy/Global migrations BEFORE running the new build (D-014)
+- **Date:** 2026-06-13 (updated 2026-06-18 for the Global feed migration) · **Area:** backend / Supabase
+- **What:** THREE migrations are pending, apply **in order**:
+  `20260614000000_visibility_foundation.sql` → `20260615000000_privacy_enforcement.sql` →
+  `20260616000000_global_feed_v1.sql`. The third adds `list_global_submissions` (Global feed) and
+  widens the 3 submission-social SELECT policies to `can_view_submission` (so Global viewers can read
+  reactions); the new client's Global tab + reaction reads expect it.
   `20260614` adds `visibility`/`is_public` columns; the client references them in **base `select`
   lists** (`PROFILE_SELECT`, group/challenge `COLUMNS`, submission selects), so against an un-migrated
   DB **every read of those tables 400s** (`column "visibility" does not exist`). `20260615` then drops

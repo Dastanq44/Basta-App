@@ -21,6 +21,57 @@
 
 ---
 
+## 2026-06-18 — Claude (fable) / Global v1 — public verified submissions feed
+
+**Did:** Built the first real Global tab: a chronological feed of PUBLIC, VERIFIED submissions.
+**Submissions only** — no challenge/group/profile discovery, no leaderboards/ranking/trending (all
+still deferred). New migration `supabase/migrations/20260616000000_global_feed_v1.sql`.
+
+- **Backend (`20260616`):** `list_global_submissions(p_limit int default 20, p_before timestamptz
+  default null)` — SECURITY DEFINER, granted to authenticated. Returns only rows where
+  `status='verified'` AND `is_submission_globally_visible(id)`; `created_at desc`; cursor
+  `created_at < p_before`; `limit greatest(1, least(p_limit,100))`. Returns submission + author
+  (username/display_name/avatar path) + challenge (title/category) + group (id/name nullable) +
+  **reaction_count + comment_count** (added beyond the literal spec so cards avoid an N+1). No invite
+  codes / internal / moderation / timezone / terms fields.
+- **Phase 4 gap found + fixed:** the reaction *summary* is read via a DIRECT select
+  (`social getReactions`), gated by the participant-only `sr_select_participant` RLS — a Global
+  viewer would see ZERO reactions (and not their own after reacting). Same migration widens the 3
+  submission-social SELECT policies (`submission_reactions`, `submission_comments`,
+  `submission_comment_likes`) to `can_view_submission`. Comments/likers/reactors already went
+  through `can_view_submission`-gated RPCs, so they were fine; reactions were the only direct read.
+- **Client:** new feature `src/features/global/` (api `listGlobalSubmissions` + mapper; hook
+  `useGlobalFeed` = `useInfiniteQuery`, cursor pagination + pull-to-refresh; `GlobalFeedCard`).
+  New entity `src/entities/globalPost.ts`. `app/(tabs)/explore.tsx` replaced the placeholder with a
+  `FlatList` feed (per spec; route name kept `explore`, visible title + tab label now **Global**).
+  Cards: author avatar/name/username, title, proof image (lazy signed URL via `useProofSignedUrl`),
+  comment, challenge·group context, date, reaction/comment counts. Tap card → `/submission/[id]`;
+  tap author → `/user/[id]`. Empty state "No public submissions yet"; graceful error (no raw RPC error).
+- **Phases 5/6 (audit, no code):** proof media loads via the existing signed-URL flow (bucket stays
+  private; global policy already allows eligible viewers; blocked excluded). `/user/[id]` already
+  uses `get_viewable_profile` (public works; private/not-allowed → graceful "Profile unavailable",
+  no hidden fields). The submission detail screen needed no changes (already `can_view_submission`).
+
+**In progress:** nothing half-finished.
+
+**Next up (still deferred — do NOT build without a new ask):** public challenge directory, public
+group directory, profile search, global leaderboards, ranking/trending/recommendations.
+
+**Blockers / decisions needed:** **USER must apply `20260616000000_global_feed_v1.sql`** (after
+`20260614` + `20260615`). Reload PostgREST schema if applied via Dashboard. No new buckets/secrets.
+
+**Branch / commit:** `mvp` @ pending (`feat(global): add public submissions feed`).
+
+**Notes for next session:**
+- THREE migrations now pending USER apply, in order: `20260614` → `20260615` → `20260616`.
+- Cursor is `created_at`-only (per spec). Exact-tie timestamps across a page boundary could in
+  theory skip an item — microsecond precision makes this vanishingly unlikely; if it ever matters,
+  switch to a `(created_at, id)` composite cursor.
+- Feed uses FlatList (per the explicit ask); FlashList would be the perf upgrade if the feed grows.
+- Reaction images sign lazily per visible card (FlatList windowing) — fine for v1.
+
+---
+
 ## 2026-06-13 — Claude (fable) / Privacy ENFORCEMENT (fix the foundation; still no Global feed)
 
 **Did:** Closed the gaps in the visibility foundation so private content is actually private and

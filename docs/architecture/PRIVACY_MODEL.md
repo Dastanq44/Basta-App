@@ -1,8 +1,12 @@
 # PRIVACY_MODEL.md
 
-> Server-authoritative visibility for Basta. The **Global feed is not built yet** — this document
-> describes the *foundation* that a future Global tab will sit on. See DECISIONS **D-014**.
-> Migrations: `20260614000000_visibility_foundation.sql` + `20260615000000_privacy_enforcement.sql`.
+> Server-authoritative visibility for Basta. The foundation + enforcement, and **Global v1**
+> (a chronological feed of public verified *submissions* — `app/(tabs)/explore.tsx` +
+> `src/features/global/`, gated by `list_global_submissions` → `is_submission_globally_visible`).
+> Still deferred: public challenge/group directories, profile search, global leaderboards, ranking.
+> See DECISIONS **D-014**. Migrations: `20260614000000_visibility_foundation.sql` +
+> `20260615000000_privacy_enforcement.sql` + `20260616000000_global_feed_v1.sql` (the last also
+> widens the submission-social SELECT policies to `can_view_submission`).
 
 ## Principles
 

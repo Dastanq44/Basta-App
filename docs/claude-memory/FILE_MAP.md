@@ -170,6 +170,10 @@ app.config.ts  eas.json  package.json                                           
 | Privacy/visibility foundation (enum + `is_public` + `is_submission_globally_visible` + proof-media RLS + RPC recreations) | `supabase/migrations/20260614000000_visibility_foundation.sql` | written — **USER must apply** (T-073, D-014) |
 | Privacy enforcement (drop broad profiles SELECT + `get_viewable_profile` + `can_view_submission` + social-RPC re-gate + hardened proof-media + `update_group_meta` clear-avatar + `create_group` visibility) | `supabase/migrations/20260615000000_privacy_enforcement.sql` | written — **USER must apply after 20260614** (T-075, D-014) |
 | Privacy model + manual smoke-test checklist | `docs/architecture/PRIVACY_MODEL.md` | live (T-075, D-014) |
+| Global feed v1 RPC (`list_global_submissions`) + social-read RLS widening to `can_view_submission` | `supabase/migrations/20260616000000_global_feed_v1.sql` | written — **USER must apply after 20260615** (T-074) |
+| Global feed feature (api + `useGlobalFeed` infinite query + `GlobalFeedCard`) | `src/features/global/` | live (T-074) |
+| Global post entity | `src/entities/globalPost.ts` | live (T-074) |
+| Global tab screen (FlatList feed; route name kept `explore`) | `app/(tabs)/explore.tsx` | live (T-074) |
 | Theme mode (light/dark/system) + persistence | `src/shared/ui/theme/ThemeProvider.tsx` · `src/shared/lib/themePreference.ts` | live |
 | Reusable group create/join form | `src/features/groups/ui/GroupCreateOrJoinForm.tsx` | live (T-026) |
 | Group create/join modal route | `app/group/join-or-create.tsx` | live (T-026) |

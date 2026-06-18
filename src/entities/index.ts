@@ -8,3 +8,4 @@ export type { LeaderboardEntry } from './leaderboard';
 export type { SubmissionComment, CommentLiker } from './comment';
 export type { Report, ReportId, ReportTargetType } from './report';
 export type { Block } from './block';
+export type { GlobalPost } from './globalPost';
