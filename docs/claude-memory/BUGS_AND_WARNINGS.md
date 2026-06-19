@@ -20,12 +20,14 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
   `20260616000000_global_feed_v1.sql` → `20260617000000_global_feed_hardening.sql` →
   `20260618000000_simplify_visibility_model.sql` → `20260619000000_profile_layout_data.sql` →
   `20260620000000_submission_detail_context.sql` → `20260621000000_delete_challenge.sql` →
-  `20260622000000_public_previews.sql` → `20260623000000_group_access_created_at.sql`.
+  `20260622000000_public_previews.sql` → `20260623000000_group_access_created_at.sql` →
+  `20260624000000_public_group_leaderboard.sql`.
   `20260619` adds the profile-redesign RPCs; `20260620` extends `get_submission_with_author`
   (DROP + recreate); `20260621` adds `delete_challenge`; `20260622` adds the public-preview access
   RPCs (`get_challenge_access`/`get_group_access` + `list_public_*`) and recreates
   `get_profile_overview` (streak privacy fix); `20260623` recreates `get_group_access` with
-  `created_at` (public group preview shows the Created date). The new clients expect them. `20260616`/`20260617` build the Global feed +
+  `created_at` (public group preview shows the Created date); `20260624` adds
+  `list_public_group_leaderboard` (public group preview Leaderboard tab). The new clients expect them. `20260616`/`20260617` build the Global feed +
   hardening. `20260618` **simplifies the model**: flips `profiles/groups/challenges.visibility`
   defaults to `'public'`, adds `submissions.hidden_from_global` (backfilled from the now-deprecated
   `is_public`), recreates `is_submission_globally_visible` (no `is_public` gate; uses

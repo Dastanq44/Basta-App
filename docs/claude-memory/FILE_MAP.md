@@ -185,6 +185,7 @@ app.config.ts  eas.json  package.json                                           
 | Public previews (`get_challenge_access`/`get_group_access` + `list_public_*` + `get_profile_overview` streak fix) | `supabase/migrations/20260622000000_public_previews.sql` | written — **USER must apply after 20260621** (T-084) |
 | Public preview screens | `src/features/challenges/ui/PublicChallengePreview.tsx` · `src/features/groups/ui/PublicGroupPreview.tsx` | live (T-084) |
 | `get_group_access` + `created_at` (public group preview Created date) | `supabase/migrations/20260623000000_group_access_created_at.sql` | written — **USER must apply after 20260622** (T-084) |
+| `list_public_group_leaderboard` (public group preview Leaderboard tab) | `supabase/migrations/20260624000000_public_group_leaderboard.sql` | written — **USER must apply after 20260623** (T-084) |
 | Theme mode (light/dark/system) + persistence | `src/shared/ui/theme/ThemeProvider.tsx` · `src/shared/lib/themePreference.ts` | live |
 | Reusable group create/join form | `src/features/groups/ui/GroupCreateOrJoinForm.tsx` | live (T-026) |
 | Group create/join modal route | `app/group/join-or-create.tsx` | live (T-026) |

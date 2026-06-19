@@ -40,8 +40,15 @@
    dismissing showed nothing; added a 250 ms delay (submission detail + member challenge/group +
    public previews).
 
-**Blockers:** **USER must apply `20260623000000_group_access_created_at.sql`** (after 20260622).
-Ten migrations now pending: `20260614`…`20260623`. typecheck + lint + expo-doctor (18/18) green.
+6. **Group + Global leaderboards on the public group preview:** `PublicGroupPreview` now has
+   Main / Leaderboard / Global tabs (mirrors the member group screen). New
+   `list_public_group_leaderboard(uuid)` RPC (gated on `get_group_access`, since `group_leaderboard`
+   is member-only) + `getPublicGroupLeaderboard`/`usePublicGroupLeaderboard` in the leaderboard
+   feature. Global tab is the same "coming soon" placeholder as the member view. Migration
+   `20260624000000_public_group_leaderboard.sql`.
+
+**Blockers:** **USER must apply `20260623` then `20260624`** (after 20260622).
+Eleven migrations now pending: `20260614`…`20260624`. typecheck + lint + expo-doctor (18/18) green.
 
 ---
 
