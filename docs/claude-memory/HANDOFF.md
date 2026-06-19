@@ -21,6 +21,30 @@
 
 ---
 
+## 2026-06-18 — Claude (fable) / Public-preview fixes (boxes, report sheet, wording)
+
+**Did:** Fixed 5 issues on top of the public-previews work below. New migration
+`supabase/migrations/20260623000000_group_access_created_at.sql` (adds `created_at` to
+`get_group_access`).
+1. **Proof context boxes** (user/challenge/group) are now ALWAYS tappable — they previously did
+   nothing for non-participants. The route resolves member detail vs public preview.
+2. **Public group preview** now shows normal info (Members + Created card + description) via
+   `created_at` added to `get_group_access` (+ `GroupAccess.createdAt`).
+3. **Removed "Public" wording** from preview section headings ("Public proofs"→"Proofs", "Public
+   challenges"→"Challenges") + empty states. Kept the "Public preview" box.
+4. **Preview 3-dot** now opens a BottomSheet menu instead of jumping straight to the report window.
+   `ReportSheet` wrapped in a nested `SafeAreaProvider` so its header no longer overlaps the
+   status bar/notch (RN Modals don't inherit the outer provider's insets). Removed the raw
+   reason-key caption under each report category.
+5. **Report from a 3-dot menu now works** — opening the report modal while the menu modal was still
+   dismissing showed nothing; added a 250 ms delay (submission detail + member challenge/group +
+   public previews).
+
+**Blockers:** **USER must apply `20260623000000_group_access_created_at.sql`** (after 20260622).
+Ten migrations now pending: `20260614`…`20260623`. typecheck + lint + expo-doctor (18/18) green.
+
+---
+
 ## 2026-06-18 — Claude (fable) / Public challenge/group previews + profile-stats privacy fix
 
 **Did:** Public challenges/groups on a profile are now tappable into **read-only previews**; full

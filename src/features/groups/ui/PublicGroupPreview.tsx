@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Image, Pressable, ScrollView, View } from 'react-native';
 import { type Href, useRouter } from 'expo-router';
-import { Avatar, Button, Card, Icon, Screen, ScreenHeader, Text, useTheme } from '@/shared/ui';
+import { Avatar, BottomSheet, BottomSheetMenuItem, Button, Card, Icon, Screen, ScreenHeader, Text, useTheme } from '@/shared/ui';
 import { ReportSheet } from '@/features/moderation';
 import type { Submission } from '@/entities';
 import { groupAvatarUrl, type GroupAccess, type PublicGroupChallenge } from '../api';
@@ -9,13 +9,15 @@ import { usePublicGroupChallenges, usePublicGroupSubmissions } from '../hooks';
 
 const DATE_FMT: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short', day: 'numeric' };
 
-/** Read-only public preview of a group for non-members. No invite code, leaderboard, member list,
- *  or settings — just safe info + public challenges/proofs + a "join with code" CTA. */
+/** Read-only public preview of a group for non-members. Shows the normal group info (members,
+ *  created, description) + its visible challenges/proofs — but no invite code, leaderboard,
+ *  member list, or settings. */
 export function PublicGroupPreview({ access }: { access: GroupAccess }) {
   const t = useTheme();
   const router = useRouter();
   const challenges = usePublicGroupChallenges(access.id);
   const submissions = usePublicGroupSubmissions(access.id);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const avatarUrl = groupAvatarUrl(access.avatarPath);
 
@@ -28,8 +30,8 @@ export function PublicGroupPreview({ access }: { access: GroupAccess }) {
           access.canReport
             ? {
                 icon: <Icon name="settings" size={22} color={t.colors.foreground} />,
-                onPress: () => setReportOpen(true),
-                accessibilityLabel: 'Report group',
+                onPress: () => setMenuOpen(true),
+                accessibilityLabel: 'Group actions',
               }
             : undefined
         }
@@ -49,11 +51,23 @@ export function PublicGroupPreview({ access }: { access: GroupAccess }) {
           ) : null}
         </View>
 
+        {/* Normal group info (no private details). */}
+        <Card>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <Text variant="muted">Members</Text>
+            <Text variant="subtitle">{access.memberCount}</Text>
+          </View>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: t.spacing.sm }}>
+            <Text variant="muted">Created</Text>
+            <Text variant="subtitle">
+              {access.createdAt ? new Date(access.createdAt).toLocaleDateString(undefined, DATE_FMT) : '—'}
+            </Text>
+          </View>
+        </Card>
+
         <Card style={{ backgroundColor: t.colors.primarySoft }}>
-          <Text variant="subtitle">Public group</Text>
-          <Text variant="muted">
-            {access.memberCount} member{access.memberCount === 1 ? '' : 's'} · Join with an invite code to participate.
-          </Text>
+          <Text variant="subtitle">Public preview</Text>
+          <Text variant="muted">You&apos;re not a member. Join with an invite code to participate.</Text>
         </Card>
 
         <Button
@@ -63,11 +77,11 @@ export function PublicGroupPreview({ access }: { access: GroupAccess }) {
         />
 
         <View style={{ gap: t.spacing.sm }}>
-          <Text variant="heading">Public challenges</Text>
+          <Text variant="heading">Challenges</Text>
           {challenges.isPending ? (
             <Text variant="muted">Loading…</Text>
           ) : (challenges.data ?? []).length === 0 ? (
-            <Text variant="muted">No public challenges yet.</Text>
+            <Text variant="muted">No challenges yet.</Text>
           ) : (
             (challenges.data ?? []).map((c) => (
               <PublicChallengeRow
@@ -80,11 +94,11 @@ export function PublicGroupPreview({ access }: { access: GroupAccess }) {
         </View>
 
         <View style={{ gap: t.spacing.sm }}>
-          <Text variant="heading">Public proofs</Text>
+          <Text variant="heading">Proofs</Text>
           {submissions.isPending ? (
             <Text variant="muted">Loading…</Text>
           ) : (submissions.data ?? []).length === 0 ? (
-            <Text variant="muted">No public proofs yet.</Text>
+            <Text variant="muted">No proofs yet.</Text>
           ) : (
             (submissions.data ?? []).map((s) => (
               <PreviewSubmissionRow key={s.id} submission={s} onPress={() => router.push(`/submission/${s.id}` as Href)} />
@@ -92,6 +106,19 @@ export function PublicGroupPreview({ access }: { access: GroupAccess }) {
           )}
         </View>
       </ScrollView>
+
+      {/* 3-dot actions → bottom sheet (then the report window). */}
+      <BottomSheet visible={menuOpen} onClose={() => setMenuOpen(false)}>
+        <BottomSheetMenuItem
+          label="Report group"
+          onPress={() => {
+            setMenuOpen(false);
+            // Let the menu sheet finish dismissing before the report modal opens (two modals
+            // can't reliably show at once).
+            setTimeout(() => setReportOpen(true), 250);
+          }}
+        />
+      </BottomSheet>
 
       <ReportSheet
         visible={reportOpen}

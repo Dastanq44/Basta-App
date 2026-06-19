@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Button, Card, Input, Screen, Text, useTheme } from '@/shared/ui';
 import type { ReportTargetType } from '@/entities';
 import { REPORT_REASON_LABELS, REPORT_REASONS, reportInput, type ReportReason } from '../model';
@@ -62,11 +63,15 @@ export function ReportSheet({ visible, onClose, targetType, targetId, targetLabe
 
   return (
     <Modal animationType="slide" transparent={false} visible={visible} onRequestClose={onClose}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={{ flex: 1 }}
-      >
-        <Screen>
+      {/* Re-provide safe-area insets INSIDE the modal — RN Modals render in a separate native
+          host where the outer SafeAreaProvider's insets aren't applied, so without this the
+          header overlapped the status bar / notch. */}
+      <SafeAreaProvider>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1 }}
+        >
+          <Screen>
           <ScrollView contentContainerStyle={{ gap: t.spacing.lg, paddingBottom: t.spacing.xl }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <Text variant="title">Report</Text>
@@ -86,7 +91,6 @@ export function ReportSheet({ visible, onClose, targetType, targetId, targetLabe
                 {REPORT_REASONS.map((r) => (
                   <ReasonRow
                     key={r}
-                    value={r}
                     label={REPORT_REASON_LABELS[r]}
                     selected={reason === r}
                     onPress={() => setReason(r)}
@@ -135,18 +139,17 @@ export function ReportSheet({ visible, onClose, targetType, targetId, targetLabe
             )}
           </ScrollView>
         </Screen>
-      </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
+      </SafeAreaProvider>
     </Modal>
   );
 }
 
 function ReasonRow({
-  value,
   label,
   selected,
   onPress,
 }: {
-  value: string;
   label: string;
   selected: boolean;
   onPress: () => void;
@@ -169,9 +172,6 @@ function ReasonRow({
     >
       <Text style={{ color: selected ? t.colors.accentForeground : t.colors.foreground, fontWeight: '600' }}>
         {label}
-      </Text>
-      <Text variant="caption" style={{ marginTop: 2 }}>
-        {value}
       </Text>
     </Pressable>
   );

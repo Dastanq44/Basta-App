@@ -310,6 +310,7 @@ export type GroupAccess = {
   avatarPath?: string;
   isPublic: boolean;
   archivedAt?: string;
+  createdAt?: string;
   ownerId: string;
   memberCount: number;
   viewerRole?: MemberRole;
@@ -327,6 +328,7 @@ type GroupAccessRow = {
   avatar_path: string | null;
   visibility: 'private' | 'public';
   archived_at: string | null;
+  created_at: string | null;
   owner_id: string;
   member_count: number;
   viewer_role: MemberRole | null;
@@ -353,6 +355,7 @@ export async function getGroupAccess(groupId: string): Promise<GroupAccess | nul
       avatarPath: r.avatar_path ?? undefined,
       isPublic: r.visibility === 'public',
       archivedAt: r.archived_at ?? undefined,
+      createdAt: r.created_at ?? undefined,
       ownerId: r.owner_id,
       memberCount: r.member_count ?? 0,
       viewerRole: r.viewer_role ?? undefined,

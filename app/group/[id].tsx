@@ -463,7 +463,7 @@ export default function GroupScreen() {
             label="Report group"
             onPress={() => {
               setMenuOpen(false);
-              setReportOpen(true);
+              setTimeout(() => setReportOpen(true), 250);
             }}
           />
         )}

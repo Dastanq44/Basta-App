@@ -329,7 +329,7 @@ export default function ChallengeDetailScreen() {
             label="Report challenge"
             onPress={() => {
               setMenuOpen(false);
-              setReportOpen(true);
+              setTimeout(() => setReportOpen(true), 250);
             }}
           />
         ) : null}

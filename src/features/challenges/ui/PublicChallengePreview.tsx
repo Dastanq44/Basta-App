@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { FlatList, Pressable, View } from 'react-native';
 import { type Href, useRouter } from 'expo-router';
-import { Button, Card, Icon, Screen, ScreenHeader, Text, useTheme } from '@/shared/ui';
+import { BottomSheet, BottomSheetMenuItem, Button, Card, Icon, Screen, ScreenHeader, Text, useTheme } from '@/shared/ui';
 import { ReportSheet } from '@/features/moderation';
 import type { Submission } from '@/entities';
 import type { ChallengeAccess } from '../api';
@@ -15,6 +15,7 @@ export function PublicChallengePreview({ access }: { access: ChallengeAccess }) 
   const t = useTheme();
   const router = useRouter();
   const subs = usePublicChallengeSubmissions(access.id);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const isGroup = access.mode === 'group';
 
@@ -27,8 +28,8 @@ export function PublicChallengePreview({ access }: { access: ChallengeAccess }) 
           access.canReport
             ? {
                 icon: <Icon name="settings" size={22} color={t.colors.foreground} />,
-                onPress: () => setReportOpen(true),
-                accessibilityLabel: 'Report challenge',
+                onPress: () => setMenuOpen(true),
+                accessibilityLabel: 'Challenge actions',
               }
             : undefined
         }
@@ -63,16 +64,28 @@ export function PublicChallengePreview({ access }: { access: ChallengeAccess }) 
                 onPress={() => router.push('/group/join-or-create' as Href)}
               />
             ) : null}
-            <Text variant="heading" style={{ marginTop: t.spacing.sm }}>Public proofs</Text>
+            <Text variant="heading" style={{ marginTop: t.spacing.sm }}>Proofs</Text>
           </View>
         }
         ListEmptyComponent={
-          subs.isPending ? <Text variant="muted">Loading…</Text> : <Text variant="muted">No public proofs yet.</Text>
+          subs.isPending ? <Text variant="muted">Loading…</Text> : <Text variant="muted">No proofs yet.</Text>
         }
         renderItem={({ item }) => (
           <PreviewSubmissionRow submission={item} onPress={() => router.push(`/submission/${item.id}` as Href)} />
         )}
       />
+      {/* 3-dot actions → bottom sheet (then the report window). */}
+      <BottomSheet visible={menuOpen} onClose={() => setMenuOpen(false)}>
+        <BottomSheetMenuItem
+          label="Report challenge"
+          onPress={() => {
+            setMenuOpen(false);
+            // Let the menu sheet finish dismissing before the report modal opens.
+            setTimeout(() => setReportOpen(true), 250);
+          }}
+        />
+      </BottomSheet>
+
       <ReportSheet
         visible={reportOpen}
         onClose={() => setReportOpen(false)}

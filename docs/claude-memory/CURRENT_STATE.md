@@ -14,7 +14,12 @@ _Last updated: 2026-06-18 — by: Claude (fable) (public previews + privacy fixe
 > stats now exclude hidden/private-challenge activity via `can_view_submission`). Frontend: challenge
 > + group detail screens branch member vs `PublicChallengePreview`/`PublicGroupPreview`; profile
 > cards always tappable; proof Report/Block moved to a 3-dot `headerRight` menu; group creation
-> defaults public. **USER must apply `20260622` (after 14…21); reload PostgREST schema if via
+> defaults public. **Follow-up fixes:** proof context boxes always navigate (→ member/preview);
+> public group preview shows the normal Members/Created card (`created_at` added to
+> `get_group_access` — migration `20260623`); removed "Public" wording from preview headings;
+> preview 3-dot opens a menu first; `ReportSheet` wrapped in `SafeAreaProvider` (notch overlap) +
+> removed reason-key caption; fixed Report-from-menu not opening (250 ms two-modal delay).
+> **USER must apply `20260622` then `20260623` (after 14…21); reload PostgREST schema if via
 > Dashboard.** typecheck + lint + expo-doctor (18/18) green.
 
 > **2026-06-18 polish batch (T-082):** removed challenge **archiving UI** (kept the `archived_at`

@@ -164,7 +164,8 @@ export default function SubmissionScreen() {
           <SyncBadge status={s.status} />
         </View>
 
-        {/* Context boxes: user · challenge (with day) · group. Clickable when openable. */}
+        {/* Context boxes: user · challenge (with day) · group. Always tappable — the destination
+            route resolves full member detail vs read-only public preview (or "unavailable"). */}
         <View style={{ flexDirection: 'row', gap: t.spacing.sm }}>
           <ContextBox
             label="User"
@@ -176,13 +177,13 @@ export default function SubmissionScreen() {
             label="Challenge"
             value={s.challengeTitle ?? 'Challenge'}
             sub={`Day ${s.challengeDay + 1}`}
-            onPress={s.canOpenChallenge ? () => router.push(`/challenge/${s.challengeId}` as Href) : undefined}
+            onPress={() => router.push(`/challenge/${s.challengeId}` as Href)}
           />
           {s.challengeGroupId ? (
             <ContextBox
               label="Group"
               value={s.challengeGroupName ?? 'Group'}
-              onPress={s.canOpenGroup ? () => router.push(`/group/${s.challengeGroupId}` as Href) : undefined}
+              onPress={() => router.push(`/group/${s.challengeGroupId}` as Href)}
             />
           ) : null}
         </View>
@@ -241,7 +242,9 @@ export default function SubmissionScreen() {
           label="Report this proof"
           onPress={() => {
             setMenuOpen(false);
-            setReportOpen(true);
+            // Let the menu sheet finish dismissing before the report modal opens (two modals
+            // can't reliably show at once — this is why Report previously did nothing).
+            setTimeout(() => setReportOpen(true), 250);
           }}
         />
         <BottomSheetMenuItem
