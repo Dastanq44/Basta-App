@@ -21,6 +21,52 @@
 
 ---
 
+## 2026-06-18 — Claude (fable) / Public challenge/group previews + profile-stats privacy fix
+
+**Did:** Public challenges/groups on a profile are now tappable into **read-only previews**; full
+member/participant detail is unchanged. Also moved proof Report/Block into a 3-dot menu, fixed a
+profile-stats leak, and made group-creation default public. New migration
+`supabase/migrations/20260622000000_public_previews.sql`. No discovery/search/ranking.
+
+- **Backend (all SECURITY DEFINER, authenticated-only, no invite codes / private members):**
+  `get_challenge_access(uuid)` (member|public + safe fields + `can_*` flags),
+  `list_public_challenge_submissions(...)` (keyset, `can_view_submission`-filtered),
+  `get_group_access(uuid)`, `list_public_group_challenges(uuid,int)`,
+  `list_public_group_submissions(...)`. **Goal 5 fix:** recreated `get_profile_overview` so the streak
+  day-walk + best-streak CTE only count submissions the viewer can see
+  (`p_user_id = v_uid OR can_view_submission(s.id)`) — previously leaked hidden-challenge activity.
+- **Challenge detail** (`app/challenge/[id].tsx`): fetch `useChallengeAccess` first; `public` →
+  `PublicChallengePreview` (title/chips/req + public proofs via `list_public_challenge_submissions`
+  + "Join with invite code" for group challenges); `member` → existing UI. The member-only hooks are
+  disabled in public mode by passing `memberId = undefined` (all gate on `enabled:!!id`), so no
+  participant-only RPC runs — branch happens BEFORE the member-data guards.
+- **Group detail** (`app/group/[id].tsx`): same pattern with `useGroupAccess` → `PublicGroupPreview`
+  (avatar/name/desc/member-count + public challenges + public proofs + join CTA; **no** invite code /
+  leaderboard / member list / settings).
+- **Profile cards** (`ProfileChallengeCard`/`ProfileGroupCard` + `ProfileScreen.renderItem`): now
+  ALWAYS tappable (route decides member vs preview) + a `›` chevron + a "Public preview" pill on
+  another user's non-participant cards.
+- **Proof detail 3-dot menu:** Report/Block moved from the footer into a native `headerRight`
+  `Icon name="settings"` → `BottomSheet` (only when loaded & not author). Footer removed.
+- **Group default public:** `createGroup(name, isPublic = true)` + `useCreateGroup` fallback `true`.
+  Cleaned stale "Default private"/"Share to Global" comments (entities + `VisibilityToggle`); marked
+  `Submission.isPublic` deprecated.
+
+**Architecture note:** the member-vs-public split is done by branching on access + disabling member
+hooks via `undefined` id (no screen extraction). All five access/list RPCs are server-gated; previews
+never expose invite codes / private members / private submissions; proof-media stays private.
+
+**Blockers:** **USER must apply `20260622000000_public_previews.sql`** (after 14…21). Reload PostgREST
+schema if via Dashboard. No new buckets/secrets. (Nine migrations now pending: `20260614`…`20260622`.)
+
+**Branch / commit:** `mvp` @ pending (`feat(public): add challenge and group previews`).
+
+**Notes for next session:** public previews show a single page (~20) of public proofs (no infinite
+scroll yet — RPCs support keyset if needed). The challenge/group access RPCs return `can_*` flags the
+member UI could later consume to drop its own role checks.
+
+---
+
 ## 2026-06-18 — Claude (fable) / Follow-up tweaks (delete challenge, activity calendar, etc.)
 
 **Did:** A second small batch on top of the polish batch below (both still in the same uncommitted

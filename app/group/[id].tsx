@@ -19,7 +19,9 @@ import {
 import { useSession } from '@/features/auth';
 import { useChallenges } from '@/features/challenges';
 import {
+  PublicGroupPreview,
   useArchiveGroup,
+  useGroupAccess,
   useGroupOverview,
   useLeaveGroup,
   useMyGroups,
@@ -40,9 +42,13 @@ export default function GroupScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const session = useSession();
   const myUid = session.session?.user.id;
+  // Resolve access first. In public-preview mode the member-only hooks are DISABLED by passing
+  // `undefined` (they gate on `enabled: !!id`), so no member-only RPC runs for a public viewer.
+  const access = useGroupAccess(id);
+  const memberId = access.data?.accessMode === 'member' ? id : undefined;
   const groups = useMyGroups();
-  const overview = useGroupOverview(id);
-  const board = useGroupLeaderboard(id);
+  const overview = useGroupOverview(memberId);
+  const board = useGroupLeaderboard(memberId);
   const challenges = useChallenges();
   const leave = useLeaveGroup();
   const archive = useArchiveGroup();
@@ -144,6 +150,31 @@ export default function GroupScreen() {
     );
   };
 
+  // Access gate (runs before the member-data guards below).
+  if (access.isPending) {
+    return (
+      <Screen edges={['top', 'bottom']}>
+        <ScreenHeader title="Group" onBack={() => router.back()} />
+        <Text variant="muted">Loading…</Text>
+      </Screen>
+    );
+  }
+  if (access.isError || !access.data) {
+    return (
+      <Screen edges={['top', 'bottom']}>
+        <ScreenHeader title="Group" onBack={() => router.back()} />
+        <View style={{ gap: t.spacing.md }}>
+          <Text variant="title">Group unavailable</Text>
+          <Text variant="muted">This group is private, archived, or no longer exists.</Text>
+        </View>
+      </Screen>
+    );
+  }
+  if (access.data.accessMode === 'public') {
+    return <PublicGroupPreview access={access.data} />;
+  }
+
+  // ── Member detail from here. ──
   if (!groups.isPending && !group) {
     return (
       <Screen edges={['top', 'bottom']}>

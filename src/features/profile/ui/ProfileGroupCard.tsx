@@ -14,13 +14,14 @@ export type ProfileGroupCardProps = {
   isOwn: boolean;
 };
 
-/** Group card for the profile Groups tab. Tappable only when the viewer is a member (group-detail
- *  RLS is member-only); public non-member cards are info-only. Never shows the invite code. */
+/** Group card for the profile Groups tab. Always tappable — the group route decides full member
+ *  detail vs read-only public preview. Never shows the invite code. */
 export function ProfileGroupCard({ group, onPress, isOwn }: ProfileGroupCardProps) {
   const t = useTheme();
   const avatarUrl = groupAvatarUrl(group.avatarPath);
-  const tappable = !!group.viewerRole && !!onPress;
   const roleLabel = group.targetRole ? ROLE_LABEL[group.targetRole] : null;
+  // On another user's profile, flag groups you'd open as a read-only preview.
+  const showPublicPreview = !isOwn && !group.viewerRole;
 
   const body = (
     <Card style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.md }}>
@@ -33,6 +34,7 @@ export function ProfileGroupCard({ group, onPress, isOwn }: ProfileGroupCardProp
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm }}>
           <Text variant="subtitle" numberOfLines={1} style={{ flex: 1 }}>{group.name}</Text>
           {isOwn && !group.isPublic ? <Pill label="Private" tone="muted" /> : null}
+          {showPublicPreview ? <Pill label="Public preview" tone="muted" /> : null}
         </View>
         <Text variant="caption" style={{ color: t.colors.mutedForeground }} numberOfLines={1}>
           {group.memberCount} member{group.memberCount === 1 ? '' : 's'}{roleLabel ? ` · ${roleLabel}` : ''}
@@ -41,10 +43,11 @@ export function ProfileGroupCard({ group, onPress, isOwn }: ProfileGroupCardProp
           <Text variant="caption" numberOfLines={1}>{group.description}</Text>
         ) : null}
       </View>
+      <Text variant="muted">›</Text>
     </Card>
   );
 
-  return tappable ? (
+  return onPress ? (
     <Pressable accessibilityRole="button" onPress={onPress}>{body}</Pressable>
   ) : (
     body

@@ -1,7 +1,7 @@
 // Groups API — thin Supabase wrappers. The DB trigger `trg_groups_add_owner` ensures the
 // creator is added as a `member_role=owner` row in group_members; clients don't have to.
 import { supabase } from '@/shared/lib/supabase';
-import type { Group, GroupId } from '@/entities';
+import type { Group, GroupId, MemberRole, Submission } from '@/entities';
 
 const COLUMNS = 'id, name, owner_id, invite_code, archived_at, visibility';
 
@@ -33,7 +33,7 @@ function toGroup(row: GroupRow): Group {
   };
 }
 
-export async function createGroup(name: string, isPublic = false): Promise<Group> {
+export async function createGroup(name: string, isPublic = true): Promise<Group> {
   const ctrl = withTimeout();
   try {
     // Use the SECURITY DEFINER RPC instead of a direct INSERT — see migration notes for
@@ -295,4 +295,171 @@ export async function uploadGroupAvatar(groupId: string, localUri: string): Prom
     .upload(remotePath, buf, { contentType: 'image/jpeg', upsert: true, cacheControl: '3600' });
   if (error) throw error;
   return remotePath;
+}
+
+// ── Public-preview access (get_group_access) ─────────────────────────────────
+
+export type GroupAccessMode = 'member' | 'public';
+
+/** Whether + how the viewer can open a group (full member detail vs read-only public preview).
+ *  Safe fields only — never the invite code. Null when neither mode applies. */
+export type GroupAccess = {
+  id: string;
+  name: string;
+  description?: string;
+  avatarPath?: string;
+  isPublic: boolean;
+  archivedAt?: string;
+  ownerId: string;
+  memberCount: number;
+  viewerRole?: MemberRole;
+  accessMode: GroupAccessMode;
+  canEdit: boolean;
+  canArchive: boolean;
+  canLeave: boolean;
+  canReport: boolean;
+};
+
+type GroupAccessRow = {
+  id: string;
+  name: string;
+  description: string | null;
+  avatar_path: string | null;
+  visibility: 'private' | 'public';
+  archived_at: string | null;
+  owner_id: string;
+  member_count: number;
+  viewer_role: MemberRole | null;
+  access_mode: GroupAccessMode;
+  can_edit: boolean;
+  can_archive: boolean;
+  can_leave: boolean;
+  can_report: boolean;
+};
+
+export async function getGroupAccess(groupId: string): Promise<GroupAccess | null> {
+  const c = withTimeout();
+  try {
+    const { data, error } = await supabase
+      .rpc('get_group_access', { p_group_id: groupId })
+      .abortSignal(c.signal);
+    if (error) throw error;
+    const r = ((data ?? []) as GroupAccessRow[])[0];
+    if (!r) return null;
+    return {
+      id: r.id,
+      name: r.name,
+      description: r.description ?? undefined,
+      avatarPath: r.avatar_path ?? undefined,
+      isPublic: r.visibility === 'public',
+      archivedAt: r.archived_at ?? undefined,
+      ownerId: r.owner_id,
+      memberCount: r.member_count ?? 0,
+      viewerRole: r.viewer_role ?? undefined,
+      accessMode: r.access_mode,
+      canEdit: !!r.can_edit,
+      canArchive: !!r.can_archive,
+      canLeave: !!r.can_leave,
+      canReport: !!r.can_report,
+    };
+  } catch (e) {
+    console.error('[basta] getGroupAccess failed:', e);
+    throw e;
+  }
+}
+
+export type PublicGroupChallenge = {
+  id: string;
+  groupId: string | null;
+  title: string;
+  category: string;
+  mode: 'solo' | 'group';
+  startDate: string;
+  durationDays: number;
+  isPublic: boolean;
+  isParticipant: boolean;
+};
+
+type PublicGroupChallengeRow = {
+  id: string;
+  group_id: string | null;
+  title: string;
+  category: string;
+  mode: 'solo' | 'group';
+  start_date: string;
+  duration_days: number;
+  visibility: 'private' | 'public';
+  is_participant: boolean;
+};
+
+/** The group's public, non-archived challenges (for the public group preview). */
+export async function listPublicGroupChallenges(groupId: string, limit = 20): Promise<PublicGroupChallenge[]> {
+  const c = withTimeout();
+  try {
+    const { data, error } = await supabase
+      .rpc('list_public_group_challenges', { p_group_id: groupId, p_limit: limit })
+      .abortSignal(c.signal);
+    if (error) throw error;
+    return ((data ?? []) as PublicGroupChallengeRow[]).map((r) => ({
+      id: r.id,
+      groupId: r.group_id,
+      title: r.title,
+      category: r.category,
+      mode: r.mode,
+      startDate: r.start_date,
+      durationDays: r.duration_days,
+      isPublic: r.visibility === 'public',
+      isParticipant: !!r.is_participant,
+    }));
+  } catch (e) {
+    console.error('[basta] listPublicGroupChallenges failed:', e);
+    throw e;
+  }
+}
+
+type PublicGroupSubmissionRow = {
+  id: string;
+  challenge_id: string;
+  author_id: string;
+  challenge_day: number;
+  title: string;
+  comment: string | null;
+  media_path: string | null;
+  status: Submission['status'];
+  created_at: string;
+  author_username: string | null;
+  author_display_name: string | null;
+  challenge_title: string | null;
+  reaction_count: number;
+  comment_count: number;
+};
+
+/** The group's globally-visible verified submissions (for the public group preview). */
+export async function listPublicGroupSubmissions(groupId: string, limit = 20): Promise<Submission[]> {
+  const c = withTimeout();
+  try {
+    const { data, error } = await supabase
+      .rpc('list_public_group_submissions', { p_group_id: groupId, p_limit: limit })
+      .abortSignal(c.signal);
+    if (error) throw error;
+    return ((data ?? []) as PublicGroupSubmissionRow[]).map((r) => ({
+      id: r.id,
+      challengeId: r.challenge_id,
+      authorId: r.author_id,
+      challengeDay: r.challenge_day,
+      title: r.title,
+      comment: r.comment ?? undefined,
+      mediaRemotePath: r.media_path ?? undefined,
+      status: r.status,
+      createdAt: r.created_at,
+      authorUsername: r.author_username ?? undefined,
+      authorDisplayName: r.author_display_name ?? undefined,
+      challengeTitle: r.challenge_title ?? undefined,
+      reactionCount: r.reaction_count ?? 0,
+      commentCount: r.comment_count ?? 0,
+    }));
+  } catch (e) {
+    console.error('[basta] listPublicGroupSubmissions failed:', e);
+    throw e;
+  }
 }

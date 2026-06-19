@@ -15,9 +15,15 @@ export {
   useTransferGroupLeadership,
   myGroupsQueryKey,
   myArchivedGroupsQueryKey,
+  useGroupAccess,
+  usePublicGroupChallenges,
+  usePublicGroupSubmissions,
+  groupAccessQueryKey,
+  publicGroupChallengesQueryKey,
+  publicGroupSubmissionsQueryKey,
 } from './hooks';
-export { uploadGroupAvatar, groupAvatarUrl } from './api';
-export type { GroupOverview } from './api';
+export { uploadGroupAvatar, groupAvatarUrl, getGroupAccess, listPublicGroupChallenges, listPublicGroupSubmissions } from './api';
+export type { GroupOverview, GroupAccess, GroupAccessMode, PublicGroupChallenge } from './api';
 export {
   groupNameSchema,
   groupDescriptionSchema,
@@ -27,5 +33,5 @@ export {
   INVITE_CODE_LENGTH,
 } from './model';
 export type { CreateGroupInput, JoinGroupInput } from './model';
-export { GroupCreateOrJoinForm, GroupAvatarPicker } from './ui';
+export { GroupCreateOrJoinForm, GroupAvatarPicker, PublicGroupPreview } from './ui';
 export type { GroupCreateOrJoinFormProps, GroupCreateOrJoinMode, GroupAvatarPickerProps } from './ui';

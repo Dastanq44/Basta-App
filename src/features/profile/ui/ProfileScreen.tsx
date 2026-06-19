@@ -103,7 +103,8 @@ export function ProfileScreen({ userId, isOwn = false, onOpenSettings }: Profile
         <ProfileChallengeCard
           challenge={c}
           isOwn={isOwn}
-          onPress={c.isParticipant ? () => router.push({ pathname: '/challenge/[id]', params: { id: c.id } }) : undefined}
+          // Always tappable — the challenge route resolves member detail vs public preview.
+          onPress={() => router.push({ pathname: '/challenge/[id]', params: { id: c.id } })}
         />
       );
     }
@@ -112,7 +113,8 @@ export function ProfileScreen({ userId, isOwn = false, onOpenSettings }: Profile
       <ProfileGroupCard
         group={g}
         isOwn={isOwn}
-        onPress={g.viewerRole ? () => router.push({ pathname: '/group/[id]', params: { id: g.id } }) : undefined}
+        // Always tappable — the group route resolves member detail vs public preview.
+        onPress={() => router.push({ pathname: '/group/[id]', params: { id: g.id } })}
       />
     );
   };

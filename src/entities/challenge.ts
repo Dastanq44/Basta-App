@@ -18,7 +18,7 @@ export type Challenge = {
   verificationThreshold: number;
   /** Set when the creator archives the challenge; consumers exclude archived from active lists. */
   archivedAt?: string;
-  /** Whether the challenge is publicly discoverable (Global). Maps to `challenges.visibility`
-   *  ('public' ⇒ true). Default private. */
+  /** Whether the challenge is visible on the profile + eligible for Global. Maps to
+   *  `challenges.visibility` ('public' ⇒ true). Default public (the user can hide it). */
   isPublic: boolean;
 };

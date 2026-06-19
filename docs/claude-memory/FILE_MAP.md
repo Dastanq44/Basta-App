@@ -182,6 +182,8 @@ app.config.ts  eas.json  package.json                                           
 | Profile routes (thin wrappers around `ProfileScreen`) | `app/(tabs)/profile.tsx` · `app/user/[id].tsx` | live (T-080) |
 | Submission-detail context (extends `get_submission_with_author` w/ challenge/group + can-open flags) | `supabase/migrations/20260620000000_submission_detail_context.sql` | written — **USER must apply after 20260619** (T-082) |
 | Delete-challenge RPC (`delete_challenge`, creator-only hard delete) | `supabase/migrations/20260621000000_delete_challenge.sql` | written — **USER must apply after 20260620** (T-083) |
+| Public previews (`get_challenge_access`/`get_group_access` + `list_public_*` + `get_profile_overview` streak fix) | `supabase/migrations/20260622000000_public_previews.sql` | written — **USER must apply after 20260621** (T-084) |
+| Public preview screens | `src/features/challenges/ui/PublicChallengePreview.tsx` · `src/features/groups/ui/PublicGroupPreview.tsx` | live (T-084) |
 | Theme mode (light/dark/system) + persistence | `src/shared/ui/theme/ThemeProvider.tsx` · `src/shared/lib/themePreference.ts` | live |
 | Reusable group create/join form | `src/features/groups/ui/GroupCreateOrJoinForm.tsx` | live (T-026) |
 | Group create/join modal route | `app/group/join-or-create.tsx` | live (T-026) |

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Keyboard, Platform, Pressable, ScrollView, View } from 'react-native';
 import { type Href, Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Button, Screen, Text, useTheme } from '@/shared/ui';
+import { BottomSheet, BottomSheetMenuItem, Icon, Screen, Text, useTheme } from '@/shared/ui';
 import { useSession } from '@/features/auth';
 import { SyncBadge, useProofSignedUrl, useSubmission } from '@/features/proofs';
 import { CommentsSection, ReactionBar } from '@/features/social';
@@ -32,6 +32,7 @@ export default function SubmissionScreen() {
   const blockedIds = useBlockedUserIds();
   const blockUser = useBlockUser();
   const [reportOpen, setReportOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   // Track the keyboard so the comment composer can rise well clear of it.
   const [kbHeight, setKbHeight] = useState(0);
@@ -121,7 +122,25 @@ export default function SubmissionScreen() {
     // No 'top' edge — the native header already handles the top safe area; adding the inset
     // here stacked an empty band below the back button.
     <Screen padded={false} edges={['bottom']}>
-      <Stack.Screen options={{ title: s.title }} />
+      <Stack.Screen
+        options={{
+          title: s.title,
+          // Non-author proof actions (Report / Block) live behind a top-right 3-dot menu.
+          headerRight: isMine
+            ? undefined
+            : () => (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Proof actions"
+                  onPress={() => setMenuOpen(true)}
+                  hitSlop={8}
+                  style={({ pressed }) => ({ paddingHorizontal: 4, opacity: pressed ? 0.5 : 1 })}
+                >
+                  <Icon name="settings" size={22} color={t.colors.foreground} />
+                </Pressable>
+              ),
+        }}
+      />
       <ScrollView
         ref={scrollRef}
         contentContainerStyle={{
@@ -214,21 +233,26 @@ export default function SubmissionScreen() {
           }}
         />
 
-        {!isMine ? (
-          <View style={{ gap: t.spacing.sm, marginTop: t.spacing.md }}>
-            <Pressable accessibilityRole="button" onPress={() => setReportOpen(true)} hitSlop={4}>
-              <Text variant="muted" style={{ textAlign: 'center' }}>Report this proof</Text>
-            </Pressable>
-            <Button
-              label={blockUser.isPending ? 'Blocking…' : 'Block author'}
-              variant="destructive"
-              onPress={confirmBlock}
-              loading={blockUser.isPending}
-              disabled={blockUser.isPending}
-            />
-          </View>
-        ) : null}
       </ScrollView>
+
+      {/* Non-author proof actions, behind the top-right 3-dot menu. */}
+      <BottomSheet visible={menuOpen} onClose={() => setMenuOpen(false)}>
+        <BottomSheetMenuItem
+          label="Report this proof"
+          onPress={() => {
+            setMenuOpen(false);
+            setReportOpen(true);
+          }}
+        />
+        <BottomSheetMenuItem
+          label={blockUser.isPending ? 'Blocking…' : 'Block author'}
+          destructive
+          onPress={() => {
+            setMenuOpen(false);
+            confirmBlock();
+          }}
+        />
+      </BottomSheet>
 
       <ReportSheet
         visible={reportOpen}

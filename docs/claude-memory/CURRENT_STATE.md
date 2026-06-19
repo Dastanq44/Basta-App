@@ -3,7 +3,19 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-06-18 — by: Claude (fable) (profile/submission polish batch)_
+_Last updated: 2026-06-18 — by: Claude (fable) (public previews + privacy fixes)_
+
+> **2026-06-18 public previews (T-084):** public challenges/groups on a profile are now tappable
+> into read-only **previews** (full member detail unchanged). New migration
+> `supabase/migrations/20260622000000_public_previews.sql`: `get_challenge_access`,
+> `list_public_challenge_submissions`, `get_group_access`, `list_public_group_challenges`,
+> `list_public_group_submissions` (all SECURITY DEFINER, no invite codes / private members), plus a
+> recreate of `get_profile_overview` that **fixes a streak privacy leak** (other viewers' streak
+> stats now exclude hidden/private-challenge activity via `can_view_submission`). Frontend: challenge
+> + group detail screens branch member vs `PublicChallengePreview`/`PublicGroupPreview`; profile
+> cards always tappable; proof Report/Block moved to a 3-dot `headerRight` menu; group creation
+> defaults public. **USER must apply `20260622` (after 14…21); reload PostgREST schema if via
+> Dashboard.** typecheck + lint + expo-doctor (18/18) green.
 
 > **2026-06-18 polish batch (T-082):** removed challenge **archiving UI** (kept the `archived_at`
 > column); challenge wizard no longer pre-highlights the first decision chip; submission detail

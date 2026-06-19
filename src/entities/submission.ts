@@ -34,8 +34,9 @@ export type Submission = {
   challengeDay: number;
   /** User-supplied short title shown as the row's primary line. 1..80 chars; required since W-034. */
   title: string;
-  /** Author opted this submission in to Global discovery ("Share to Global"). Maps to
-   *  `submissions.is_public`. Default false. Only present on read paths that return it. */
+  /** DEPRECATED. Maps to the legacy `submissions.is_public` column. Submissions no longer have a
+   *  visibility toggle — Global eligibility is inherited from the profile/challenge/group (the
+   *  server uses `hidden_from_global`). Still returned by some read paths; unused by the UI. */
   isPublic?: boolean;
   comment?: string;
   /** Local sandbox URI while offline. */
@@ -66,4 +67,7 @@ export type Submission = {
   canOpenChallenge?: boolean;
   /** Whether the viewer may open the host group's detail (member). Drives box tappability. */
   canOpenGroup?: boolean;
+  /** Social counts — present on public-preview list reads (challenge/group previews). */
+  reactionCount?: number;
+  commentCount?: number;
 };

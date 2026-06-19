@@ -3,10 +3,10 @@ import { Text } from './Text';
 import { useTheme } from './theme';
 
 export type VisibilityToggleProps = {
-  /** Controlled on/off state. `true` = public / shared to Global. */
+  /** Controlled on/off state. */
   value: boolean;
   onValueChange: (next: boolean) => void;
-  /** Bold primary line, e.g. "Share to Global" or "Public profile". */
+  /** Bold primary line, e.g. "Private profile" or "Hide from profile and Global". */
   title: string;
   /** Muted helper line explaining what turning this on does. */
   description?: string;
@@ -15,9 +15,9 @@ export type VisibilityToggleProps = {
 };
 
 /**
- * Labelled native Switch row — the single control used for every public/private opt-in
- * (profile, group, challenge, and the proof "Share to Global" toggle). Default-off lives
- * with the caller; this component is purely presentational + controlled.
+ * Labelled native Switch row — the control used for the "private/hide" toggles on Edit Profile,
+ * Group create/edit, and Challenge create/edit (the simplified visibility model). Submissions have
+ * no visibility toggle. Purely presentational + controlled.
  */
 export function VisibilityToggle({
   value,

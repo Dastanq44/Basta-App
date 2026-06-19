@@ -10,8 +10,8 @@ export type Group = {
   inviteCode: string;
   /** Set when the owner archives the group; consumers exclude archived groups from active lists. */
   archivedAt?: string;
-  /** Whether the group is publicly discoverable (Global). Maps to `groups.visibility`
-   *  ('public' ⇒ true). Default private. */
+  /** Whether the group is public (its group-challenge content eligible for Global, and it gets a
+   *  read-only public preview). Maps to `groups.visibility` ('public' ⇒ true). Default public. */
   isPublic: boolean;
 };
 

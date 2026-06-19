@@ -57,6 +57,21 @@ A submission is globally visible only when **all** hold:
   removed. Own profile is still read/edited directly (RLS `profiles_select_own`).
 - **`shares_group_or_challenge(viewer, target)`** — do they co-belong to any group or challenge.
 
+## Public previews (2026-06)
+
+Public challenges/groups are openable by non-participants as **read-only previews** — full
+member/participant detail stays member-only. Server-gated, authenticated-only, **no invite codes /
+private members / private submissions**:
+- **`get_challenge_access(uuid)`** / **`get_group_access(uuid)`** return one row with
+  `access_mode 'member' | 'public'` + safe fields + `can_*` flags. Public access requires the entity
+  public & not archived (solo challenge → creator profile public; group challenge → group public) and
+  no block between viewer and creator/owner.
+- **`list_public_challenge_submissions` / `list_public_group_*`** return only `can_view_submission`
+  content (so non-participants see the globally-visible verified proofs), keyset-paginated.
+- The client branches member vs preview and **disables member-only hooks in public mode**, so no
+  participant-only RPC runs. `get_profile_overview` streaks are also `can_view_submission`-gated for
+  non-owners (no hidden-challenge activity leaks via stats).
+
 ## Proof-media (private bucket)
 
 `proof-media` stays **private**. The `storage_proof_media_select` policy allows SELECT when:

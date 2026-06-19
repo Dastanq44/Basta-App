@@ -24,24 +24,25 @@ function computeStatus(startDate: string, durationDays: number): Status {
   return { label: 'Active', tone: 'primary', day };
 }
 
-/** Challenge card for the profile Challenges tab. Tappable only when the viewer participates (the
- *  challenge-detail RLS is participant-only); public non-participant cards are info-only. */
+/** Challenge card for the profile Challenges tab. Always tappable — the challenge route decides
+ *  full member detail vs read-only public preview. */
 export function ProfileChallengeCard({ challenge, onPress, isOwn }: ProfileChallengeCardProps) {
   const t = useTheme();
   const st = computeStatus(challenge.startDate, challenge.durationDays);
-  const tappable = challenge.isParticipant && !!onPress;
   const progress =
-    st.label === 'Completed'
+    st.label === 'Completed' || st.label === 'Upcoming'
       ? `${challenge.durationDays} days`
-      : st.label === 'Upcoming'
-        ? `${challenge.durationDays} days`
-        : `Day ${Math.min(st.day, challenge.durationDays)} of ${challenge.durationDays}`;
+      : `Day ${Math.min(st.day, challenge.durationDays)} of ${challenge.durationDays}`;
+  // On another user's profile, flag challenges you'd open as a read-only preview.
+  const showPublicPreview = !isOwn && !challenge.isParticipant;
 
   const body = (
     <Card style={{ gap: 6 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: t.spacing.sm }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm }}>
         <Text variant="subtitle" numberOfLines={1} style={{ flex: 1 }}>{challenge.title}</Text>
         {isOwn && !challenge.isPublic ? <Pill label="Hidden" tone="muted" /> : null}
+        {showPublicPreview ? <Pill label="Public preview" tone="muted" /> : null}
+        <Text variant="muted">›</Text>
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm, flexWrap: 'wrap' }}>
         <Pill label={st.label} tone={st.tone} />
@@ -55,7 +56,7 @@ export function ProfileChallengeCard({ challenge, onPress, isOwn }: ProfileChall
     </Card>
   );
 
-  return tappable ? (
+  return onPress ? (
     <Pressable accessibilityRole="button" onPress={onPress}>{body}</Pressable>
   ) : (
     body

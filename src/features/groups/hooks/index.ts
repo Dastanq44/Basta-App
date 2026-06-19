@@ -9,3 +9,11 @@ export { useUpdateGroup } from './useUpdateGroup';
 export { useGroupOverview, groupOverviewQueryKey } from './useGroupOverview';
 export { useUpdateGroupMeta } from './useUpdateGroupMeta';
 export { useTransferGroupLeadership } from './useTransferGroupLeadership';
+export {
+  useGroupAccess,
+  usePublicGroupChallenges,
+  usePublicGroupSubmissions,
+  groupAccessQueryKey,
+  publicGroupChallengesQueryKey,
+  publicGroupSubmissionsQueryKey,
+} from './usePublicGroup';

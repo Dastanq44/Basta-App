@@ -4,3 +4,5 @@ export { useCreateChallenge } from './useCreateChallenge';
 export { useChallengeStreak, challengeStreakQueryKey } from './useChallengeStreak';
 export { useUpdateChallenge } from './useUpdateChallenge';
 export { useDeleteChallenge } from './useDeleteChallenge';
+export { useChallengeAccess, challengeAccessQueryKey } from './useChallengeAccess';
+export { usePublicChallengeSubmissions, publicChallengeSubmissionsQueryKey } from './usePublicChallengeSubmissions';

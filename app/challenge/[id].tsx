@@ -24,7 +24,13 @@ import {
   Text,
   useTheme,
 } from '@/shared/ui';
-import { useChallenge, useChallengeStreak, useDeleteChallenge } from '@/features/challenges';
+import {
+  PublicChallengePreview,
+  useChallenge,
+  useChallengeAccess,
+  useChallengeStreak,
+  useDeleteChallenge,
+} from '@/features/challenges';
 import { useSession } from '@/features/auth';
 import { useMyGroups } from '@/features/groups';
 import { ReportSheet, useBlockedUserIds } from '@/features/moderation';
@@ -53,12 +59,17 @@ export default function ChallengeDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const session = useSession();
   const myUid = session.session?.user.id;
-  const challenge = useChallenge(id);
-  const streak = useChallengeStreak(id);
-  const today = useTodaySubmission(id);
-  const queueItems = useQueueForChallenge(id);
-  const submissions = useSubmissions(id);
-  const streaks = useChallengeStreaks(id);
+  // Resolve access first. In public-preview mode the member-only hooks are DISABLED by passing
+  // `undefined` (they all gate on `enabled: !!id`), so no participant-only RPC runs for a viewer
+  // who can only see the public preview.
+  const access = useChallengeAccess(id);
+  const memberId = access.data?.accessMode === 'member' ? id : undefined;
+  const challenge = useChallenge(memberId);
+  const streak = useChallengeStreak(memberId);
+  const today = useTodaySubmission(memberId);
+  const queueItems = useQueueForChallenge(memberId);
+  const submissions = useSubmissions(memberId);
+  const streaks = useChallengeStreaks(memberId);
   const groups = useMyGroups();
   const del = useDeleteChallenge();
   const blockedIds = useBlockedUserIds();
@@ -87,6 +98,27 @@ export default function ChallengeDetailScreen() {
     [submissions.data, blockedIds],
   );
 
+  // Access gate (runs before the member-data guards below).
+  if (access.isPending) {
+    return (
+      <Screen>
+        <Text variant="muted">Loading…</Text>
+      </Screen>
+    );
+  }
+  if (access.isError || !access.data) {
+    return (
+      <Screen>
+        <Text variant="title">Challenge unavailable</Text>
+        <Text variant="muted">This challenge is private, archived, or no longer exists.</Text>
+      </Screen>
+    );
+  }
+  if (access.data.accessMode === 'public') {
+    return <PublicChallengePreview access={access.data} />;
+  }
+
+  // ── Member detail from here (memberId === id; the member hooks are enabled). ──
   if (challenge.isPending) {
     return (
       <Screen>
