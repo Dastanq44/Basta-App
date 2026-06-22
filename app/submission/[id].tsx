@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Keyboard, Platform, Pressable, ScrollView, View } from 'react-native';
-import { type Href, Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { BottomSheet, BottomSheetMenuItem, Icon, Screen, Text, useTheme } from '@/shared/ui';
+import { ActivityIndicator, Alert, Keyboard, Platform, ScrollView, View } from 'react-native';
+import { Image } from 'expo-image';
+import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
+import { BottomSheet, BottomSheetMenuItem, Icon, ProofContextStrip, Screen, ScreenHeader, Text, useTheme } from '@/shared/ui';
+import type { ProofContextItem } from '@/shared/ui';
+import { useI18n } from '@/shared/i18n';
 import { useSession } from '@/features/auth';
 import { SyncBadge, useProofSignedUrl, useSubmission } from '@/features/proofs';
 import { CommentsSection, ReactionBar } from '@/features/social';
@@ -24,6 +27,7 @@ const SUBMISSION_DETAIL_DATE_FMT: Intl.DateTimeFormatOptions = {
 export default function SubmissionScreen() {
   const t = useTheme();
   const router = useRouter();
+  const { t: tr } = useI18n();
   const { id } = useLocalSearchParams<{ id: string }>();
   const session = useSession();
   const myUid = session.session?.user.id;
@@ -57,20 +61,24 @@ export default function SubmissionScreen() {
 
   if (submission.isPending) {
     return (
-      <Screen>
-        <Stack.Screen options={{ title: 'Proof' }} />
-        <Text variant="muted">Loading…</Text>
+      <Screen padded={false} edges={['top']}>
+        <ScreenHeader title={tr('common.proof')} onBack={() => router.back()} />
+        <View style={{ padding: t.spacing.lg, alignItems: 'center', paddingTop: t.spacing.xxl }}>
+          <ActivityIndicator color={t.colors.primary} />
+        </View>
       </Screen>
     );
   }
   if (submission.isError || !submission.data) {
     return (
-      <Screen>
-        <Stack.Screen options={{ title: 'Proof' }} />
-        <Text variant="title">Proof unavailable</Text>
-        <Text variant="caption" style={{ color: t.colors.destructive }}>
-          {submission.error instanceof Error ? submission.error.message : 'Could not load this proof.'}
-        </Text>
+      <Screen padded={false} edges={['top']}>
+        <ScreenHeader title={tr('common.proof')} onBack={() => router.back()} />
+        <View style={{ padding: t.spacing.lg, gap: t.spacing.sm }}>
+          <Text variant="title">Proof unavailable</Text>
+          <Text variant="caption" style={{ color: t.colors.destructive }}>
+            {submission.error instanceof Error ? submission.error.message : 'Could not load this proof.'}
+          </Text>
+        </View>
       </Screen>
     );
   }
@@ -83,13 +91,13 @@ export default function SubmissionScreen() {
   // Server-side RLS still allows reads; we'd need broader RLS work to enforce this everywhere.
   if (isBlocked) {
     return (
-      <Screen>
-        <Stack.Screen options={{ title: 'Hidden' }} />
-        <View style={{ gap: t.spacing.md }}>
+      <Screen padded={false} edges={['top']}>
+        <ScreenHeader title="Hidden" onBack={() => router.back()} />
+        <View style={{ padding: t.spacing.lg, gap: t.spacing.md }}>
           <Text variant="title">Hidden</Text>
           <Text variant="muted">
             This proof is from a user you've blocked. Unblock them from your Profile to see
-            their submissions again.
+            their proofs again.
           </Text>
         </View>
       </Screen>
@@ -118,28 +126,51 @@ export default function SubmissionScreen() {
     );
   };
 
+  // Context strip rows: author · challenge (with day) · group. Always tappable — the destination
+  // route resolves full member detail vs read-only public preview (or "unavailable").
+  const contextItems: ProofContextItem[] = [
+    {
+      key: 'author',
+      label: 'Author',
+      value: s.authorDisplayName || (s.authorUsername ? `@${s.authorUsername}` : 'Member'),
+      sub: s.authorDisplayName && s.authorUsername ? `@${s.authorUsername}` : undefined,
+      avatarName: s.authorDisplayName ?? s.authorUsername ?? null,
+      onPress: () => router.push(`/user/${s.authorId}` as Href),
+    },
+    {
+      key: 'challenge',
+      label: 'Challenge',
+      value: s.challengeTitle ?? 'Challenge',
+      sub: tr('challenges.day') + ` ${s.challengeDay + 1}`,
+      onPress: () => router.push(`/challenge/${s.challengeId}` as Href),
+    },
+    ...(s.challengeGroupId
+      ? [
+          {
+            key: 'group',
+            label: 'Group',
+            value: s.challengeGroupName ?? 'Group',
+            onPress: () => router.push(`/group/${s.challengeGroupId}` as Href),
+          } satisfies ProofContextItem,
+        ]
+      : []),
+  ];
+
   return (
-    // No 'top' edge — the native header already handles the top safe area; adding the inset
-    // here stacked an empty band below the back button.
-    <Screen padded={false} edges={['bottom']}>
-      <Stack.Screen
-        options={{
-          title: s.title,
-          // Non-author proof actions (Report / Block) live behind a top-right 3-dot menu.
-          headerRight: isMine
+    <Screen padded={false} edges={['top', 'bottom']}>
+      {/* In-body header (native header is off) — title + back + non-owner 3-dot menu. */}
+      <ScreenHeader
+        title={s.title}
+        onBack={() => router.back()}
+        rightAction={
+          isMine
             ? undefined
-            : () => (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Proof actions"
-                  onPress={() => setMenuOpen(true)}
-                  hitSlop={8}
-                  style={({ pressed }) => ({ paddingHorizontal: 4, opacity: pressed ? 0.5 : 1 })}
-                >
-                  <Icon name="settings" size={22} color={t.colors.foreground} />
-                </Pressable>
-              ),
-        }}
+            : {
+                icon: <Icon name="settings" size={22} color={t.colors.foreground} />,
+                onPress: () => setMenuOpen(true),
+                accessibilityLabel: 'Proof actions',
+              }
+        }
       />
       <ScrollView
         ref={scrollRef}
@@ -153,7 +184,7 @@ export default function SubmissionScreen() {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
       >
-        {/* Date + sync badge. (Title lives in the native header — not duplicated here.) */}
+        {/* Date + sync badge. */}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm }}>
           <Text variant="muted" style={{ flex: 1 }}>
             {new Date(s.createdAt).toLocaleString(undefined, SUBMISSION_DETAIL_DATE_FMT)}
@@ -161,29 +192,7 @@ export default function SubmissionScreen() {
           <SyncBadge status={s.status} />
         </View>
 
-        {/* Context boxes: user · challenge (with day) · group. Always tappable — the destination
-            route resolves full member detail vs read-only public preview (or "unavailable"). */}
-        <View style={{ flexDirection: 'row', gap: t.spacing.sm }}>
-          <ContextBox
-            label="User"
-            value={s.authorDisplayName || (s.authorUsername ? `@${s.authorUsername}` : 'Member')}
-            sub={s.authorDisplayName && s.authorUsername ? `@${s.authorUsername}` : undefined}
-            onPress={() => router.push(`/user/${s.authorId}` as Href)}
-          />
-          <ContextBox
-            label="Challenge"
-            value={s.challengeTitle ?? 'Challenge'}
-            sub={`Day ${s.challengeDay + 1}`}
-            onPress={() => router.push(`/challenge/${s.challengeId}` as Href)}
-          />
-          {s.challengeGroupId ? (
-            <ContextBox
-              label="Group"
-              value={s.challengeGroupName ?? 'Group'}
-              onPress={() => router.push(`/group/${s.challengeGroupId}` as Href)}
-            />
-          ) : null}
-        </View>
+        <ProofContextStrip items={contextItems} />
 
         {/* Merged photo + description — the description card continues the photo as one unit. */}
         <View
@@ -205,7 +214,13 @@ export default function SubmissionScreen() {
             }}
           >
             {media.data ? (
-              <Image source={{ uri: media.data }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+              <Image
+                source={{ uri: media.data }}
+                style={{ width: '100%', height: '100%' }}
+                contentFit="cover"
+                transition={150}
+                cachePolicy="memory-disk"
+              />
             ) : media.isError ? (
               <Text variant="muted">Couldn&apos;t load the photo.</Text>
             ) : s.mediaRemotePath ? (
@@ -262,48 +277,5 @@ export default function SubmissionScreen() {
         targetLabel="this proof"
       />
     </Screen>
-  );
-}
-
-/** Small context box (user / challenge / group) shown under the submission title. Clickable when
- *  `onPress` is provided; otherwise a plain, non-interactive box (the viewer can't open that target). */
-function ContextBox({
-  label,
-  value,
-  sub,
-  onPress,
-}: {
-  label: string;
-  value: string;
-  sub?: string;
-  onPress?: () => void;
-}) {
-  const t = useTheme();
-  const inner = (
-    <View
-      style={{
-        flex: 1,
-        padding: t.spacing.sm,
-        borderRadius: t.radius.md,
-        borderWidth: 1,
-        borderColor: t.colors.border,
-        backgroundColor: t.colors.card,
-        gap: 2,
-        minHeight: 58,
-      }}
-    >
-      <Text variant="caption" style={{ color: t.colors.mutedForeground, fontSize: t.fontSize.xs }}>
-        {label.toUpperCase()}
-      </Text>
-      <Text variant="subtitle" numberOfLines={1}>{value}</Text>
-      {sub ? (
-        <Text variant="caption" style={{ color: t.colors.mutedForeground }}>{sub}</Text>
-      ) : null}
-    </View>
-  );
-  return onPress ? (
-    <Pressable style={{ flex: 1 }} accessibilityRole="button" onPress={onPress}>{inner}</Pressable>
-  ) : (
-    <View style={{ flex: 1 }}>{inner}</View>
   );
 }

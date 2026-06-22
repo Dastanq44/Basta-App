@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { FlatList, Pressable, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { type Href, useRouter } from 'expo-router';
-import { BottomSheet, BottomSheetMenuItem, Button, Card, Icon, Screen, ScreenHeader, Text, useTheme } from '@/shared/ui';
+import { BottomSheet, BottomSheetMenuItem, Button, Card, Icon, PublicPreviewBanner, Screen, ScreenHeader, Text, useTheme } from '@/shared/ui';
+import { useI18n } from '@/shared/i18n';
 import { ReportSheet } from '@/features/moderation';
 import type { Submission } from '@/entities';
 import type { ChallengeAccess } from '../api';
@@ -14,6 +15,7 @@ const DATE_FMT: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short', 
 export function PublicChallengePreview({ access }: { access: ChallengeAccess }) {
   const t = useTheme();
   const router = useRouter();
+  const { t: tr } = useI18n();
   const subs = usePublicChallengeSubmissions(access.id);
   const [menuOpen, setMenuOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
@@ -40,40 +42,45 @@ export function PublicChallengePreview({ access }: { access: ChallengeAccess }) 
         contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.sm, paddingBottom: t.spacing.xl }}
         ListHeaderComponent={
           <View style={{ gap: t.spacing.md, marginBottom: t.spacing.sm }}>
-            <Text variant="title">{access.title}</Text>
+            {/* Title is owned by the ScreenHeader — not duplicated here. */}
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.spacing.xs }}>
               <Chip label={titleCase(access.category)} />
-              <Chip label={isGroup ? (access.groupName ? `Group · ${access.groupName}` : 'Group') : 'Solo'} />
+              <Chip label={isGroup ? (access.groupName ? `${tr('common.groups')} · ${access.groupName}` : tr('common.groups')) : 'Solo'} />
               <Chip label={`${access.durationDays} days`} />
             </View>
             {access.proofRequirement ? (
               <Text variant="body" style={{ color: t.colors.mutedForeground }}>{access.proofRequirement}</Text>
             ) : null}
-            <Card style={{ backgroundColor: t.colors.primarySoft }}>
-              <Text variant="subtitle">Public preview</Text>
-              <Text variant="muted">
-                {isGroup
-                  ? 'Join the group with an invite code to participate.'
-                  : 'This is a public challenge preview.'}
-              </Text>
-            </Card>
-            {isGroup ? (
-              <Button
-                label="Join with invite code"
-                variant="secondary"
-                onPress={() => router.push('/group/join-or-create' as Href)}
-              />
-            ) : null}
-            <Text variant="heading" style={{ marginTop: t.spacing.sm }}>Proofs</Text>
+            <PublicPreviewBanner
+              message={isGroup ? tr('preview.groupBody') : tr('preview.challengeBody')}
+            />
+            <Text variant="heading" style={{ marginTop: t.spacing.sm }}>{tr('common.proofs')}</Text>
           </View>
         }
         ListEmptyComponent={
-          subs.isPending ? <Text variant="muted">Loading…</Text> : <Text variant="muted">No proofs yet.</Text>
+          subs.isPending ? <Text variant="muted">{tr('common.loading')}</Text> : <Text variant="muted">No proofs yet.</Text>
         }
         renderItem={({ item }) => (
           <PreviewSubmissionRow submission={item} onPress={() => router.push(`/submission/${item.id}` as Href)} />
         )}
       />
+
+      {/* Persistent join CTA — group challenges can be joined with an invite code; pinned so the
+          action is always visible on a read-only preview. */}
+      {isGroup ? (
+        <View
+          style={{
+            padding: t.spacing.lg,
+            paddingTop: t.spacing.sm,
+            borderTopWidth: StyleSheet.hairlineWidth,
+            borderTopColor: t.colors.border,
+            backgroundColor: t.colors.background,
+          }}
+        >
+          <Button label={tr('preview.joinCta')} onPress={() => router.push('/group/join-or-create' as Href)} />
+        </View>
+      ) : null}
+
       {/* 3-dot actions → bottom sheet (then the report window). */}
       <BottomSheet visible={menuOpen} onClose={() => setMenuOpen(false)}>
         <BottomSheetMenuItem

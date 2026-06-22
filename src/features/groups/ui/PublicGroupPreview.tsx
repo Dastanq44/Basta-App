@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Image, Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { type Href, useRouter } from 'expo-router';
 import {
   Avatar,
@@ -9,13 +9,14 @@ import {
   Card,
   EmptyStateCard,
   Icon,
-  InlineBanner,
+  PublicPreviewBanner,
   Screen,
   ScreenHeader,
   SegmentedControl,
   Text,
   useTheme,
 } from '@/shared/ui';
+import { useI18n } from '@/shared/i18n';
 import { ReportSheet } from '@/features/moderation';
 import type { Submission } from '@/entities';
 import { groupAvatarUrl, type GroupAccess, type PublicGroupChallenge } from '../api';
@@ -30,6 +31,7 @@ type Tab = 'overview' | 'challenges' | 'proofs';
 export function PublicGroupPreview({ access }: { access: GroupAccess }) {
   const t = useTheme();
   const router = useRouter();
+  const { t: tr } = useI18n();
   const challenges = usePublicGroupChallenges(access.id);
   const submissions = usePublicGroupSubmissions(access.id);
   const [tab, setTab] = useState<Tab>('overview');
@@ -55,13 +57,11 @@ export function PublicGroupPreview({ access }: { access: GroupAccess }) {
 
       <View style={{ paddingHorizontal: t.spacing.lg, paddingTop: t.spacing.md }}>
         <SegmentedControl
-          options={
-            [
-              { label: 'Overview', value: 'overview' },
-              { label: 'Challenges', value: 'challenges' },
-              { label: 'Proofs', value: 'proofs' },
-            ] as const
-          }
+          options={[
+            { label: 'Overview', value: 'overview' },
+            { label: tr('common.challenges'), value: 'challenges' },
+            { label: tr('common.proofs'), value: 'proofs' },
+          ]}
           value={tab}
           onChange={setTab}
         />
@@ -71,13 +71,7 @@ export function PublicGroupPreview({ access }: { access: GroupAccess }) {
         {tab === 'overview' ? (
           <>
             <View style={{ alignItems: 'center', gap: t.spacing.sm }}>
-              {avatarUrl ? (
-                <View style={{ width: 88, height: 88, borderRadius: 44, overflow: 'hidden', backgroundColor: t.colors.muted }}>
-                  <Image source={{ uri: avatarUrl }} style={{ width: 88, height: 88 }} resizeMode="cover" />
-                </View>
-              ) : (
-                <Avatar name={access.name} size={88} />
-              )}
+              <Avatar name={access.name} uri={avatarUrl} size={88} />
               <Text variant="title" style={{ textAlign: 'center' }}>{access.name}</Text>
               {access.description ? (
                 <Text variant="muted" style={{ textAlign: 'center' }}>{access.description}</Text>
@@ -86,7 +80,7 @@ export function PublicGroupPreview({ access }: { access: GroupAccess }) {
 
             <Card>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                <Text variant="muted">Members</Text>
+                <Text variant="muted">{tr('common.members')}</Text>
                 <Text variant="subtitle">{access.memberCount}</Text>
               </View>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: t.spacing.sm }}>
@@ -97,19 +91,11 @@ export function PublicGroupPreview({ access }: { access: GroupAccess }) {
               </View>
             </Card>
 
-            <InlineBanner
-              tone="primary"
-              title="Public preview"
-              message="You're not a member. Join with an invite code to participate."
-            />
-            <Button
-              label="Join with invite code"
-              onPress={() => router.push('/group/join-or-create' as Href)}
-            />
+            <PublicPreviewBanner title={tr('preview.publicTitle')} message={tr('preview.groupBody')} />
           </>
         ) : tab === 'challenges' ? (
           challenges.isPending ? (
-            <Text variant="muted">Loading…</Text>
+            <Text variant="muted">{tr('common.loading')}</Text>
           ) : (challenges.data ?? []).length === 0 ? (
             <EmptyStateCard title="No challenges yet" body="This group's public challenges will appear here." icon="🎯" />
           ) : (
@@ -118,7 +104,7 @@ export function PublicGroupPreview({ access }: { access: GroupAccess }) {
             ))
           )
         ) : submissions.isPending ? (
-          <Text variant="muted">Loading…</Text>
+          <Text variant="muted">{tr('common.loading')}</Text>
         ) : (submissions.data ?? []).length === 0 ? (
           <EmptyStateCard title="No proofs yet" body="Verified proofs shared to Global from this group will appear here." icon="📸" />
         ) : (
@@ -127,6 +113,19 @@ export function PublicGroupPreview({ access }: { access: GroupAccess }) {
           ))
         )}
       </ScrollView>
+
+      {/* Persistent join CTA — always visible across tabs so a non-member can act at any time. */}
+      <View
+        style={{
+          padding: t.spacing.lg,
+          paddingTop: t.spacing.sm,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: t.colors.border,
+          backgroundColor: t.colors.background,
+        }}
+      >
+        <Button label={tr('preview.joinCta')} onPress={() => router.push('/group/join-or-create' as Href)} />
+      </View>
 
       {/* 3-dot actions → bottom sheet (then the report window). */}
       <BottomSheet visible={menuOpen} onClose={() => setMenuOpen(false)}>

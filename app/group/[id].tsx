@@ -11,12 +11,14 @@ import {
   CrownIcon,
   EmptyStateCard,
   Icon,
+  OrnamentDivider,
   Screen,
   ScreenHeader,
   SegmentedControl,
   Text,
   useTheme,
 } from '@/shared/ui';
+import { useI18n } from '@/shared/i18n';
 import { useSession } from '@/features/auth';
 import { useChallenges } from '@/features/challenges';
 import {
@@ -40,6 +42,7 @@ type Tab = 'overview' | 'challenges' | 'board';
 export default function GroupScreen() {
   const t = useTheme();
   const router = useRouter();
+  const { t: tr } = useI18n();
   const { id } = useLocalSearchParams<{ id: string }>();
   const session = useSession();
   const myUid = session.session?.user.id;
@@ -206,13 +209,11 @@ export default function GroupScreen() {
 
       <View style={{ paddingHorizontal: t.spacing.lg, paddingTop: t.spacing.md }}>
         <SegmentedControl
-          options={
-            [
-              { label: 'Overview', value: 'overview' },
-              { label: 'Challenges', value: 'challenges' },
-              { label: 'Leaderboard', value: 'board' },
-            ] as const
-          }
+          options={[
+            { label: 'Overview', value: 'overview' },
+            { label: tr('common.challenges'), value: 'challenges' },
+            { label: 'Leaderboard', value: 'board' },
+          ]}
           value={tab}
           onChange={setTab}
         />
@@ -221,29 +222,7 @@ export default function GroupScreen() {
       {tab === 'overview' ? (
         <ScrollView contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.md, paddingBottom: t.spacing.xl }}>
           <View style={{ alignItems: 'center', gap: t.spacing.sm }}>
-            {overview.data?.avatarUrl ? (
-              // iOS doesn't always clip a raw <Image> by its own borderRadius. Wrapping in
-              // a View with overflow:'hidden' guarantees the image is fully clipped to the
-              // circle (otherwise the top corners of the source bitmap can poke past the
-              // rounded mask — what was reading as the avatar being "half cut on top").
-              <View
-                style={{
-                  width: 88,
-                  height: 88,
-                  borderRadius: 44,
-                  overflow: 'hidden',
-                  backgroundColor: t.colors.muted,
-                }}
-              >
-                <Image
-                  source={{ uri: overview.data.avatarUrl }}
-                  style={{ width: 88, height: 88 }}
-                  resizeMode="cover"
-                />
-              </View>
-            ) : (
-              <Avatar name={group?.name ?? '?'} size={88} />
-            )}
+            <Avatar name={group?.name ?? '?'} uri={overview.data?.avatarUrl} size={88} />
             <Text variant="title" style={{ textAlign: 'center' }}>
               {group?.name ?? 'Group'}
             </Text>
@@ -253,6 +232,8 @@ export default function GroupScreen() {
               </Text>
             ) : null}
           </View>
+
+          <OrnamentDivider style={{ marginVertical: t.spacing.xs }} />
 
           <Card>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>

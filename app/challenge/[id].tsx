@@ -4,6 +4,7 @@ import {
   FlatList,
   Pressable,
   RefreshControl,
+  StyleSheet,
   View,
 } from 'react-native';
 import {
@@ -194,10 +195,7 @@ export default function ChallengeDetailScreen() {
         contentContainerStyle={{ padding: t.spacing.lg, paddingBottom: t.spacing.xl, gap: t.spacing.md }}
         ListHeaderComponent={
           <View style={{ gap: t.spacing.md, marginBottom: t.spacing.md }}>
-            {/* Header: name as the main title (the stack screen title carries it too, but a
-                large in-screen title gives the page a clear top). */}
-            <Text variant="title">{c.title}</Text>
-
+            {/* Title is owned by the ScreenHeader above — not duplicated here. */}
             {/* Encapsulated, divided metadata chips. */}
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.spacing.xs }}>
               <MetaChip label={titleCase(c.category)} />
@@ -264,28 +262,15 @@ export default function ChallengeDetailScreen() {
               />
             ) : null}
 
-            {/* The primary action — single button. Submit / Edit / hidden, based on
-                today's status + mode (see computePrimaryAction). */}
-            {primary.kind !== 'hidden' && !isArchived ? (
-              <Button
-                label={primary.label}
-                onPress={() => {
-                  if (primary.kind === 'submit') {
-                    router.push(`/challenge/${c.id}/submit-proof`);
-                  } else if (primary.kind === 'redact') {
-                    router.push(`/challenge/${c.id}/edit-proof`);
-                  }
-                }}
-              />
-            ) : null}
+            {/* Primary action is a STICKY bottom CTA (below the list) — not in the scroll. */}
 
             <Text variant="heading" style={{ marginTop: t.spacing.md }}>
-              Recent submissions
+              Recent proofs
             </Text>
           </View>
         }
         ListEmptyComponent={
-          submissions.isPending ? null : <Text variant="muted">No submissions yet.</Text>
+          submissions.isPending ? null : <Text variant="muted">No proofs yet.</Text>
         }
         refreshControl={
           <RefreshControl
@@ -302,6 +287,31 @@ export default function ChallengeDetailScreen() {
         // Footer Edit/Archive/Report block removed — all of those affordances moved
         // behind the headerRight 3-dot button + BottomSheet below.
       />
+
+      {/* Sticky primary CTA — Submit / Edit, pinned above the bottom inset so the main action
+          is always reachable without scrolling. Hidden when archived / locked / uploading. */}
+      {primary.kind !== 'hidden' && !isArchived ? (
+        <View
+          style={{
+            padding: t.spacing.lg,
+            paddingTop: t.spacing.sm,
+            borderTopWidth: StyleSheet.hairlineWidth,
+            borderTopColor: t.colors.border,
+            backgroundColor: t.colors.background,
+          }}
+        >
+          <Button
+            label={primary.label}
+            onPress={() => {
+              if (primary.kind === 'submit') {
+                router.push(`/challenge/${c.id}/submit-proof`);
+              } else if (primary.kind === 'redact') {
+                router.push(`/challenge/${c.id}/edit-proof`);
+              }
+            }}
+          />
+        </View>
+      ) : null}
 
       {/* Challenge settings sheet (Edit for creator; Report for others). */}
       <BottomSheet visible={menuOpen} onClose={() => setMenuOpen(false)}>
@@ -373,11 +383,11 @@ function computePrimaryAction(args: {
   if (args.isArchived) return { kind: 'hidden' };
   if (args.queuedStatus) return { kind: 'hidden' };
   if (!args.todayStatus) return { kind: 'submit', label: "Submit today's proof" };
-  if (args.mode === 'solo') return { kind: 'redact', label: 'Edit submission' };
+  if (args.mode === 'solo') return { kind: 'redact', label: 'Edit proof' };
   // group
   if (args.todayStatus === 'verified') return { kind: 'hidden' };
   if (args.todayStatus === 'rejected') return { kind: 'redact', label: 'Edit and resubmit' };
-  return { kind: 'redact', label: 'Edit submission' };
+  return { kind: 'redact', label: 'Edit proof' };
 }
 
 // --------------------------------------------------------------------------------------
@@ -402,17 +412,10 @@ function MetaChip({ label }: { label: string }) {
   );
 }
 
-// Status palette — bumped up from the prior muted set per the user's "a bit brighter"
-// note. Each state has a solid border color (the contour) and a tinted same-hue fill
-// (translucent so it reads on both light and dark theme backgrounds without two
-// separate palettes). Still intentionally not neon — these sit one step below the
-// theme's `success` / `warning` / `destructive` brights.
-const STATUS_RED_BORDER = '#D45656';
-const STATUS_RED_BG = 'rgba(212, 86, 86, 0.16)';
-const STATUS_AMBER_BORDER = '#ffc125';
-const STATUS_AMBER_BG = 'rgba(255, 183, 0, 0.39)';
-const STATUS_GREEN_BORDER = '#6FAE85';
-const STATUS_GREEN_BG = 'rgba(111, 174, 133, 0.18)';
+// Status tone — semantic, mapped to Steppe Sky tokens (destructive / warning-gold / success).
+// Each tone draws a solid contour + a translucent same-hue fill so it reads on light + dark
+// without a second palette. No hardcoded hex — the colors follow the active theme.
+type StatusTone = 'danger' | 'pending' | 'done';
 
 function StatusBar({
   mode,
@@ -422,18 +425,17 @@ function StatusBar({
   todayStatus: ServerSubmissionStatus | null;
 }) {
   const t = useTheme();
-  const { label, border, fill } = describeStatus(mode, todayStatus);
+  const { label, tone } = describeStatus(mode, todayStatus);
+  const color = { danger: t.colors.destructive, pending: t.colors.warning, done: t.colors.success }[tone];
   return (
     <View
       style={{
         paddingVertical: t.spacing.sm,
         paddingHorizontal: t.spacing.md,
         borderRadius: t.radius.md,
-        // Tinted same-hue fill (translucent → tints whatever theme bg sits below) +
-        // a solid contour in the matching state color. No left-side accent.
-        backgroundColor: fill,
+        backgroundColor: color + '24',
         borderWidth: 1.5,
-        borderColor: border,
+        borderColor: color,
       }}
     >
       <Text variant="caption" style={{ color: t.colors.mutedForeground }}>Today</Text>
@@ -445,16 +447,16 @@ function StatusBar({
 function describeStatus(
   mode: ChallengeMode,
   todayStatus: ServerSubmissionStatus | null,
-): { label: string; border: string; fill: string } {
+): { label: string; tone: StatusTone } {
   if (mode === 'solo') {
-    if (!todayStatus) return { label: 'Not submitted', border: STATUS_RED_BORDER, fill: STATUS_RED_BG };
-    return { label: 'Submitted', border: STATUS_GREEN_BORDER, fill: STATUS_GREEN_BG };
+    if (!todayStatus) return { label: 'Not submitted', tone: 'danger' };
+    return { label: 'Submitted', tone: 'done' };
   }
   // group
-  if (!todayStatus) return { label: 'Not submitted', border: STATUS_RED_BORDER, fill: STATUS_RED_BG };
-  if (todayStatus === 'pending_verification') return { label: 'Pending verification', border: STATUS_AMBER_BORDER, fill: STATUS_AMBER_BG };
-  if (todayStatus === 'verified') return { label: 'Verified', border: STATUS_GREEN_BORDER, fill: STATUS_GREEN_BG };
-  return { label: 'Rejected', border: STATUS_RED_BORDER, fill: STATUS_RED_BG };
+  if (!todayStatus) return { label: 'Not submitted', tone: 'danger' };
+  if (todayStatus === 'pending_verification') return { label: 'Pending verification', tone: 'pending' };
+  if (todayStatus === 'verified') return { label: 'Verified', tone: 'done' };
+  return { label: 'Rejected', tone: 'danger' };
 }
 
 type StreakSortKey = 'current' | 'longest';
