@@ -15,6 +15,8 @@ export type IconName =
   | 'check'
   | 'copy'
   | 'explore'
+  | 'globe'
+  | 'flame'
   | 'settings';
 
 export type IconProps = { name: IconName; size?: number; color?: string; strokeWidth?: number };
@@ -121,6 +123,34 @@ export function Icon({ name, size = 24, color, strokeWidth = 2 }: IconProps) {
           <View style={{ width: size * 0.78, height: size * 0.78, borderRadius: size * 0.39, borderWidth: sw, borderColor: c, alignItems: 'center', justifyContent: 'center' }}>
             <View style={{ width: size * 0.28, height: size * 0.28, backgroundColor: c, transform: [{ rotate: '45deg' }] }} />
           </View>
+        </View>
+      );
+    case 'globe':
+      return (
+        <View style={box}>
+          <View style={{ width: size * 0.78, height: size * 0.78, borderRadius: size * 0.39, borderWidth: sw, borderColor: c, alignItems: 'center', justifyContent: 'center' }}>
+            {/* equator */}
+            <View style={{ position: 'absolute', width: size * 0.78, height: sw, backgroundColor: c }} />
+            {/* meridian (narrow ellipse) */}
+            <View style={{ width: size * 0.34, height: size * 0.78, borderRadius: size * 0.17, borderWidth: sw, borderColor: c }} />
+          </View>
+        </View>
+      );
+    case 'flame':
+      return (
+        <View style={box}>
+          <View
+            style={{
+              width: size * 0.5,
+              height: size * 0.6,
+              backgroundColor: c,
+              borderTopLeftRadius: size * 0.3,
+              borderTopRightRadius: size * 0.04,
+              borderBottomLeftRadius: size * 0.3,
+              borderBottomRightRadius: size * 0.3,
+              transform: [{ rotate: '45deg' }],
+            }}
+          />
         </View>
       );
     case 'settings': {

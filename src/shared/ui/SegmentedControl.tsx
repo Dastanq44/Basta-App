@@ -24,11 +24,14 @@ export function SegmentedControl<T extends string>({ options, value, onChange }:
             accessibilityState={{ selected: active }}
             onPress={() => onChange(opt.value)}
             style={[
-              { flex: 1, paddingVertical: 8, borderRadius: t.radius.full, alignItems: 'center', backgroundColor: active ? t.colors.card : 'transparent' },
+              { flex: 1, minHeight: 36, paddingVertical: 8, borderRadius: t.radius.full, alignItems: 'center', justifyContent: 'center', backgroundColor: active ? t.colors.card : 'transparent' },
               active ? t.shadow.sm : null,
             ]}
           >
-            <Text style={{ color: active ? t.colors.foreground : t.colors.mutedForeground, fontWeight: active ? '700' : '500', fontSize: t.fontSize.sm }}>
+            <Text
+              numberOfLines={1}
+              style={{ color: active ? t.colors.primary : t.colors.mutedForeground, fontWeight: active ? '700' : '500', fontSize: t.fontSize.sm }}
+            >
               {opt.label}
             </Text>
           </Pressable>

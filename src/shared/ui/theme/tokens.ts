@@ -3,11 +3,14 @@
 // Light/dark share one token shape with different values; the user picks
 // light / dark / system and the choice is persisted — see ThemeProvider + useThemeMode.
 //
-// THEME = "Sleek indigo" (2026-06, from a user-supplied reference): friendly geometric
-// SANS (system font, zero assets), a vivid indigo accent (#4F46E5) on a soft off-white
-// canvas (light) or a deep indigo-navy canvas (dark), rounded cards with a soft diffused
-// lift, fully-rounded pill buttons, and warm stat accents (orange streak, green done,
-// gold rank). Rebrand = edit the hex here.
+// THEME = "Steppe Sky" (2026-06): a contemporary Kazakh-inspired palette — Kazakhstan's
+// sky-blue + gold visual language, used with restraint. A warm paper-cream canvas (light)
+// or a deep steppe-night navy (dark), a confident sky-blue primary (#0E5AA8 / #2B79B5),
+// a gold accent reserved for streaks/rank/active ornaments (#C99412 / #E7B84B), rounded
+// cards with a soft diffused lift, and pill buttons. Traditional motifs (qoshqar-muiz /
+// woven band) appear ONLY in dividers, medallions, sheet handles, and active indicators —
+// never as wallpaper. Body type stays system sans (full kz/ru/en glyph coverage, zero
+// assets). Rebrand = edit the hex here.
 
 import type { ViewStyle } from 'react-native';
 
@@ -61,63 +64,67 @@ const minTapTarget = 44;
 // (e.g. Plus Jakarta Sans / Nunito) via expo-google-fonts later if more personality is wanted.
 const fonts: ThemeTokens['fonts'] = { display: undefined, body: undefined };
 
-// Soft, diffused, slightly indigo-tinted elevation (premium look — never a harsh black drop shadow).
+// Soft, diffused, navy-tinted elevation (premium steppe-sky look — never a harsh black drop shadow).
 const shadow = {
-  sm: { shadowColor: '#1E1B4B', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
-  md: { shadowColor: '#1E1B4B', shadowOpacity: 0.1, shadowRadius: 24, shadowOffset: { width: 0, height: 10 }, elevation: 6 },
-  lg: { shadowColor: '#1E1B4B', shadowOpacity: 0.16, shadowRadius: 36, shadowOffset: { width: 0, height: 18 }, elevation: 12 },
+  sm: { shadowColor: '#0A2540', shadowOpacity: 0.07, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
+  md: { shadowColor: '#0A2540', shadowOpacity: 0.11, shadowRadius: 24, shadowOffset: { width: 0, height: 10 }, elevation: 6 },
+  lg: { shadowColor: '#0A2540', shadowOpacity: 0.17, shadowRadius: 36, shadowOffset: { width: 0, height: 18 }, elevation: 12 },
 } satisfies ThemeTokens['shadow'];
 
+// "Steppe Sky" light — warm paper-cream canvas, sky-blue primary, gold accent (reserved for
+// streak / rank / active ornaments). Foregrounds chosen for WCAG AA on their surfaces.
 export const lightColors: ColorTokens = {
-  background: '#F4F5F8', // soft off-white page (cards pop white on top)
-  foreground: '#16161E', // near-black ink
+  background: '#FAF8F2', // warm paper cream (cards pop white on top)
+  foreground: '#1E293B', // slate ink
   card: '#FFFFFF',
-  cardForeground: '#16161E',
-  primary: '#4F46E5', // vivid indigo — primary CTA + selected + accents
+  cardForeground: '#1E293B',
+  primary: '#0E5AA8', // sky blue — primary CTA + selected + accents
   primaryForeground: '#FFFFFF',
-  primarySoft: '#E0E7FF', // indigo tint (selected row / chip / icon tile bg)
-  secondary: '#EEEEF3', // soft gray pill (inactive chips, secondary button)
-  secondaryForeground: '#16161E',
-  muted: '#EFEFF4',
-  mutedForeground: '#85858F',
-  accent: '#4F46E5',
-  accentForeground: '#FFFFFF',
-  success: '#22C55E',
+  primarySoft: '#D9EDFA', // pale sky tint (selected row / chip / icon tile bg)
+  secondary: '#EBEFF4', // soft blue-gray pill (inactive chips, secondary button)
+  secondaryForeground: '#1E293B',
+  muted: '#EEF2F6', // segment track / inactive surface
+  mutedForeground: '#5C6B7B', // AA on cream + white (captions / secondary text)
+  accent: '#C99412', // gold — ornaments, rank, highlights
+  accentForeground: '#1E293B', // dark ink reads on gold fills
+  success: '#198754',
   successForeground: '#FFFFFF',
-  warning: '#F5A623', // gold (rank / trophy)
-  warningForeground: '#FFFFFF',
-  streak: '#FF7A1A', // orange (flame / days-in-a-row)
-  streakForeground: '#FFFFFF',
-  destructive: '#FF3B30',
+  warning: '#C99412', // gold doubles as warning (restrained palette)
+  warningForeground: '#3A2B00',
+  streak: '#C99412', // gold flame / days-in-a-row
+  streakForeground: '#3A2B00',
+  destructive: '#C44536', // terracotta red
   destructiveForeground: '#FFFFFF',
-  border: '#E7E7EE',
-  ring: '#4F46E5',
+  border: '#D7E2EC',
+  ring: '#0E5AA8',
 };
 
+// "Steppe Sky" dark — deep steppe-night navy, lifted navy cards, brighter sky-blue + gold for
+// contrast. Foregrounds tuned for AA on the dark surfaces.
 export const darkColors: ColorTokens = {
-  background: '#131120', // deep indigo-navy (not pure black — matches the reference)
-  foreground: '#F3F2FA',
-  card: '#1E1B2D', // slightly lifted navy-indigo surface
-  cardForeground: '#F3F2FA',
-  primary: '#6366F1', // brighter indigo for contrast on dark
+  background: '#0D1B2A', // steppe night
+  foreground: '#F5F7FB',
+  card: '#112235', // lifted navy surface
+  cardForeground: '#F5F7FB',
+  primary: '#2B79B5', // brighter sky blue for dark contrast
   primaryForeground: '#FFFFFF',
-  primarySoft: '#262B4D',
-  secondary: '#272335',
-  secondaryForeground: '#F3F2FA',
-  muted: '#221F31',
-  mutedForeground: '#9A96AD',
-  accent: '#6366F1',
-  accentForeground: '#FFFFFF',
-  success: '#34D27B',
-  successForeground: '#06230F',
-  warning: '#F5B027',
-  warningForeground: '#211603',
-  streak: '#FF8A42',
-  streakForeground: '#2A1402',
-  destructive: '#FF453A',
-  destructiveForeground: '#FFFFFF',
-  border: '#2C2841',
-  ring: '#6366F1',
+  primarySoft: '#17324B',
+  secondary: '#1B3046',
+  secondaryForeground: '#F5F7FB',
+  muted: '#15293D',
+  mutedForeground: '#93A6B8',
+  accent: '#E7B84B', // brighter gold on dark
+  accentForeground: '#1A1200',
+  success: '#2FA968',
+  successForeground: '#04210F',
+  warning: '#E7B84B',
+  warningForeground: '#201700',
+  streak: '#E7B84B',
+  streakForeground: '#201700',
+  destructive: '#E06A5C',
+  destructiveForeground: '#2A0A06',
+  border: '#29435C',
+  ring: '#2B79B5',
 };
 
 export const lightTheme: ThemeTokens = { colors: lightColors, radius, spacing, fontSize, fonts, shadow, minTapTarget };
