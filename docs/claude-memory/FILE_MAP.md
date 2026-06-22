@@ -188,6 +188,9 @@ app.config.ts  eas.json  package.json                                           
 | `list_public_group_leaderboard` (public group preview Leaderboard tab) | `supabase/migrations/20260624000000_public_group_leaderboard.sql` | written — **USER must apply after 20260623** (T-084) |
 | Harden `list_public_group_leaderboard` → member-only (privacy) | `supabase/migrations/20260625000000_group_leaderboard_member_only.sql` | written — **USER must apply after 20260624** (T-085) |
 | Shared UI: inline banner / empty-state card / global offline bar | `src/shared/ui/InlineBanner.tsx` · `EmptyStateCard.tsx` · `OfflineBanner.tsx` | live (T-085) |
+| Steppe-Sky ornaments (react-native-svg) | `src/shared/ui/OrnamentDivider.tsx` · `OrnamentMedallion.tsx` | live (D-015) |
+| Redesign shared UI: read-only banner / proof context strip / branded empty | `src/shared/ui/PublicPreviewBanner.tsx` · `ProofContextStrip.tsx` · `BrandEmptyState.tsx` | live (D-015) |
+| In-house i18n (kz/ru/en, device locale, `I18nProvider`/`useI18n`/`useT`) | `src/shared/i18n/index.ts` | live (D-015) |
 | Theme mode (light/dark/system) + persistence | `src/shared/ui/theme/ThemeProvider.tsx` · `src/shared/lib/themePreference.ts` | live |
 | Reusable group create/join form | `src/features/groups/ui/GroupCreateOrJoinForm.tsx` | live (T-026) |
 | Group create/join modal route | `app/group/join-or-create.tsx` | live (T-026) |

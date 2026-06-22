@@ -21,6 +21,56 @@
 
 ---
 
+## 2026-06-22 — Claude (opus) / "Steppe Sky" Kazakh-inspired redesign + i18n
+
+**Did:** A large contemporary Kazakh-inspired UI redesign (theme "Steppe Sky") + localization
+skeleton. **No DB migration** (the redesign is client-only; see D-015). Committed in logical steps
+on `mvp`:
+- `671d967` feat(theme): Steppe Sky tokens (sky-blue primary, reserved gold accent, paper-cream /
+  steppe-night canvases) + `react-native-svg` ornament primitives (`OrnamentDivider` qoshqar-müyiz
+  band, `OrnamentMedallion` 8-point star) + new shared `PublicPreviewBanner` / `ProofContextStrip` /
+  `BrandEmptyState`; `Avatar` gains optional cached image (expo-image); `Icon` +globe/+flame;
+  SegmentedControl active label uses primary.
+- `2e94c70` feat(i18n): in-house i18n (`src/shared/i18n`, flat dot-keys + `t()` + `I18nProvider`),
+  device locale via expo-localization, kz/ru/en (en source of truth). `I18nProvider` mounted in
+  `app/_layout`. submission/[id] switched to `headerShown:false`.
+- `d84e222` feat(ui): nav shell (floating-card tab bar, primary pill active state, globe Global,
+  localized labels) + core tabs (Today hero with streak/today + ornament divider; Challenges counts
+  + branded empties; **ChallengeRow now progress-led** — category chip + Day X/N + bar; Groups rows
+  show real avatar + description + member count, archived = quiet outlined row; Global empty state +
+  GlobalFeedCard hierarchy + expo-image). `listMyGroups` projection extended (description,
+  avatar_path, `group_members(count)`) — **client query only, no migration**.
+- `9d55807` feat(ui): submission detail → in-body `ScreenHeader` + `ProofContextStrip` + expo-image;
+  challenge detail → **sticky primary CTA**, de-duplicated title, status colors now semantic tokens
+  (no hardcoded hex), "proofs" terminology; public previews → `PublicPreviewBanner` + **persistent
+  sticky Join CTA**; group detail → Avatar image + ornament divider.
+- `ab07fd9` feat(ui): ProfileHeader ornament band + Avatar image; profile cards progress-led;
+  auth heroes (medallion + ornament); onboarding create-vs-join as two **choice cards**; challenge
+  creation **steppe step indicator**.
+
+**In progress / partial:** i18n string extraction is **partial** — high-visibility surfaces use
+`t()`; many secondary strings are still English literals. No language-switcher UI yet (device
+locale only). `ActivityPreview` keeps its own grid (one intentional `#FFFFFF` selected-ring).
+
+**Next up:** (1) expand i18n coverage + add a language switcher in Profile/Appearance; (2) optional:
+verify the `group_members(count)` embedded select returns correct counts against the live DB (RLS
+should allow members to count their group's membership — if it 400s, fall back to base columns +
+omit count); (3) sweep remaining secondary screens (verify/[submissionId], blocked-users) for brand
++ "proof" terminology.
+
+**Blockers / decisions needed:** none. No migration to apply for this redesign (W-040/W-041 from
+prior sessions still stand).
+
+**Branch / commit:** `mvp` @ `ab07fd9`. typecheck + lint + expo-doctor (18/18) all green.
+
+**Notes for next session:** all colors flow through `tokens.ts` semantic tokens — rebrand = edit hex
+there. Ornaments are `react-native-svg`, memoized, a11y-hidden; use ONLY in dividers/medallions/hero
+accents/empty states/active indicators (never behind text or as FlatList card backgrounds). `Avatar`
+now takes an optional `uri` (expo-image, memory-disk cache) — prefer it over a raw `<Image>` for
+avatars. W-041 temporary `[basta][avatar-upload]` logging is still in `uploadGroupAvatar`.
+
+---
+
 ## 2026-06-18 — Claude (fable) / UI/UX pass (nav, Today, profile, group, offline)
 
 **Did:** A broad UI/UX streamlining pass. New migration

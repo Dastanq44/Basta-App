@@ -241,3 +241,27 @@ Date · Status · Decision · Why · Consequences
 - **Consequences:** Challenge emoji is embedded in the title and start+end→duration (no challenge
   schema change); group description/avatar live behind `get_group_overview` + a public
   `group-avatars` bucket. Supersedes the "Sleek violet" colour note — the palette is now indigo.
+
+## D-015 — "Steppe Sky" rebrand + in-house i18n (2026-06)   [Accepted; supersedes the D-012 indigo palette]
+- **Date:** 2026-06-22
+- **Decision:** The visual language is now **"Steppe Sky"** — a contemporary Kazakh-inspired theme:
+  sky-blue primary (`#0E5AA8` light / `#2B79B5` dark), a **reserved gold accent** (`#C99412` /
+  `#E7B84B`) used only for streak/rank/active ornaments, warm paper-cream / steppe-night canvases.
+  Traditional motifs (qoshqar-müyiz band, 8-point steppe star) appear ONLY in dividers, medallions,
+  hero accents, empty states, and active indicators via `react-native-svg` — never as wallpaper.
+  Body type stays **system sans** (full kz/ru/en glyph coverage, zero font assets) — no display font
+  was added because we can't guarantee Kazakh+Cyrillic+Latin coverage of a custom face. All colors
+  flow through the existing semantic tokens (`tokens.ts`); rebrand = edit the hex there.
+- **i18n:** a **lightweight in-house** solution (`src/shared/i18n`) — flat dot-keyed dictionary +
+  interpolating `t()` + `I18nProvider`/`useI18n`/`useT`, device locale via **expo-localization**.
+  We deliberately did NOT add `i18n-js`/`intl-pluralrules` (SDK-compat + bundle risk); en is the
+  source of truth, ru/kz fall back to en. `isRTL` is plumbed through (all current langs LTR) so a
+  future RTL locale needs only a dict + `forceRTL`. **String extraction is partial** (high-visibility
+  surfaces done); expanding coverage + a language-switcher UI is follow-up work.
+- **Packages added:** `react-native-svg` (ornaments), `expo-localization` (locale), `expo-image`
+  (cached avatars + proof media on image-heavy surfaces). No backend/schema migration for the
+  redesign. The Groups-tab `listMyGroups` projection was extended (description, avatar_path,
+  `group_members(count)`) — **client query only**, per D-012's additive rule.
+- **Why:** the user asked for a restrained Kazakh-inspired modern UI without weakening privacy/RLS.
+- **Consequences:** `accent` changed from indigo (== primary) to gold; it's only used for
+  selection/highlight states, which read well in gold. `Avatar` now optionally renders an expo-image.

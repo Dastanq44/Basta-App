@@ -3,7 +3,20 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-06-18 — by: Claude (fable) (UI/UX pass)_
+_Last updated: 2026-06-22 — by: Claude (opus) ("Steppe Sky" redesign + i18n)_
+
+> **2026-06-22 "Steppe Sky" redesign (D-015):** full Kazakh-inspired rebrand — sky-blue primary +
+> reserved gold accent, paper-cream/steppe-night canvases, restrained `react-native-svg` ornaments
+> (`OrnamentDivider`/`OrnamentMedallion`) in dividers/medallions/hero accents/empty states only. New
+> shared `PublicPreviewBanner`/`ProofContextStrip`/`BrandEmptyState`; `Avatar` renders cached images
+> via **expo-image**. **In-house i18n** (`src/shared/i18n`, kz/ru/en, device locale via
+> expo-localization) wired through `I18nProvider` in `app/_layout`. Floating-card tab bar with a
+> primary pill active state. Richer Groups rows use an extended `listMyGroups` projection
+> (description, avatar_path, `group_members(count)`) — **client query only, no migration**.
+> submission detail uses `ScreenHeader`+`ProofContextStrip`; challenge detail has a sticky CTA;
+> public previews have a strong read-only banner + persistent Join CTA. **No backend/schema change.**
+> typecheck+lint+expo-doctor (18/18) green. Branch `mvp` @ `ab07fd9`. Packages added:
+> react-native-svg, expo-localization, expo-image. i18n string extraction is partial (follow-up).
 
 > **2026-06-18 UI/UX pass (T-085):** tabs reordered (Today/Challenges/Groups/Global/Profile); Today
 > is action-first (due above weekly summary, dead bell removed); profile "Proofs" tab + hidden
