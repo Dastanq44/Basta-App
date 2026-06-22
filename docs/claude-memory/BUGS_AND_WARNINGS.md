@@ -13,6 +13,21 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
 
 ## Active warnings (not bugs — traps to respect)
 
+## [OPEN] W-041 — `uploadGroupAvatar` has TEMPORARY diagnostic logging (remove later)
+- **Date:** 2026-06-22 · **Area:** groups / storage
+- **What:** [src/features/groups/api/index.ts](../../src/features/groups/api/index.ts) `uploadGroupAvatar`
+  now `console.log`s `[basta][avatar-upload]` lines (supabaseUrl, uid, groupId, localUri, remotePath,
+  and the full storage error object) to debug an on-device upload failure. It never logs the anon
+  key or any token, but **remove these logs** once the upload path is confirmed stable on a real
+  device.
+- **Also changed (keep):** the local read switched from `fetch(localUri)` to
+  `expo-file-system/legacy` (`getInfoAsync` + `readAsStringAsync` base64 → bytes) because
+  `fetch(file://|content://)` fails on some Android builds. Upload now throws a typed
+  `AvatarUploadError` with `.kind` (`not-signed-in | local-read | too-large | invalid-type |
+  bucket-missing | rls-denied | unknown`); the edit screen maps each kind to an actionable message
+  (`avatarUploadMessage` in [app/group/[id]/edit.tsx](../../app/group/[id]/edit.tsx)). Path + bucket
+  unchanged: `group-avatars/<uid>/<groupId>-<ts>.jpg`, RLS untouched (correct — gates on uid prefix).
+
 ## [OPEN] W-040 — Apply the THREE privacy/Global migrations BEFORE running the new build (D-014)
 - **Date:** 2026-06-13 (updated 2026-06-18 for the Global feed migration) · **Area:** backend / Supabase
 - **What:** SIX migrations are pending, apply **in order**:

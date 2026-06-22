@@ -1,6 +1,9 @@
 // Groups API — thin Supabase wrappers. The DB trigger `trg_groups_add_owner` ensures the
 // creator is added as a `member_role=owner` row in group_members; clients don't have to.
+// SDK 54 / expo-file-system v19: the classic read API lives under the `/legacy` entry.
+import * as FileSystem from 'expo-file-system/legacy';
 import { supabase } from '@/shared/lib/supabase';
+import { env } from '@/shared/lib/env';
 import type { Group, GroupId, MemberRole, Submission } from '@/entities';
 
 const COLUMNS = 'id, name, owner_id, invite_code, archived_at, visibility';
@@ -272,28 +275,154 @@ export async function updateGroupMeta(
   }
 }
 
+/** Discriminated upload-failure kinds so the UI can show a specific, actionable message
+ *  instead of a raw Supabase string. */
+export type AvatarUploadErrorKind =
+  | 'not-signed-in'
+  | 'local-read'
+  | 'too-large'
+  | 'invalid-type'
+  | 'bucket-missing'
+  | 'rls-denied'
+  | 'unknown';
+
+/** Thrown by `uploadGroupAvatar`. `kind` lets callers branch to a friendly message; the
+ *  original error is kept on `cause` for logging. */
+export class AvatarUploadError extends Error {
+  readonly kind: AvatarUploadErrorKind;
+  override readonly cause?: unknown;
+  constructor(kind: AvatarUploadErrorKind, message: string, cause?: unknown) {
+    super(message);
+    this.name = 'AvatarUploadError';
+    this.kind = kind;
+    this.cause = cause;
+  }
+}
+
+// Generous local guard — the picker crops 1:1 at quality 0.8, so real photos land far under
+// this. It only catches a genuinely oversized file before we waste an upload round-trip.
+const MAX_AVATAR_BYTES = 10 * 1024 * 1024;
+
+function describeError(e: unknown): string {
+  if (e instanceof Error) return e.message;
+  if (typeof e === 'string') return e;
+  try {
+    return JSON.stringify(e);
+  } catch {
+    return String(e);
+  }
+}
+
+/** base64 → bytes. `atob` is provided by Hermes (SDK 54) and typed via the DOM lib. */
+function base64ToBytes(base64: string): Uint8Array {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+/** Reads a local image URI into bytes via expo-file-system. More robust on-device than
+ *  `fetch(file://…)` / `fetch(content://…)`, whose RN polyfill fails on some Android builds
+ *  and content-provider URIs. Throws a typed `local-read` / `too-large`. */
+async function readLocalImageBytes(localUri: string): Promise<Uint8Array> {
+  let info: FileSystem.FileInfo;
+  try {
+    info = await FileSystem.getInfoAsync(localUri);
+  } catch (e) {
+    throw new AvatarUploadError('local-read', `Could not stat local image: ${describeError(e)}`, e);
+  }
+  if (!info.exists) {
+    throw new AvatarUploadError('local-read', 'The selected image no longer exists on this device.');
+  }
+  if (typeof info.size === 'number' && info.size > MAX_AVATAR_BYTES) {
+    const mb = (info.size / (1024 * 1024)).toFixed(1);
+    throw new AvatarUploadError('too-large', `Image is ${mb} MB; the limit is ${MAX_AVATAR_BYTES / (1024 * 1024)} MB.`);
+  }
+  let base64: string;
+  try {
+    base64 = await FileSystem.readAsStringAsync(localUri, { encoding: FileSystem.EncodingType.Base64 });
+  } catch (e) {
+    throw new AvatarUploadError('local-read', `Could not read local image: ${describeError(e)}`, e);
+  }
+  if (!base64) {
+    throw new AvatarUploadError('local-read', 'The selected image is empty or unreadable.');
+  }
+  return base64ToBytes(base64);
+}
+
+/** Maps a Supabase Storage error to a typed kind. Bucket-missing is checked before the generic
+ *  4xx → rls-denied branch so a missing bucket is never mislabeled as a security denial. */
+function classifyStorageError(error: unknown): AvatarUploadError {
+  const raw = (error ?? {}) as { message?: unknown; status?: unknown };
+  const message = typeof raw.message === 'string' ? raw.message : '';
+  const lower = message.toLowerCase();
+  const status = typeof raw.status === 'number' ? raw.status : undefined;
+
+  if (lower.includes('bucket not found') || (status === 404 && lower.includes('bucket'))) {
+    return new AvatarUploadError('bucket-missing', message || 'Storage bucket not found.', error);
+  }
+  if (lower.includes('maximum allowed size') || lower.includes('payload too large') || lower.includes('entity too large') || status === 413) {
+    return new AvatarUploadError('too-large', message || 'Image exceeds the storage size limit.', error);
+  }
+  if (lower.includes('mime type') || lower.includes('invalid_mime_type') || lower.includes('not supported')) {
+    return new AvatarUploadError('invalid-type', message || 'Image type not allowed by the bucket.', error);
+  }
+  if (lower.includes('row-level security') || lower.includes('violates row') || lower.includes('unauthorized') || status === 401 || status === 403) {
+    return new AvatarUploadError('rls-denied', message || 'Upload denied by the storage security policy.', error);
+  }
+  return new AvatarUploadError('unknown', message || 'Unknown storage error.', error);
+}
+
 /** Uploads a group avatar image to the public `group-avatars` bucket; returns the storage path.
- *  Path is `<uploader_uid>/<groupId>-<ts>.jpg`:
+ *  Path is `<uploader_uid>/<groupId>-<ts>.jpg` (NO bucket name in the path):
  *    - storage RLS gates on the first segment (the uploader's uid), the SAME proven pattern
  *      as user avatars (a group-ownership table lookup from a storage policy did not resolve
  *      in Supabase — see migration 20260613100000). Group ownership is enforced by the
  *      owner-only `update_group_meta` RPC that records which path becomes the avatar.
  *    - the `<ts>` makes the public URL change per upload so the CDN + RN <Image> caches don't
  *      keep serving the previous photo.
+ *  Throws `AvatarUploadError` with a `.kind` so the UI can show a specific message.
  *  NOTE: group-avatars has no SELECT/DELETE policy, so superseded files are left as harmless
  *  orphans rather than cleaned up (groups change avatars rarely). */
 export async function uploadGroupAvatar(groupId: string, localUri: string): Promise<string> {
   const { data: auth } = await supabase.auth.getUser();
-  const uid = auth.user?.id;
-  if (!uid) throw new Error('Not signed in');
+  const uid = auth.user?.id ?? null;
+
+  // TEMPORARY diagnostic logging — remove once the on-device upload path is confirmed stable.
+  // Deliberately never logs the anon key or any auth token.
+  console.log('[basta][avatar-upload] start', {
+    supabaseUrl: env.supabaseUrl,
+    uid,
+    groupId,
+    localUri,
+    bucket: GROUP_AVATAR_BUCKET,
+  });
+
+  if (!uid) throw new AvatarUploadError('not-signed-in', 'You are not signed in.');
+
   const remotePath = `${uid}/${groupId}-${Date.now()}.jpg`;
-  const res = await fetch(localUri);
-  if (!res.ok) throw new Error(`Could not read image (${res.status})`);
-  const buf = await res.arrayBuffer();
+  console.log('[basta][avatar-upload] remotePath', { remotePath });
+
+  const bytes = await readLocalImageBytes(localUri);
+
   const { error } = await supabase.storage
     .from(GROUP_AVATAR_BUCKET)
-    .upload(remotePath, buf, { contentType: 'image/jpeg', upsert: true, cacheControl: '3600' });
-  if (error) throw error;
+    .upload(remotePath, bytes, { contentType: 'image/jpeg', upsert: true, cacheControl: '3600' });
+
+  if (error) {
+    console.log('[basta][avatar-upload] storage error', {
+      supabaseUrl: env.supabaseUrl,
+      uid,
+      remotePath,
+      bucket: GROUP_AVATAR_BUCKET,
+      error,
+      errorMessage: (error as { message?: unknown }).message,
+      errorStatus: (error as { status?: unknown }).status,
+    });
+    throw classifyStorageError(error);
+  }
+
+  console.log('[basta][avatar-upload] success', { remotePath });
   return remotePath;
 }
 

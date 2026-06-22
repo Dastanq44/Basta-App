@@ -4,6 +4,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Button, Input, Screen, Text, useTheme, VisibilityToggle } from '@/shared/ui';
 import { useSession } from '@/features/auth';
 import {
+  AvatarUploadError,
   GroupAvatarPicker,
   groupDescriptionSchema,
   groupNameSchema,
@@ -12,6 +13,29 @@ import {
   useMyGroups,
   useUpdateGroupMeta,
 } from '@/features/groups';
+
+/** Map a typed avatar-upload failure to an actionable, user-facing message. */
+function avatarUploadMessage(e: unknown): string {
+  if (e instanceof AvatarUploadError) {
+    switch (e.kind) {
+      case 'not-signed-in':
+        return 'You appear to be signed out. Sign in again, then retry the photo.';
+      case 'local-read':
+        return 'Could not read the selected image on this device. Pick it again, or try a different photo.';
+      case 'bucket-missing':
+        return 'Photo storage isn’t set up: the "group-avatars" bucket is missing. It’s a manual Supabase Dashboard step (Storage → New bucket), separate from the migrations. Check your app points at the right project (EXPO_PUBLIC_SUPABASE_URL).';
+      case 'rls-denied':
+        return 'Storage rejected the upload (row-level security). The "group-avatars" upload policy must allow writes under your own user-id folder. Re-check the policy from migration 20260613100000.';
+      case 'too-large':
+        return 'That image is too large for the storage bucket. Pick a smaller photo or lower its resolution.';
+      case 'invalid-type':
+        return 'That image type isn’t allowed by the storage bucket. Use a JPEG or PNG photo.';
+      default:
+        return `Could not upload photo: ${e.message}. Try again.`;
+    }
+  }
+  return 'Could not upload photo. Try again.';
+}
 
 // Thin route: owner edits name + description + avatar. Server enforces owner + not-archived.
 export default function EditGroupScreen() {
@@ -78,16 +102,13 @@ export default function EditGroupScreen() {
     let avatarPath: string | null | undefined = undefined;
     try {
       if (avatarUri) {
-        // Upload phase — bug E: previously the catch swallowed this silently and the
-        // user saw no feedback. Now surfaced via the dedicated uploadError state.
+        // Upload phase — bug E: this catch used to swallow the error silently and the user saw
+        // no feedback. Now surfaced via the dedicated uploadError state with a kind-specific,
+        // actionable message (see avatarUploadMessage).
         try {
           avatarPath = await uploadGroupAvatar(id, avatarUri);
         } catch (e) {
-          setUploadError(
-            e instanceof Error
-              ? `Could not upload photo: ${e.message}. If this says "row-level security", check the Supabase project your app points at (EXPO_PUBLIC_SUPABASE_URL) has the "group-avatars" Storage bucket created — buckets are a manual Dashboard step, not part of the migration.`
-              : 'Could not upload photo. Try again.',
-          );
+          setUploadError(avatarUploadMessage(e));
           return;
         }
       } else if (removeAvatar) {

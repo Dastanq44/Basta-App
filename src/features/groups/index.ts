@@ -22,8 +22,8 @@ export {
   publicGroupChallengesQueryKey,
   publicGroupSubmissionsQueryKey,
 } from './hooks';
-export { uploadGroupAvatar, groupAvatarUrl, getGroupAccess, listPublicGroupChallenges, listPublicGroupSubmissions } from './api';
-export type { GroupOverview, GroupAccess, GroupAccessMode, PublicGroupChallenge } from './api';
+export { uploadGroupAvatar, AvatarUploadError, groupAvatarUrl, getGroupAccess, listPublicGroupChallenges, listPublicGroupSubmissions } from './api';
+export type { GroupOverview, GroupAccess, GroupAccessMode, PublicGroupChallenge, AvatarUploadErrorKind } from './api';
 export {
   groupNameSchema,
   groupDescriptionSchema,
