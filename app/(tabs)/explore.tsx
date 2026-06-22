@@ -1,7 +1,8 @@
 import { useCallback } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Screen, Text, useTheme } from '@/shared/ui';
+import { OrnamentMedallion, Screen, Text, useTheme } from '@/shared/ui';
+import { useI18n } from '@/shared/i18n';
 import { GlobalFeedCard, useGlobalFeed } from '@/features/global';
 import type { GlobalPost } from '@/entities';
 
@@ -12,6 +13,7 @@ import type { GlobalPost } from '@/entities';
 export default function GlobalScreen() {
   const t = useTheme();
   const router = useRouter();
+  const { t: tr } = useI18n();
   const feed = useGlobalFeed();
 
   const posts: GlobalPost[] = feed.data?.pages.flat() ?? [];
@@ -40,7 +42,7 @@ export default function GlobalScreen() {
   return (
     <Screen edges={['top']} padded={false}>
       <View style={{ paddingHorizontal: t.spacing.lg, paddingBottom: t.spacing.sm }}>
-        <Text variant="title">Global</Text>
+        <Text variant="title">{tr('global.title')}</Text>
       </View>
 
       <FlatList
@@ -69,8 +71,8 @@ export default function GlobalScreen() {
             />
           ) : (
             <EmptyState
-              title="No public proofs yet"
-              body="Verified proofs from public profiles and visible challenges show up here. Make your profile and a challenge public to share yours."
+              title={tr('global.empty')}
+              body={tr('global.emptyBody')}
             />
           )
         }
@@ -89,7 +91,8 @@ export default function GlobalScreen() {
 function EmptyState({ title, body }: { title: string; body: string }) {
   const t = useTheme();
   return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: t.spacing.sm, paddingTop: t.spacing.xxl, paddingHorizontal: t.spacing.lg }}>
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: t.spacing.md, paddingTop: t.spacing.xxl, paddingHorizontal: t.spacing.lg }}>
+      <OrnamentMedallion size={72} />
       <Text variant="heading" style={{ textAlign: 'center' }}>{title}</Text>
       <Text variant="muted" style={{ textAlign: 'center' }}>{body}</Text>
     </View>

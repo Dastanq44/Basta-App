@@ -1,8 +1,10 @@
+import type { ReactNode } from 'react';
 import { useCallback, useMemo } from 'react';
-import { Image, Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { type Href, useFocusEffect, useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
-import { Avatar, Card, EmptyStateCard, Icon, ProgressBar, Screen, StatTile, Text, useTheme } from '@/shared/ui';
+import { Avatar, BrandEmptyState, Card, Icon, OrnamentDivider, ProgressBar, Screen, Text, useTheme } from '@/shared/ui';
+import { useI18n } from '@/shared/i18n';
 import { useSession } from '@/features/auth';
 import { ChallengeRow, useChallenges } from '@/features/challenges';
 import { useMyRecentSubmissions } from '@/features/proofs';
@@ -18,6 +20,7 @@ export default function TodayScreen() {
   const router = useRouter();
   const qc = useQueryClient();
   const session = useSession();
+  const { t: tr } = useI18n();
   const overview = useHomeOverview();
   const profile = useProfile();
 
@@ -84,17 +87,20 @@ export default function TodayScreen() {
     (challenges.isFetching && !challenges.isPending) ||
     (recentSubmissions.isFetching && !recentSubmissions.isPending);
 
+  const hour = new Date().getHours();
+  const greeting =
+    hour < 12 ? tr('today.greeting.morning') : hour < 18 ? tr('today.greeting.afternoon') : tr('today.greeting.evening');
+
   return (
     <Screen padded={false} edges={['top']}>
       <ScrollView
         contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.lg, paddingBottom: t.spacing.xl }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        {/* Greeting — avatar is tappable, redirects to Profile. Avatar + text both
-            bigger than before (46 → 64; heading variant → explicit larger size) so the
-            greeting reads as the page header rather than an afterthought. */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.md, flex: 1 }}>
+        {/* Hero summary — greeting + avatar, then inline streak + today status. A single
+            compact card so the page opens with "who you are + where you stand" at a glance. */}
+        <Card style={{ backgroundColor: t.colors.primarySoft, borderColor: t.colors.primary + '33', gap: t.spacing.md }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.md }}>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Go to profile"
@@ -102,33 +108,31 @@ export default function TodayScreen() {
               hitSlop={6}
               style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
             >
-              {avatarRemoteUrl ? (
-                <Image
-                  source={{ uri: avatarRemoteUrl }}
-                  style={{ width: 64, height: 64, borderRadius: 32 }}
-                />
-              ) : (
-                <Avatar name={name} size={64} />
-              )}
+              <Avatar name={name} uri={avatarRemoteUrl} size={56} />
             </Pressable>
             <View style={{ flex: 1 }}>
-              <Text variant="caption">Welcome back</Text>
-              <Text
-                numberOfLines={1}
-                style={{
-                  fontSize: t.fontSize.xl,
-                  fontWeight: '700',
-                  color: t.colors.foreground,
-                  lineHeight: t.fontSize.xl * 1.2,
-                  marginTop: 2,
-                }}
-              >
-                Hi, {name} 👋
+              <Text variant="caption" style={{ color: t.colors.foreground, opacity: 0.7 }}>{greeting}</Text>
+              <Text numberOfLines={1} style={{ fontSize: t.fontSize.xl, fontWeight: '800', color: t.colors.foreground, lineHeight: t.fontSize.xl * 1.2, marginTop: 2 }}>
+                {name}
               </Text>
             </View>
           </View>
-          {/* No notification center yet → no bell affordance (was a dead button). */}
-        </View>
+          <OrnamentDivider />
+          <View style={{ flexDirection: 'row', gap: t.spacing.md }}>
+            <HeroStat
+              icon={<Icon name="flame" size={18} color={t.colors.streak} />}
+              value={String(o?.currentStreak ?? 0)}
+              label={tr('today.streak')}
+              tint={t.colors.streak}
+            />
+            <HeroStat
+              icon={<Icon name="check" size={18} color={t.colors.success} />}
+              value={o ? `${o.todayDone}/${o.todayTotal}` : '0/0'}
+              label={tr('today.dueToday')}
+              tint={t.colors.success}
+            />
+          </View>
+        </Card>
 
         {/* Conditional: verify a friend */}
         {pending > 0 ? (
@@ -136,17 +140,17 @@ export default function TodayScreen() {
             <Card style={{ backgroundColor: t.colors.primary, borderColor: t.colors.primary }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.md }}>
                 <View style={{ flex: 1 }}>
-                  <Text variant="label" style={{ color: '#FFFFFF', opacity: 0.85 }}>
+                  <Text variant="label" style={{ color: t.colors.primaryForeground, opacity: 0.85 }}>
                     NEEDS YOU
                   </Text>
-                  <Text style={{ color: '#FFFFFF', fontSize: t.fontSize.lg, fontWeight: '800', marginTop: 2 }}>
+                  <Text style={{ color: t.colors.primaryForeground, fontSize: t.fontSize.lg, fontWeight: '800', marginTop: 2 }}>
                     Verify a friend
                   </Text>
-                  <Text style={{ color: '#FFFFFF', opacity: 0.9, marginTop: 2 }}>
+                  <Text style={{ color: t.colors.primaryForeground, opacity: 0.9, marginTop: 2 }}>
                     {pending} proof{pending > 1 ? 's' : ''} waiting for your approval.
                   </Text>
                 </View>
-                <Icon name="chevron" size={20} color="#FFFFFF" />
+                <Icon name="chevron" size={20} color={t.colors.primaryForeground} />
               </View>
             </Card>
           </Pressable>
@@ -156,10 +160,10 @@ export default function TodayScreen() {
             Same row format as the Challenges tab so the two surfaces match. Empty
             states differentiate "nothing pending" from "no challenges at all". */}
         <View style={{ gap: t.spacing.sm }}>
-          <Text variant="heading">Today</Text>
+          <Text variant="heading">{tr('today.dueToday')}</Text>
           {challenges.isPending || recentSubmissions.isPending ? (
             <Card>
-              <Text variant="muted">Loading…</Text>
+              <Text variant="muted">{tr('common.loading')}</Text>
             </Card>
           ) : openToday.length > 0 ? (
             <View style={{ gap: t.spacing.md }}>
@@ -168,24 +172,24 @@ export default function TodayScreen() {
               ))}
             </View>
           ) : (challenges.data?.length ?? 0) > 0 ? (
-            <EmptyStateCard
-              title="All done for today 🎉"
-              body="Every active challenge has today's proof logged. Come back tomorrow to keep the streak."
+            <BrandEmptyState
+              title={tr('today.allDone')}
+              body={tr('today.allDoneBody')}
+              tone={t.colors.success}
             />
           ) : (
-            <EmptyStateCard
-              title="No active challenges"
-              body="Start a solo or group challenge — a daily photo proof keeps your streak alive."
-              icon="🎯"
-              actionLabel="New challenge"
+            <BrandEmptyState
+              title={tr('today.noChallenges')}
+              body={tr('today.noChallengesBody')}
+              actionLabel={tr('today.newChallenge')}
               onAction={() => router.push('/challenge/new')}
             />
           )}
         </View>
 
-        {/* Compact summary — current streak + this week, below the action-first Today section. */}
+        {/* This week — active-days progress, below the action-first Today section. */}
         <Card>
-          <Text variant="label">THIS WEEK</Text>
+          <Text variant="label">{tr('today.thisWeek').toUpperCase()}</Text>
           <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, marginTop: t.spacing.xs }}>
             <Text
               style={{
@@ -204,12 +208,24 @@ export default function TodayScreen() {
             <ProgressBar value={weekPct} height={10} />
           </View>
         </Card>
-        <View style={{ flexDirection: 'row', gap: t.spacing.sm }}>
-          <StatTile value={o?.currentStreak ?? 0} label="Day streak" tone="streak" icon="🔥" />
-          <StatTile value={o ? `${o.todayDone}/${o.todayTotal}` : '0/0'} label="Today's tasks" tone="success" icon="✅" />
-        </View>
       </ScrollView>
     </Screen>
+  );
+}
+
+/** Inline hero stat — a tinted icon tile + big value + caption. Used in the Today hero. */
+function HeroStat({ icon, value, label, tint }: { icon: ReactNode; value: string; label: string; tint: string }) {
+  const t = useTheme();
+  return (
+    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm }}>
+      <View style={{ width: 38, height: 38, borderRadius: t.radius.md, backgroundColor: tint + '22', alignItems: 'center', justifyContent: 'center' }}>
+        {icon}
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text numberOfLines={1} style={{ fontSize: t.fontSize.lg, fontWeight: '800', color: t.colors.foreground }}>{value}</Text>
+        <Text variant="caption" numberOfLines={1}>{label}</Text>
+      </View>
+    </View>
   );
 }
 

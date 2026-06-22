@@ -7,6 +7,10 @@ import { env } from '@/shared/lib/env';
 import type { Group, GroupId, MemberRole, Submission } from '@/entities';
 
 const COLUMNS = 'id, name, owner_id, invite_code, archived_at, visibility';
+// Richer projection for the Groups tab — base columns + description, avatar, and an embedded
+// member count (group_members(count)). Plain columns are RLS-safe; the embedded count is
+// readable because members may see their group's membership. Client query only — no migration.
+const LIST_COLUMNS = 'id, name, owner_id, invite_code, archived_at, visibility, description, avatar_path, group_members(count)';
 
 const REQUEST_TIMEOUT_MS = 10_000;
 
@@ -33,6 +37,28 @@ function toGroup(row: GroupRow): Group {
     inviteCode: row.invite_code,
     archivedAt: row.archived_at ?? undefined,
     isPublic: row.visibility === 'public',
+  };
+}
+
+/** Group enriched for list rows — base Group plus description, avatar URL, and member count. */
+export type GroupListItem = Group & {
+  description: string | null;
+  avatarUrl: string | null;
+  memberCount: number;
+};
+
+type GroupListRow = GroupRow & {
+  description?: string | null;
+  avatar_path?: string | null;
+  group_members?: { count: number }[];
+};
+
+function toGroupListItem(row: GroupListRow): GroupListItem {
+  return {
+    ...toGroup(row),
+    description: row.description ?? null,
+    avatarUrl: groupAvatarUrl(row.avatar_path ?? null),
+    memberCount: row.group_members?.[0]?.count ?? 0,
   };
 }
 
@@ -64,18 +90,19 @@ export async function createGroup(name: string, isPublic = true): Promise<Group>
   }
 }
 
-/** List groups the current user is a member of (excludes archived). */
-export async function listMyGroups(): Promise<Group[]> {
+/** List groups the current user is a member of (excludes archived), enriched with description,
+ *  avatar, and member count for the Groups tab. */
+export async function listMyGroups(): Promise<GroupListItem[]> {
   const ctrl = withTimeout();
   try {
     const { data, error } = await supabase
       .from('groups')
-      .select(COLUMNS)
+      .select(LIST_COLUMNS)
       .is('archived_at', null)
       .order('created_at', { ascending: false })
       .abortSignal(ctrl.signal);
     if (error) throw error;
-    return (data ?? []).map((r) => toGroup(r as GroupRow));
+    return (data ?? []).map((r) => toGroupListItem(r as GroupListRow));
   } catch (e) {
     console.error('[basta] listMyGroups failed:', e);
     throw e;

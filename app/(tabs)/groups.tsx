@@ -1,14 +1,15 @@
 import { FlatList, Pressable, RefreshControl, View } from 'react-native';
 import { type Href, useRouter } from 'expo-router';
-import { Avatar, Button, Card, Icon, Screen, Text, useTheme } from '@/shared/ui';
-import { useMyArchivedGroups, useMyGroups } from '@/features/groups';
-import type { Group } from '@/entities';
+import { Avatar, BrandEmptyState, Button, Card, Icon, Screen, Text, useTheme } from '@/shared/ui';
+import { useI18n } from '@/shared/i18n';
+import { type GroupListItem, useMyArchivedGroups, useMyGroups } from '@/features/groups';
 
 // Thin route: lists the user's active groups, with create/join CTAs and a link to archived
 // groups. Tapping a row opens its leaderboard (group/[id]).
 export default function GroupsScreen() {
   const t = useTheme();
   const router = useRouter();
+  const { t: tr } = useI18n();
   const groups = useMyGroups();
   const archived = useMyArchivedGroups();
   const archivedCount = archived.data?.length ?? 0;
@@ -27,18 +28,18 @@ export default function GroupsScreen() {
         contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.md, paddingBottom: t.spacing.xl }}
         ListHeaderComponent={
           <View style={{ gap: t.spacing.md, marginBottom: t.spacing.sm }}>
-            <Text variant="title">Groups</Text>
+            <Text variant="title">{tr('nav.groups')}</Text>
             {/* One primary (create) + one secondary (join) — no competing duplicate CTAs. */}
             <View style={{ flexDirection: 'row', gap: t.spacing.sm }}>
               <View style={{ flex: 1 }}>
                 <Button
-                  label="New group"
+                  label={tr('groups.newGroup')}
                   icon={<Icon name="plus" size={15} color={t.colors.primaryForeground} />}
                   onPress={() => goCreateOrJoin('create')}
                 />
               </View>
               <View style={{ flex: 1 }}>
-                <Button label="Join with code" variant="secondary" onPress={() => goCreateOrJoin('join')} />
+                <Button label={tr('common.joinWithCode')} variant="secondary" onPress={() => goCreateOrJoin('join')} />
               </View>
             </View>
           </View>
@@ -49,15 +50,12 @@ export default function GroupsScreen() {
               {groups.error instanceof Error ? groups.error.message : 'Could not load groups.'}
             </Text>
           ) : (
-            <Card>
-              <View style={{ gap: t.spacing.xs }}>
-                <Text variant="heading">No groups yet</Text>
-                <Text variant="muted">
-                  Tap "Create group" to start your own, or "Join with code" if a friend has
-                  shared an invite.
-                </Text>
-              </View>
-            </Card>
+            <BrandEmptyState
+              title={tr('groups.empty')}
+              body={tr('groups.emptyBody')}
+              actionLabel={tr('groups.newGroup')}
+              onAction={() => goCreateOrJoin('create')}
+            />
           )
         }
         refreshControl={
@@ -71,33 +69,61 @@ export default function GroupsScreen() {
         }
         renderItem={({ item }) => <GroupRow group={item} onPress={() => openGroup(item.id)} />}
         ListFooterComponent={
-          <View style={{ marginTop: t.spacing.lg, gap: t.spacing.sm }}>
-            <Pressable accessibilityRole="button" onPress={goArchived} hitSlop={4}>
-              <Text variant="muted" style={{ textAlign: 'center' }}>
-                Archived groups{archivedCount > 0 ? ` (${archivedCount})` : ''} ›
-              </Text>
-            </Pressable>
-          </View>
+          // Archived = a softer settings/archive destination: a quiet outlined row, not a CTA.
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={tr('groups.archived')}
+            onPress={goArchived}
+            hitSlop={4}
+            style={({ pressed }) => ({
+              marginTop: t.spacing.lg,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: t.spacing.sm,
+              paddingVertical: t.spacing.sm,
+              paddingHorizontal: t.spacing.md,
+              borderRadius: t.radius.lg,
+              borderWidth: 1,
+              borderColor: t.colors.border,
+              backgroundColor: 'transparent',
+              opacity: pressed ? 0.6 : 1,
+            })}
+          >
+            <Icon name="settings" size={16} color={t.colors.mutedForeground} />
+            <Text variant="caption" style={{ flex: 1 }}>
+              {tr('groups.archived')}{archivedCount > 0 ? ` · ${archivedCount}` : ''}
+            </Text>
+            <Icon name="chevron" size={14} color={t.colors.mutedForeground} />
+          </Pressable>
         }
       />
     </Screen>
   );
 }
 
-function GroupRow({ group, onPress }: { group: Group; onPress: () => void }) {
+function GroupRow({ group, onPress }: { group: GroupListItem; onPress: () => void }) {
   const t = useTheme();
+  const { t: tr } = useI18n();
+  const memberLabel =
+    group.memberCount === 1 ? tr('groups.memberCountOne') : tr('groups.memberCount', { count: group.memberCount });
   return (
-    <Pressable onPress={onPress} accessibilityRole="button">
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={group.name}>
       <Card>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.md }}>
-          <Avatar name={group.name} size={44} />
-          <View style={{ flex: 1, gap: 2 }}>
+          <Avatar name={group.name} uri={group.avatarUrl} size={48} />
+          <View style={{ flex: 1, gap: 3 }}>
             <Text variant="subtitle" numberOfLines={1}>
               {group.name}
             </Text>
-            <Text variant="caption" style={{ color: t.colors.mutedForeground }}>
-              {group.isPublic ? 'Public group' : 'Private group'}
-            </Text>
+            {group.description ? (
+              <Text variant="caption" numberOfLines={1}>{group.description}</Text>
+            ) : null}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm }}>
+              <Text variant="label" style={{ color: t.colors.primary }}>{memberLabel}</Text>
+              <Text variant="label" style={{ color: t.colors.mutedForeground }}>
+                · {group.isPublic ? tr('groups.publicGroup') : tr('groups.privateGroup')}
+              </Text>
+            </View>
           </View>
           <Icon name="chevron" size={18} color={t.colors.mutedForeground} />
         </View>

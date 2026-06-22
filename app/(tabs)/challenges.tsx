@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { FlatList, RefreshControl, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Button, Icon, Screen, SegmentedControl, Text, useTheme } from '@/shared/ui';
+import { BrandEmptyState, Button, Icon, Screen, SegmentedControl, Text, useTheme } from '@/shared/ui';
+import { useI18n } from '@/shared/i18n';
 import { ChallengeRow, useChallenges } from '@/features/challenges';
 import type { Challenge } from '@/entities';
 
@@ -13,6 +14,7 @@ type Tab = 'active' | 'finished';
 export default function ChallengesTab() {
   const t = useTheme();
   const router = useRouter();
+  const { t: tr } = useI18n();
   const { data, isPending, isError, error, refetch, isFetching } = useChallenges();
   const [tab, setTab] = useState<Tab>('active');
 
@@ -41,21 +43,19 @@ export default function ChallengesTab() {
     <Screen padded={false}>
       <View style={{ padding: t.spacing.lg, gap: t.spacing.md }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text variant="title">Challenges</Text>
+          <Text variant="title">{tr('nav.challenges')}</Text>
           <Button
-            label="New"
+            label={tr('common.new')}
             size="sm"
             icon={<Icon name="plus" size={15} color={t.colors.primaryForeground} />}
             onPress={() => router.push('/challenge/new')}
           />
         </View>
         <SegmentedControl
-          options={
-            [
-              { label: 'Active', value: 'active' },
-              { label: 'Finished', value: 'finished' },
-            ] as const
-          }
+          options={[
+            { label: `${tr('challenges.active')} · ${active.length}`, value: 'active' },
+            { label: `${tr('challenges.finished')} · ${finished.length}`, value: 'finished' },
+          ]}
           value={tab}
           onChange={setTab}
         />
@@ -71,16 +71,20 @@ export default function ChallengesTab() {
         contentContainerStyle={{ paddingHorizontal: t.spacing.lg, paddingBottom: t.spacing.xl, gap: t.spacing.md }}
         ListEmptyComponent={
           !isPending ? (
-            <View style={{ gap: t.spacing.sm }}>
-              <Text variant="heading">
-                {tab === 'active' ? 'No active challenges' : 'No finished challenges yet'}
-              </Text>
-              <Text variant="muted">
-                {tab === 'active'
-                  ? 'Create your first solo or group challenge. Daily proof keeps the streak alive.'
-                  : 'Past challenges show up here once they end. Keep your active ones running to build a track record.'}
-              </Text>
-            </View>
+            tab === 'active' ? (
+              <BrandEmptyState
+                title={tr('challenges.empty')}
+                body={tr('challenges.emptyBody')}
+                actionLabel={tr('today.newChallenge')}
+                onAction={() => router.push('/challenge/new')}
+              />
+            ) : (
+              <BrandEmptyState
+                title="No finished challenges yet"
+                body="Past challenges show up here once they end. Keep your active ones running to build a track record."
+                tone={t.colors.mutedForeground}
+              />
+            )
           ) : null
         }
         refreshControl={
