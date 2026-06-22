@@ -9,6 +9,7 @@ import {
   Button,
   Card,
   CrownIcon,
+  EmptyStateCard,
   Icon,
   Screen,
   ScreenHeader,
@@ -32,7 +33,7 @@ import { ReportSheet } from '@/features/moderation';
 import { userAvatarUrl } from '@/features/onboarding';
 import type { Challenge, LeaderboardEntry } from '@/entities';
 
-type Tab = 'main' | 'board' | 'global';
+type Tab = 'overview' | 'challenges' | 'board';
 
 // Group detail: three tabs (Main info / Leaderboard / Global placeholder) + a gear action menu
 // (owner → edit/archive; everyone → leave/report). Server enforces every action server-side.
@@ -53,7 +54,7 @@ export default function GroupScreen() {
   const leave = useLeaveGroup();
   const archive = useArchiveGroup();
   const transfer = useTransferGroupLeadership();
-  const [tab, setTab] = useState<Tab>('main');
+  const [tab, setTab] = useState<Tab>('overview');
   const [menuOpen, setMenuOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
@@ -207,9 +208,9 @@ export default function GroupScreen() {
         <SegmentedControl
           options={
             [
-              { label: 'Main', value: 'main' },
+              { label: 'Overview', value: 'overview' },
+              { label: 'Challenges', value: 'challenges' },
               { label: 'Leaderboard', value: 'board' },
-              { label: 'Global', value: 'global' },
             ] as const
           }
           value={tab}
@@ -217,7 +218,7 @@ export default function GroupScreen() {
         />
       </View>
 
-      {tab === 'main' ? (
+      {tab === 'overview' ? (
         <ScrollView contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.md, paddingBottom: t.spacing.xl }}>
           <View style={{ alignItems: 'center', gap: t.spacing.sm }}>
             {overview.data?.avatarUrl ? (
@@ -266,30 +267,29 @@ export default function GroupScreen() {
             </View>
           </Card>
 
-          {/* Below main info: create-in-group button → wizard pre-seeded with this group. */}
+          {/* Create-in-group button → wizard pre-seeded with this group. */}
           <Button
             label="+ New challenge"
             onPress={() => router.push(`/challenge/new?groupId=${id}` as Href)}
           />
-
-          {/* Active challenges in this group. Skipped while the global list is loading so
-              we don't flash an empty state, and hidden entirely if the group has none. */}
-          {challenges.isPending ? null : activeGroupChallenges.length > 0 ? (
-            <View style={{ gap: t.spacing.sm }}>
-              <Text variant="subtitle">Active challenges</Text>
-              <View style={{ gap: t.spacing.xs }}>
-                {activeGroupChallenges.map((c) => (
-                  <GroupChallengeRow
-                    key={c.id}
-                    challenge={c}
-                    onPress={() => router.push(`/challenge/${c.id}` as Href)}
-                  />
-                ))}
-              </View>
-            </View>
-          ) : null}
         </ScrollView>
-      ) : tab === 'board' ? (
+      ) : tab === 'challenges' ? (
+        <ScrollView contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.sm, paddingBottom: t.spacing.xl }}>
+          <Button
+            label="+ New challenge"
+            onPress={() => router.push(`/challenge/new?groupId=${id}` as Href)}
+          />
+          {challenges.isPending ? (
+            <Text variant="muted">Loading…</Text>
+          ) : activeGroupChallenges.length > 0 ? (
+            activeGroupChallenges.map((c) => (
+              <GroupChallengeRow key={c.id} challenge={c} onPress={() => router.push(`/challenge/${c.id}` as Href)} />
+            ))
+          ) : (
+            <EmptyStateCard title="No active challenges" body="Create a challenge for this group to get going." />
+          )}
+        </ScrollView>
+      ) : (
         <FlatList
           data={board.data ?? []}
           keyExtractor={(e) => e.userId}
@@ -323,13 +323,6 @@ export default function GroupScreen() {
             />
           )}
         />
-      ) : (
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: t.spacing.xl, gap: t.spacing.sm }}>
-          <Text variant="heading">Global leaderboard</Text>
-          <Text variant="muted" style={{ textAlign: 'center' }}>
-            Ranking across all groups is coming soon.
-          </Text>
-        </View>
       )}
 
       {/* Settings sheet — slides up from bottom as one body (was a transparent fade). */}

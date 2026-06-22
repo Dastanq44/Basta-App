@@ -20,8 +20,6 @@ export function ProfileGroupCard({ group, onPress, isOwn }: ProfileGroupCardProp
   const t = useTheme();
   const avatarUrl = groupAvatarUrl(group.avatarPath);
   const roleLabel = group.targetRole ? ROLE_LABEL[group.targetRole] : null;
-  // On another user's profile, flag groups you'd open as a read-only preview.
-  const showPublicPreview = !isOwn && !group.viewerRole;
 
   const body = (
     <Card style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.md }}>
@@ -34,7 +32,6 @@ export function ProfileGroupCard({ group, onPress, isOwn }: ProfileGroupCardProp
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm }}>
           <Text variant="subtitle" numberOfLines={1} style={{ flex: 1 }}>{group.name}</Text>
           {isOwn && !group.isPublic ? <Pill label="Private" tone="muted" /> : null}
-          {showPublicPreview ? <Pill label="Public preview" tone="muted" /> : null}
         </View>
         <Text variant="caption" style={{ color: t.colors.mutedForeground }} numberOfLines={1}>
           {group.memberCount} member{group.memberCount === 1 ? '' : 's'}{roleLabel ? ` · ${roleLabel}` : ''}

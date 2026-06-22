@@ -69,8 +69,8 @@ export default function GlobalScreen() {
             />
           ) : (
             <EmptyState
-              title="No public submissions yet"
-              body="When people share verified proofs to Global from public profiles and challenges, they'll show up here."
+              title="No public proofs yet"
+              body="Verified proofs from public profiles and visible challenges show up here. Make your profile and a challenge public to share yours."
             />
           )
         }

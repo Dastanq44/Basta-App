@@ -21,6 +21,50 @@
 
 ---
 
+## 2026-06-18 — Claude (fable) / UI/UX pass (nav, Today, profile, group, offline)
+
+**Did:** A broad UI/UX streamlining pass. New migration
+`supabase/migrations/20260625000000_group_leaderboard_member_only.sql` (privacy). Done by phase:
+
+- **A — Nav order:** bottom tabs are now Today · Challenges · Groups · **Global** · Profile (moved
+  Global before Profile; route names unchanged).
+- **B — Today v2:** removed the dead bell affordance (no notification center exists); **due-today
+  section now sits above** the weekly summary (action-first); empty states use the new
+  `EmptyStateCard` (with a "New challenge" CTA when there are no challenges). *Follow-up:* a
+  server-authoritative `get_today_focus()` RPC (Today still computes `todayDay` client-side — tz
+  drift already accepted for display).
+- **C — Profile:** "Submissions" tab → **"Proofs"**; **WorldRankCard hidden** (no placeholder — no
+  real rank data); `ActivityPreview` back to **rolling last 30 days** (compact 5×7 grid, today
+  ringed, tap-a-day message, full 90-day in a bottom sheet); removed the "Public preview" pill from
+  profile cards (the destination screen is already a labelled preview).
+- **F — Group detail:** member tabs **Overview / Challenges / Leaderboard** (dropped the Global
+  placeholder tab; renamed Main→Overview, split challenges into their own tab). **Public group
+  preview** tabs **Overview / Challenges / Proofs** — **leaderboard removed entirely** for
+  non-members.
+- **L — Privacy:** hardened `list_public_group_leaderboard` to **member-only** (`is_group_member`),
+  so a non-member can't read group member identities/counts even via a direct RPC call. (The
+  `usePublicGroupLeaderboard` client hook is now unused — dead code, safe; cleanup follow-up.)
+- **G — Groups tab:** collapsed 3 competing create/join CTAs into one primary "New group" + one
+  secondary "Join with code"; GroupRow caption shows Public/Private instead of "View leaderboard".
+- **H — Global:** empty-state copy updated to the simplified visibility model.
+- **D (partial):** submission detail no longer **duplicates the title** (native header owns it).
+  Context boxes stay always-tappable — correct now: any submission you can see has a challenge/group
+  that's either participant-open or public-previewable (so no dead navigation). *Follow-up:* sticky
+  comment composer, context-box 2-row layout, and `can_edit_submission` (owner Edit) — not rushed.
+- **J — Offline UX:** new global `<OfflineBanner>` mounted in `app/_layout` (shows only when
+  offline, safe-area aware). *Follow-up:* a global queue-count chip on Today (per-challenge queue
+  badge already exists).
+- **New shared UI:** `InlineBanner`, `EmptyStateCard`, `OfflineBanner` (reused across the above).
+
+**Deferred (documented, not rushed — see TASKS T-086):** Phase E (challenge-detail sticky CTA +
+compact overview), Phase I (creation-wizard restructure), the `get_today_focus` / `can_edit_submission`
+RPCs, and a full Phase K accessibility sweep.
+
+**Blockers:** **USER must apply `20260625000000_group_leaderboard_member_only.sql`** (after 20260624).
+Twelve migrations now pending: `20260614`…`20260625`. typecheck + lint + expo-doctor (18/18) green.
+
+---
+
 ## 2026-06-18 — Claude (fable) / Public-preview fixes (boxes, report sheet, wording)
 
 **Did:** Fixed 5 issues on top of the public-previews work below. New migration

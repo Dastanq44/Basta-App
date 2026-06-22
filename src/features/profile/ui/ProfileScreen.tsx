@@ -8,7 +8,6 @@ import type { ProfileChallenge, ProfileGroup } from '../api';
 import { useProfileOverview, useViewableUserChallenges, useViewableUserGroups } from '../hooks';
 import { ProfileHeader } from './ProfileHeader';
 import { ProfileStatsGrid } from './ProfileStatsGrid';
-import { WorldRankCard } from './WorldRankCard';
 import { ActivityPreview, type ActivityDay } from './ActivityPreview';
 import { ProfileSubmissionRow } from './ProfileSubmissionRow';
 import { ProfileChallengeCard } from './ProfileChallengeCard';
@@ -139,12 +138,12 @@ export function ProfileScreen({ userId, isOwn = false, onOpenSettings }: Profile
         activeChallenges={overview.data?.activeChallengeCount ?? 0}
         groups={overview.data?.groupCount ?? 0}
       />
-      <WorldRankCard />
+      {/* World Rank card hidden — no real ranking data yet (no placeholder by default). */}
       <ActivityPreview submissions={submissions.data ?? []} selected={activityDay} onSelect={setActivityDay} />
       <SegmentedControl
         options={
           [
-            { label: 'Submissions', value: 'submissions' },
+            { label: 'Proofs', value: 'submissions' },
             { label: 'Challenges', value: 'challenges' },
             { label: 'Groups', value: 'groups' },
           ] as const

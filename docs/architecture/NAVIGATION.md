@@ -2,6 +2,31 @@
 
 > **Status: PROPOSAL (pre-implementation).** expo-router, file-based, typed.
 
+## Navigation v2 (2026-06, T-085)
+
+Bottom tab order is now **Today · Challenges · Groups · Global · Profile** (route names unchanged —
+`index`, `challenges`, `groups`, `explore`(title "Global"), `profile`). A global `<OfflineBanner>`
+is mounted above the navigator in `app/_layout` (visible only when offline).
+
+```mermaid
+flowchart LR
+  subgraph TabsV2["(tabs) — v2 order"]
+    direction LR
+    Today --> Challenges --> Groups --> Global --> Profile
+  end
+  Today -->|due card| CDetail["challenge/[id]"]
+  Challenges --> CDetail
+  Groups --> GDetail["group/[id] (Overview/Challenges/Leaderboard)"]
+  Global -->|"GlobalFeedCard"| SDetail["submission/[id]"]
+  Profile -->|"Proofs/Challenges/Groups tabs"| SDetail
+  Profile --> CDetail
+  Profile --> GDetail
+  CDetail -->|"member"| Submit["submit-proof (modal)"]
+  CDetail -->|"public, non-participant"| CPrev["PublicChallengePreview (read-only)"]
+  GDetail -->|"public, non-member"| GPrev["PublicGroupPreview (Overview/Challenges/Proofs)"]
+  SDetail -->|"context boxes"| UserP["user/[id]"]
+```
+
 ```mermaid
 flowchart TD
   Start([launch]) --> S{session valid?}

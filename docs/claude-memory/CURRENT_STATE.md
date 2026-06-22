@@ -3,7 +3,18 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-06-18 — by: Claude (fable) (public previews + privacy fixes)_
+_Last updated: 2026-06-18 — by: Claude (fable) (UI/UX pass)_
+
+> **2026-06-18 UI/UX pass (T-085):** tabs reordered (Today/Challenges/Groups/Global/Profile); Today
+> is action-first (due above weekly summary, dead bell removed); profile "Proofs" tab + hidden
+> WorldRankCard + rolling-30-day activity; group detail tabs Overview/Challenges/Leaderboard (member)
+> and Overview/Challenges/Proofs (public preview, **leaderboard removed for non-members**); groups
+> tab CTAs simplified; global empty-state copy; new shared `InlineBanner`/`EmptyStateCard`/
+> `OfflineBanner` (global offline bar in `app/_layout`); submission title de-duplicated. Privacy:
+> migration `20260625000000_group_leaderboard_member_only.sql` hardens `list_public_group_leaderboard`
+> to member-only. **USER must apply `20260625` (after 20260624).** Deferred (T-086): challenge-detail
+> sticky CTA, wizard restructure, `get_today_focus`/`can_edit_submission` RPCs, full a11y sweep.
+> typecheck + lint + expo-doctor (18/18) green.
 
 > **2026-06-18 public previews (T-084):** public challenges/groups on a profile are now tappable
 > into read-only **previews** (full member detail unchanged). New migration

@@ -186,6 +186,8 @@ app.config.ts  eas.json  package.json                                           
 | Public preview screens | `src/features/challenges/ui/PublicChallengePreview.tsx` · `src/features/groups/ui/PublicGroupPreview.tsx` | live (T-084) |
 | `get_group_access` + `created_at` (public group preview Created date) | `supabase/migrations/20260623000000_group_access_created_at.sql` | written — **USER must apply after 20260622** (T-084) |
 | `list_public_group_leaderboard` (public group preview Leaderboard tab) | `supabase/migrations/20260624000000_public_group_leaderboard.sql` | written — **USER must apply after 20260623** (T-084) |
+| Harden `list_public_group_leaderboard` → member-only (privacy) | `supabase/migrations/20260625000000_group_leaderboard_member_only.sql` | written — **USER must apply after 20260624** (T-085) |
+| Shared UI: inline banner / empty-state card / global offline bar | `src/shared/ui/InlineBanner.tsx` · `EmptyStateCard.tsx` · `OfflineBanner.tsx` | live (T-085) |
 | Theme mode (light/dark/system) + persistence | `src/shared/ui/theme/ThemeProvider.tsx` · `src/shared/lib/themePreference.ts` | live |
 | Reusable group create/join form | `src/features/groups/ui/GroupCreateOrJoinForm.tsx` | live (T-026) |
 | Group create/join modal route | `app/group/join-or-create.tsx` | live (T-026) |

@@ -71,6 +71,10 @@ private members / private submissions**:
 - The client branches member vs preview and **disables member-only hooks in public mode**, so no
   participant-only RPC runs. `get_profile_overview` streaks are also `can_view_submission`-gated for
   non-owners (no hidden-challenge activity leaks via stats).
+- **Public group preview shows NO leaderboard** (member identities + proof counts are not exposed to
+  non-members). `list_public_group_leaderboard` was re-gated to **member-only** (`is_group_member`)
+  in `20260625` — a non-member gets no rows even via a direct RPC call. Public group preview tabs:
+  Overview / Challenges / Proofs only.
 
 ## Proof-media (private bucket)
 

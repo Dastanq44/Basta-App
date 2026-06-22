@@ -153,14 +153,11 @@ export default function SubmissionScreen() {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
       >
-        {/* Title + date + sync badge. */}
-        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: t.spacing.sm }}>
-          <View style={{ flex: 1, gap: 4 }}>
-            <Text variant="title">{s.title}</Text>
-            <Text variant="muted">
-              {new Date(s.createdAt).toLocaleString(undefined, SUBMISSION_DETAIL_DATE_FMT)}
-            </Text>
-          </View>
+        {/* Date + sync badge. (Title lives in the native header — not duplicated here.) */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm }}>
+          <Text variant="muted" style={{ flex: 1 }}>
+            {new Date(s.createdAt).toLocaleString(undefined, SUBMISSION_DETAIL_DATE_FMT)}
+          </Text>
           <SyncBadge status={s.status} />
         </View>
 

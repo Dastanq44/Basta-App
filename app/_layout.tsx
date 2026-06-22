@@ -6,7 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { queryClient } from '@/shared/lib/queryClient';
 import { SessionProvider, useSession } from '@/features/auth';
-import { HeaderBackButton, KeyboardDoneAccessory, ThemeProvider, useTheme, useThemeMode } from '@/shared/ui';
+import { HeaderBackButton, KeyboardDoneAccessory, OfflineBanner, ThemeProvider, useTheme, useThemeMode } from '@/shared/ui';
 import { isAtTarget, useOnboardingGate } from '@/navigation/guards';
 import { initOffline } from '@/offline';
 import { push } from '@/services/notifications';
@@ -101,7 +101,9 @@ function RootNav() {
   }
 
   return (
-    <Stack
+    <View style={{ flex: 1, backgroundColor: t.colors.background }}>
+      <OfflineBanner />
+      <Stack
       screenOptions={{
         headerShown: false,
         // Replace the native back chevron + tap-tint with a custom Pressable that
@@ -158,6 +160,7 @@ function RootNav() {
       <Stack.Screen name="verifications" options={{ headerShown: true, title: 'Verify proofs' }} />
       <Stack.Screen name="profile/edit" options={{ headerShown: true, presentation: 'modal', title: 'Edit profile' }} />
       <Stack.Screen name="profile/appearance" options={{ headerShown: true, title: 'Appearance' }} />
-    </Stack>
+      </Stack>
+    </View>
   );
 }

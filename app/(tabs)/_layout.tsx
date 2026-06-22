@@ -30,12 +30,12 @@ export default function TabsLayout() {
         options={{ title: 'Challenges', tabBarIcon: ({ color }) => <Icon name="tasks" color={color} size={22} /> }}
       />
       <Tabs.Screen
-        name="explore"
-        options={{ title: 'Global', tabBarIcon: ({ color }) => <Icon name="explore" color={color} size={22} /> }}
-      />
-      <Tabs.Screen
         name="groups"
         options={{ title: 'Groups', tabBarIcon: ({ color }) => <Icon name="groups" color={color} size={22} /> }}
+      />
+      <Tabs.Screen
+        name="explore"
+        options={{ title: 'Global', tabBarIcon: ({ color }) => <Icon name="explore" color={color} size={22} /> }}
       />
       <Tabs.Screen
         name="profile"

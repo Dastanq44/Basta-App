@@ -27,37 +27,18 @@ export default function GroupsScreen() {
         contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.md, paddingBottom: t.spacing.xl }}
         ListHeaderComponent={
           <View style={{ gap: t.spacing.md, marginBottom: t.spacing.sm }}>
-            <View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
-            >
-              <Text variant="title">Groups</Text>
-              <Button
-                label="New"
-                size="sm"
-                icon={<Icon name="plus" size={15} color={t.colors.primaryForeground} />}
-                onPress={() => goCreateOrJoin('create')}
-              />
-            </View>
+            <Text variant="title">Groups</Text>
+            {/* One primary (create) + one secondary (join) — no competing duplicate CTAs. */}
             <View style={{ flexDirection: 'row', gap: t.spacing.sm }}>
               <View style={{ flex: 1 }}>
                 <Button
-                  label="Create group"
-                  variant="secondary"
-                  size="sm"
+                  label="New group"
+                  icon={<Icon name="plus" size={15} color={t.colors.primaryForeground} />}
                   onPress={() => goCreateOrJoin('create')}
                 />
               </View>
               <View style={{ flex: 1 }}>
-                <Button
-                  label="Join with code"
-                  variant="secondary"
-                  size="sm"
-                  onPress={() => goCreateOrJoin('join')}
-                />
+                <Button label="Join with code" variant="secondary" onPress={() => goCreateOrJoin('join')} />
               </View>
             </View>
           </View>
@@ -114,7 +95,9 @@ function GroupRow({ group, onPress }: { group: Group; onPress: () => void }) {
             <Text variant="subtitle" numberOfLines={1}>
               {group.name}
             </Text>
-            <Text variant="caption">View leaderboard</Text>
+            <Text variant="caption" style={{ color: t.colors.mutedForeground }}>
+              {group.isPublic ? 'Public group' : 'Private group'}
+            </Text>
           </View>
           <Icon name="chevron" size={18} color={t.colors.mutedForeground} />
         </View>

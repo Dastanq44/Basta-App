@@ -2,7 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { Image, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { type Href, useFocusEffect, useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
-import { Avatar, Button, Card, Icon, ProgressBar, Screen, StatTile, Text, useTheme } from '@/shared/ui';
+import { Avatar, Card, EmptyStateCard, Icon, ProgressBar, Screen, StatTile, Text, useTheme } from '@/shared/ui';
 import { useSession } from '@/features/auth';
 import { ChallengeRow, useChallenges } from '@/features/challenges';
 import { useMyRecentSubmissions } from '@/features/proofs';
@@ -127,54 +127,7 @@ export default function TodayScreen() {
               </Text>
             </View>
           </View>
-          {/* Bell icon — no longer wrapped in a circular card-bg button (the prior styles.iconBtn
-              made a small white circle). Just the glyph with a tap dim. */}
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Notifications"
-            hitSlop={8}
-            style={({ pressed }) => ({
-              width: 40,
-              height: 40,
-              alignItems: 'center',
-              justifyContent: 'center',
-              opacity: pressed ? 0.5 : 1,
-            })}
-          >
-            <Icon name="bell" size={22} color={t.colors.foreground} />
-          </Pressable>
-        </View>
-
-        {/* This week */}
-        <Card>
-          <Text variant="label">THIS WEEK</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, marginTop: t.spacing.xs }}>
-            <Text
-              style={{
-                fontSize: t.fontSize.xxxl,
-                fontWeight: '800',
-                color: t.colors.foreground,
-                // Extra-bold digits at xxxl (40) need an explicit line box: without it
-                // the ascender clips against the Card's top edge (the "0 / 7 …" looked
-                // half-cut). Padded ~15% above the font size; `includeFontPadding: false`
-                // also strips Android's default font-vertical padding.
-                lineHeight: t.fontSize.xxxl + 6,
-                includeFontPadding: false,
-              }}
-            >
-              {o?.weekActiveDays ?? 0}
-            </Text>
-            <Text variant="muted">/ 7 days active</Text>
-          </View>
-          <View style={{ marginTop: t.spacing.sm }}>
-            <ProgressBar value={weekPct} height={10} />
-          </View>
-        </Card>
-
-        {/* Stat tiles */}
-        <View style={{ flexDirection: 'row', gap: t.spacing.sm }}>
-          <StatTile value={o?.currentStreak ?? 0} label="Day streak" tone="streak" icon="🔥" />
-          <StatTile value={o ? `${o.todayDone}/${o.todayTotal}` : '0/0'} label="Today's tasks" tone="success" icon="✅" />
+          {/* No notification center yet → no bell affordance (was a dead button). */}
         </View>
 
         {/* Conditional: verify a friend */}
@@ -215,17 +168,45 @@ export default function TodayScreen() {
               ))}
             </View>
           ) : (challenges.data?.length ?? 0) > 0 ? (
-            <Card>
-              <Text variant="subtitle">All done for today 🎉</Text>
-              <Text variant="caption">Submit-the-day check: nothing left to log.</Text>
-            </Card>
+            <EmptyStateCard
+              title="All done for today 🎉"
+              body="Every active challenge has today's proof logged. Come back tomorrow to keep the streak."
+            />
           ) : (
-            <Card>
-              <Text variant="subtitle">No active challenges</Text>
-              <Text variant="caption">Start a challenge to begin building a streak.</Text>
-              <Button label="New challenge" onPress={() => router.push('/challenge/new')} />
-            </Card>
+            <EmptyStateCard
+              title="No active challenges"
+              body="Start a solo or group challenge — a daily photo proof keeps your streak alive."
+              icon="🎯"
+              actionLabel="New challenge"
+              onAction={() => router.push('/challenge/new')}
+            />
           )}
+        </View>
+
+        {/* Compact summary — current streak + this week, below the action-first Today section. */}
+        <Card>
+          <Text variant="label">THIS WEEK</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, marginTop: t.spacing.xs }}>
+            <Text
+              style={{
+                fontSize: t.fontSize.xxxl,
+                fontWeight: '800',
+                color: t.colors.foreground,
+                lineHeight: t.fontSize.xxxl + 6,
+                includeFontPadding: false,
+              }}
+            >
+              {o?.weekActiveDays ?? 0}
+            </Text>
+            <Text variant="muted">/ 7 days active</Text>
+          </View>
+          <View style={{ marginTop: t.spacing.sm }}>
+            <ProgressBar value={weekPct} height={10} />
+          </View>
+        </Card>
+        <View style={{ flexDirection: 'row', gap: t.spacing.sm }}>
+          <StatTile value={o?.currentStreak ?? 0} label="Day streak" tone="streak" icon="🔥" />
+          <StatTile value={o ? `${o.todayDone}/${o.todayTotal}` : '0/0'} label="Today's tasks" tone="success" icon="✅" />
         </View>
       </ScrollView>
     </Screen>

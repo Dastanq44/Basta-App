@@ -33,15 +33,12 @@ export function ProfileChallengeCard({ challenge, onPress, isOwn }: ProfileChall
     st.label === 'Completed' || st.label === 'Upcoming'
       ? `${challenge.durationDays} days`
       : `Day ${Math.min(st.day, challenge.durationDays)} of ${challenge.durationDays}`;
-  // On another user's profile, flag challenges you'd open as a read-only preview.
-  const showPublicPreview = !isOwn && !challenge.isParticipant;
 
   const body = (
     <Card style={{ gap: 6 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm }}>
         <Text variant="subtitle" numberOfLines={1} style={{ flex: 1 }}>{challenge.title}</Text>
         {isOwn && !challenge.isPublic ? <Pill label="Hidden" tone="muted" /> : null}
-        {showPublicPreview ? <Pill label="Public preview" tone="muted" /> : null}
         <Text variant="muted">›</Text>
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm, flexWrap: 'wrap' }}>
