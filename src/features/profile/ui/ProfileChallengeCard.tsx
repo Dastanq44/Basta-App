@@ -1,5 +1,5 @@
 import { Pressable, View } from 'react-native';
-import { Card, Text, useTheme } from '@/shared/ui';
+import { Card, Icon, ProgressBar, Text, useTheme } from '@/shared/ui';
 import type { ProfileChallenge } from '../api';
 import { Pill, type PillTone } from './Pill';
 
@@ -33,13 +33,16 @@ export function ProfileChallengeCard({ challenge, onPress, isOwn }: ProfileChall
     st.label === 'Completed' || st.label === 'Upcoming'
       ? `${challenge.durationDays} days`
       : `Day ${Math.min(st.day, challenge.durationDays)} of ${challenge.durationDays}`;
+  const progressFraction =
+    st.label === 'Completed' ? 1 : st.label === 'Upcoming' ? 0 : Math.min(1, st.day / Math.max(1, challenge.durationDays));
+  const barColor = st.tone === 'success' ? t.colors.success : t.colors.primary;
 
   const body = (
-    <Card style={{ gap: 6 }}>
+    <Card style={{ gap: 8 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm }}>
         <Text variant="subtitle" numberOfLines={1} style={{ flex: 1 }}>{challenge.title}</Text>
         {isOwn && !challenge.isPublic ? <Pill label="Hidden" tone="muted" /> : null}
-        <Text variant="muted">›</Text>
+        <Icon name="chevron" size={16} color={t.colors.mutedForeground} />
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm, flexWrap: 'wrap' }}>
         <Pill label={st.label} tone={st.tone} />
@@ -50,6 +53,7 @@ export function ProfileChallengeCard({ challenge, onPress, isOwn }: ProfileChall
           </Text>
         ) : null}
       </View>
+      {st.label !== 'Upcoming' ? <ProgressBar value={progressFraction} height={5} color={barColor} /> : null}
     </Card>
   );
 

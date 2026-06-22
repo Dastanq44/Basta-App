@@ -525,8 +525,9 @@ export default function CreateChallengeScreen() {
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <Screen padded={false} edges={['bottom']}>
         <Stack.Screen options={{ title: 'New challenge' }} />
-        <View style={{ paddingHorizontal: t.spacing.lg, paddingTop: t.spacing.md }}>
-          <ProgressBar value={progress} />
+        <View style={{ paddingHorizontal: t.spacing.lg, paddingTop: t.spacing.md, gap: t.spacing.sm }}>
+          <StepIndicator total={stepKeys.length} current={safeIdx} />
+          <ProgressBar value={progress} height={6} />
         </View>
 
         {/* Slide stage. During transitions, two absolutely-positioned layers overlap; the
@@ -580,3 +581,42 @@ export default function CreateChallengeScreen() {
 }
 
 const ABSOLUTE_LAYER = { position: 'absolute' as const, top: 0, left: 0, right: 0, bottom: 0 };
+
+/** Subtle steppe-style step indicator: completed steps are filled dots, the current step is a
+ *  small rotated diamond (qoshqar-müyiz nod), upcoming steps are hollow. Pure ornament, a11y-hidden
+ *  (the ProgressBar below conveys progress; this is decorative reinforcement). */
+function StepIndicator({ total, current }: { total: number; current: number }) {
+  const t = useTheme();
+  return (
+    <View
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 }}
+    >
+      {Array.from({ length: total }).map((_, i) => {
+        if (i === current) {
+          return (
+            <View
+              key={i}
+              style={{ width: 9, height: 9, backgroundColor: t.colors.primary, transform: [{ rotate: '45deg' }] }}
+            />
+          );
+        }
+        const done = i < current;
+        return (
+          <View
+            key={i}
+            style={{
+              width: 7,
+              height: 7,
+              borderRadius: 3.5,
+              backgroundColor: done ? t.colors.primary : 'transparent',
+              borderWidth: done ? 0 : 1.5,
+              borderColor: t.colors.border,
+            }}
+          />
+        );
+      })}
+    </View>
+  );
+}

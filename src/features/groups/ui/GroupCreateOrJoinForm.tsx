@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
-import { Button, Input, Text, useTheme, VisibilityToggle } from '@/shared/ui';
+import { Button, Icon, Input, Text, useTheme, VisibilityToggle } from '@/shared/ui';
 // Relative imports keep this free of a self-cycle once `index.ts` re-exports ui.
 import { createGroupInput, groupDescriptionSchema, INVITE_CODE_LENGTH, joinGroupInput } from '../model';
 import { useCreateGroup, useJoinGroup, useUpdateGroupMeta } from '../hooks';
@@ -187,50 +187,91 @@ export function GroupCreateOrJoinForm({
   );
 }
 
+/** Create vs Join presented as two deliberate choice cards (not a thin toggle) — each with an
+ *  icon, title, and one-line description; the selected card gets a primary border + soft fill. */
 function ModeToggle({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => void }) {
-  const t = useTheme();
-  const options: { value: Mode; label: string }[] = [
-    { value: 'create', label: 'Create' },
-    { value: 'join', label: 'Join with code' },
+  const options: { value: Mode; icon: 'plus' | 'groups'; title: string; sub: string }[] = [
+    { value: 'create', icon: 'plus', title: 'Create a group', sub: 'Start your own and invite friends' },
+    { value: 'join', icon: 'groups', title: 'Join with a code', sub: 'Enter an invite code from a friend' },
   ];
   return (
-    <View
+    <View style={{ gap: 10 }}>
+      {options.map((o) => (
+        <ModeChoiceCard
+          key={o.value}
+          icon={o.icon}
+          title={o.title}
+          sub={o.sub}
+          selected={o.value === mode}
+          onPress={() => onChange(o.value)}
+        />
+      ))}
+    </View>
+  );
+}
+
+function ModeChoiceCard({
+  icon,
+  title,
+  sub,
+  selected,
+  onPress,
+}: {
+  icon: 'plus' | 'groups';
+  title: string;
+  sub: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  const t = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      accessibilityLabel={title}
+      onPress={onPress}
       style={{
         flexDirection: 'row',
-        backgroundColor: t.colors.muted,
-        borderRadius: t.radius.md,
-        padding: 4,
+        alignItems: 'center',
+        gap: t.spacing.md,
+        padding: t.spacing.md,
+        minHeight: t.minTapTarget + 16,
+        borderRadius: t.radius.lg,
+        borderWidth: 1.5,
+        borderColor: selected ? t.colors.primary : t.colors.border,
+        backgroundColor: selected ? t.colors.primarySoft : t.colors.card,
       }}
     >
-      {options.map((o) => {
-        const selected = o.value === mode;
-        return (
-          <Pressable
-            key={o.value}
-            accessibilityRole="button"
-            accessibilityState={{ selected }}
-            onPress={() => onChange(o.value)}
-            style={{
-              flex: 1,
-              paddingVertical: 10,
-              borderRadius: t.radius.md - 2,
-              backgroundColor: selected ? t.colors.background : 'transparent',
-              alignItems: 'center',
-              minHeight: t.minTapTarget,
-              justifyContent: 'center',
-            }}
-          >
-            <Text
-              style={{
-                color: selected ? t.colors.foreground : t.colors.mutedForeground,
-                fontWeight: '600',
-              }}
-            >
-              {o.label}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </View>
+      <View
+        style={{
+          width: 40,
+          height: 40,
+          borderRadius: t.radius.md,
+          backgroundColor: selected ? t.colors.primary : t.colors.muted,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Icon name={icon} size={20} color={selected ? t.colors.primaryForeground : t.colors.mutedForeground} />
+      </View>
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text variant="subtitle" style={{ color: selected ? t.colors.primary : t.colors.foreground }}>{title}</Text>
+        <Text variant="caption">{sub}</Text>
+      </View>
+      {/* Radio indicator. */}
+      <View
+        style={{
+          width: 20,
+          height: 20,
+          borderRadius: 10,
+          borderWidth: 2,
+          borderColor: selected ? t.colors.primary : t.colors.border,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        {selected ? <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: t.colors.primary }} /> : null}
+      </View>
+    </Pressable>
   );
 }

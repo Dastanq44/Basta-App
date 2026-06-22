@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, View } from 'react-native';
 import { type Href, Link, Stack } from 'expo-router';
 import { signInInput, useSignIn } from '@/features/auth';
-import { Button, Input, Screen, Text, useTheme } from '@/shared/ui';
+import { Button, Input, OrnamentDivider, OrnamentMedallion, Screen, Text, useTheme } from '@/shared/ui';
+import { useI18n } from '@/shared/i18n';
 
 export default function SignInScreen() {
   const t = useTheme();
+  const { t: tr } = useI18n();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
@@ -35,7 +37,13 @@ export default function SignInScreen() {
         style={{ flex: 1 }}
       >
         <View style={{ flex: 1, justifyContent: 'center', gap: t.spacing.lg }}>
-          <Text variant="title">Welcome back</Text>
+          {/* Branded hero — medallion + wordmark + ornament band. */}
+          <View style={{ alignItems: 'center', gap: t.spacing.sm }}>
+            <OrnamentMedallion size={72} />
+            <Text variant="title" style={{ textAlign: 'center' }}>{tr('auth.welcome')}</Text>
+            <Text variant="muted" style={{ textAlign: 'center' }}>{tr('auth.tagline')}</Text>
+            <OrnamentDivider style={{ alignSelf: 'stretch', marginTop: t.spacing.xs }} />
+          </View>
           <Input
             label="Email"
             value={email}
@@ -66,7 +74,7 @@ export default function SignInScreen() {
               {mutation.error instanceof Error ? mutation.error.message : 'Sign in failed.'}
             </Text>
           ) : null}
-          <Button label="Sign in" onPress={onSubmit} loading={mutation.isPending} />
+          <Button label={tr('auth.signIn')} onPress={onSubmit} loading={mutation.isPending} />
           {/* typedRoutes hasn't generated the new (auth)/forgot-password path in the route
               union yet; the resolved string href is what expo-router navigates with. */}
           <Link href={'/(auth)/forgot-password' as Href}>

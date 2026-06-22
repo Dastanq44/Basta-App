@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, View } from 'react-native';
 import { Link, Stack, useRouter } from 'expo-router';
 import { signUpInput, useSignUp } from '@/features/auth';
-import { Button, Input, Screen, Text, useTheme } from '@/shared/ui';
+import { Button, Input, OrnamentDivider, OrnamentMedallion, Screen, Text, useTheme } from '@/shared/ui';
+import { useI18n } from '@/shared/i18n';
 
 export default function SignUpScreen() {
   const t = useTheme();
   const router = useRouter();
+  const { t: tr } = useI18n();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
@@ -43,7 +45,12 @@ export default function SignUpScreen() {
         style={{ flex: 1 }}
       >
         <View style={{ flex: 1, justifyContent: 'center', gap: t.spacing.lg }}>
-          <Text variant="title">Create your account</Text>
+          <View style={{ alignItems: 'center', gap: t.spacing.sm }}>
+            <OrnamentMedallion size={72} color={t.colors.accent} background={t.colors.accent + '1F'} />
+            <Text variant="title" style={{ textAlign: 'center' }}>{tr('auth.welcome')}</Text>
+            <Text variant="muted" style={{ textAlign: 'center' }}>{tr('auth.tagline')}</Text>
+            <OrnamentDivider style={{ alignSelf: 'stretch', marginTop: t.spacing.xs }} />
+          </View>
           <Input
             label="Email"
             value={email}
@@ -75,7 +82,7 @@ export default function SignUpScreen() {
               {mutation.error instanceof Error ? mutation.error.message : 'Sign up failed.'}
             </Text>
           ) : null}
-          <Button label="Create account" onPress={onSubmit} loading={mutation.isPending} />
+          <Button label={tr('auth.signUp')} onPress={onSubmit} loading={mutation.isPending} />
           <Link href="/(auth)/sign-in">
             <Text variant="muted" style={{ textAlign: 'center' }}>
               Already have an account? Sign in

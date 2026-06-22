@@ -1,5 +1,5 @@
-import { Image, View } from 'react-native';
-import { Avatar, Text, useTheme } from '@/shared/ui';
+import { View } from 'react-native';
+import { Avatar, OrnamentDivider, Text, useTheme } from '@/shared/ui';
 
 export type ProfileHeaderProps = {
   avatarUrl: string | null;
@@ -8,17 +8,13 @@ export type ProfileHeaderProps = {
   description?: string;
 };
 
-/** Compact identity block: avatar + name + @username + optional bio. Empty bio/username collapse
- *  (no awkward blank space). Avatar is prominent but not oversized (88pt). */
+/** Compact identity block: avatar + name + @username + optional bio, closed by a subtle ornament
+ *  band that marks the transition into the profile's tabbed content. Empty bio/username collapse. */
 export function ProfileHeader({ avatarUrl, displayName, username, description }: ProfileHeaderProps) {
   const t = useTheme();
   return (
-    <View style={{ alignItems: 'center', gap: 3, paddingVertical: t.spacing.md }}>
-      {avatarUrl ? (
-        <Image source={{ uri: avatarUrl }} style={{ width: 112, height: 112, borderRadius: 56 }} />
-      ) : (
-        <Avatar name={displayName} size={112} />
-      )}
+    <View style={{ alignItems: 'center', gap: 3, paddingTop: t.spacing.md, paddingBottom: t.spacing.sm }}>
+      <Avatar name={displayName} uri={avatarUrl} size={112} />
       <Text
         style={{ textAlign: 'center', marginTop: t.spacing.sm, fontSize: t.fontSize.xxl, fontWeight: '800', color: t.colors.foreground }}
         numberOfLines={1}
@@ -38,6 +34,7 @@ export function ProfileHeader({ avatarUrl, displayName, username, description }:
           {description}
         </Text>
       ) : null}
+      <OrnamentDivider style={{ marginTop: t.spacing.md, alignSelf: 'stretch', paddingHorizontal: t.spacing.xl }} />
     </View>
   );
 }

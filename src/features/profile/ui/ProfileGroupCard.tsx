@@ -1,5 +1,5 @@
-import { Image, Pressable, View } from 'react-native';
-import { Avatar, Card, Text, useTheme } from '@/shared/ui';
+import { Pressable, View } from 'react-native';
+import { Avatar, Card, Icon, Text, useTheme } from '@/shared/ui';
 import { groupAvatarUrl } from '@/features/groups';
 import type { MemberRole } from '@/entities';
 import type { ProfileGroup } from '../api';
@@ -23,11 +23,7 @@ export function ProfileGroupCard({ group, onPress, isOwn }: ProfileGroupCardProp
 
   const body = (
     <Card style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.md }}>
-      {avatarUrl ? (
-        <Image source={{ uri: avatarUrl }} style={{ width: 48, height: 48, borderRadius: 24 }} />
-      ) : (
-        <Avatar name={group.name} size={48} />
-      )}
+      <Avatar name={group.name} uri={avatarUrl} size={48} />
       <View style={{ flex: 1, gap: 2 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm }}>
           <Text variant="subtitle" numberOfLines={1} style={{ flex: 1 }}>{group.name}</Text>
@@ -40,7 +36,7 @@ export function ProfileGroupCard({ group, onPress, isOwn }: ProfileGroupCardProp
           <Text variant="caption" numberOfLines={1}>{group.description}</Text>
         ) : null}
       </View>
-      <Text variant="muted">›</Text>
+      <Icon name="chevron" size={16} color={t.colors.mutedForeground} />
     </Card>
   );
 
