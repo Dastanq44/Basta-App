@@ -7,6 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { queryClient } from '@/shared/lib/queryClient';
 import { SessionProvider, useSession } from '@/features/auth';
 import { HeaderBackButton, KeyboardDoneAccessory, OfflineBanner, ThemeProvider, useTheme, useThemeMode } from '@/shared/ui';
+import { I18nProvider } from '@/shared/i18n';
 import { isAtTarget, useOnboardingGate } from '@/navigation/guards';
 import { initOffline } from '@/offline';
 import { push } from '@/services/notifications';
@@ -35,11 +36,13 @@ export default function RootLayout() {
       <SessionProvider>
         <QueryClientProvider client={queryClient}>
           <ThemeProvider>
-            <ThemedStatusBar />
-            <RootNav />
-            {/* Shared iOS "Done" bar above the keyboard. UIKit binds it to multiline
-                TextInputs by `nativeID`, so a single instance covers the whole app. */}
-            <KeyboardDoneAccessory />
+            <I18nProvider>
+              <ThemedStatusBar />
+              <RootNav />
+              {/* Shared iOS "Done" bar above the keyboard. UIKit binds it to multiline
+                  TextInputs by `nativeID`, so a single instance covers the whole app. */}
+              <KeyboardDoneAccessory />
+            </I18nProvider>
           </ThemeProvider>
         </QueryClientProvider>
       </SessionProvider>
@@ -154,7 +157,9 @@ function RootNav() {
         options={{ headerShown: true, presentation: 'modal', title: 'New group' }}
       />
       <Stack.Screen name="group/archived" options={{ headerShown: true, title: 'Archived groups' }} />
-      <Stack.Screen name="submission/[id]" options={{ headerShown: true, title: 'Proof' }} />
+      {/* submission/[id] renders its own in-body ScreenHeader (like challenge/group) so the
+          native bar-button tap-highlight isn't visible. */}
+      <Stack.Screen name="submission/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="user/[id]" options={{ headerShown: true, title: 'Profile' }} />
       <Stack.Screen name="blocked-users" options={{ headerShown: true, title: 'Blocked users' }} />
       <Stack.Screen name="verifications" options={{ headerShown: true, title: 'Verify proofs' }} />
