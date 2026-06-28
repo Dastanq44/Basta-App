@@ -2,6 +2,8 @@ import type { ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
 import { Text } from './Text';
 import { useTheme } from './theme';
+import { GlassIconButton } from './glass/GlassIconButton';
+import { useGlassMode } from './glass/glassSupport';
 
 export type ScreenHeaderProps = {
   /** Centered title. */
@@ -29,10 +31,14 @@ export type ScreenHeaderProps = {
  */
 export function ScreenHeader({ title, onBack, rightAction }: ScreenHeaderProps) {
   const t = useTheme();
+  // On iOS 26 (Liquid Glass available) the back + action controls float in glass circles;
+  // everywhere else they stay the lightweight plain Pressables (no glass dependency at runtime).
+  const glass = useGlassMode() === 'liquid';
+
   return (
     <View
       style={{
-        height: 44,
+        height: glass ? 52 : 44,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -41,9 +47,13 @@ export function ScreenHeader({ title, onBack, rightAction }: ScreenHeaderProps) 
     >
       {/* Left slot — back chevron or empty spacer to keep the title centered. */}
       {onBack ? (
-        <HeaderBackButton onPress={onBack} />
+        glass ? (
+          <GlassIconButton icon={<BackChevron color={t.colors.foreground} />} onPress={onBack} accessibilityLabel="Back" />
+        ) : (
+          <HeaderBackButton onPress={onBack} />
+        )
       ) : (
-        <View style={{ width: 40, height: 40 }} />
+        <View style={{ width: glass ? 44 : 40, height: glass ? 44 : 40 }} />
       )}
 
       {/* Title — centered. flex: 1 so it absorbs the middle column. */}
@@ -62,25 +72,46 @@ export function ScreenHeader({ title, onBack, rightAction }: ScreenHeaderProps) 
 
       {/* Right slot — action button or empty spacer. */}
       {rightAction ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={rightAction.accessibilityLabel}
-          onPress={rightAction.onPress}
-          hitSlop={8}
-          style={({ pressed }) => ({
-            width: 40,
-            height: 40,
-            alignItems: 'center',
-            justifyContent: 'center',
-            opacity: pressed ? 0.5 : 1,
-          })}
-        >
-          {rightAction.icon}
-        </Pressable>
+        glass ? (
+          <GlassIconButton icon={rightAction.icon} onPress={rightAction.onPress} accessibilityLabel={rightAction.accessibilityLabel} />
+        ) : (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={rightAction.accessibilityLabel}
+            onPress={rightAction.onPress}
+            hitSlop={8}
+            style={({ pressed }) => ({
+              width: 40,
+              height: 40,
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: pressed ? 0.5 : 1,
+            })}
+          >
+            {rightAction.icon}
+          </Pressable>
+        )
       ) : (
-        <View style={{ width: 40, height: 40 }} />
+        <View style={{ width: glass ? 44 : 40, height: glass ? 44 : 40 }} />
       )}
     </View>
+  );
+}
+
+/** Dep-free back chevron drawn from a single rotated View (used inside the glass back button). */
+function BackChevron({ color }: { color: string }) {
+  return (
+    <View
+      style={{
+        width: 11,
+        height: 11,
+        borderTopWidth: 2.2,
+        borderLeftWidth: 2.2,
+        borderColor: color,
+        transform: [{ rotate: '-45deg' }],
+        marginLeft: 3,
+      }}
+    />
   );
 }
 

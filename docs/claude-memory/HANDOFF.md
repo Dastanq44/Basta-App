@@ -21,6 +21,41 @@
 
 ---
 
+## 2026-06-28 (pm) — Claude (opus) / full localization (Phase A) + Liquid Glass (Phase B)
+
+**Did:** Two-phase update (D-017). Three commits on `mvp`:
+- `b64d80e` chore(snapshot): checkpoint before full i18n and liquid glass (**empty marker** — tree
+  was clean/pushed at `12c9abf`).
+- `351e4ee` fix(i18n): complete localization coverage — **core daily loop now localizes in the
+  selected app language** + **app-language dates/numbers** (`fmtDate`/`fmtDateTime`/`fmtNumber`,
+  `formatDate`/etc.) + enum mappers (`formatChallengeCategory`/`Mode`/`SubmissionStatus`/`MemberRole`,
+  `formatDays`). Swept: submission/challenge/group detail, public previews, GlobalFeedCard, verify,
+  verifications, blocked-users, ReportSheet (+reasons), localized stack titles in `app/_layout`.
+  Raw enums removed from UI.
+- (this commit) feat(ios): adopt liquid glass navigation — see Phase B below.
+
+**Phase B (Liquid Glass, iPhone-first + gated):** added `expo-glass-effect` + `expo-blur` (clean
+reinstall, no peer issues this time). New `src/shared/ui/glass/*` (`GlassSurface`/`GlassPill`/
+`GlassIconButton`/`GlassHeader` + `useGlassMode`/`isGlassAvailable`/`useReduceTransparency`) + a
+`glass` token group per theme. **iOS 26 → native Liquid Glass tab bar** (`NativeTabs`, SF Symbols,
+localized labels, minimize-on-scroll); **Android / iOS<26 → refined floating JS tabs**. `ScreenHeader`
+auto-upgrades to glass back/action circles on iOS 26 → every detail screen gets it for free. Blue
+stays the CTA in all 4 themes; content cards stay solid; Reduce Transparency → solid fallback.
+**react-native-reanimated NOT added.**
+
+**Checks:** typecheck + lint + expo-doctor (18/18) green after BOTH phases. **No backend / migration.**
+
+**Next up / residual:** (1) finish localization on auth secondary screens (verify-email/reset/forgot,
+field labels), onboarding profile-setup, profile/edit, group edit form, ProofComposer, ProfileScreen
+stat labels, **zod schema validation messages** (form-layer mapping), activity-heatmap tooltips —
+infra (helpers + mappers + dicts) is all in place, this is mechanical. (2) Optional Phase B polish:
+glass BottomSheet/menus on iOS, glass SegmentedControl, hero stat capsules. (3) **Liquid Glass can
+only be visually verified on real iOS 26 hardware** — everywhere else it's the frosted/solid fallback.
+
+**Branch / commit:** `mvp`. Packages added: expo-glass-effect ~0.1.10, expo-blur ~15.0.8.
+
+---
+
 ## 2026-06-28 — Claude (opus) / appearance + localization upgrade (4 themes, 3 languages)
 
 **Did:** Frontend/local-pref/packaging upgrade (D-016). **No DB migration.** All green

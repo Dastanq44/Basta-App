@@ -42,12 +42,30 @@ export type ColorTokens = {
   ring: string;
 };
 
+/** Liquid-glass surface tokens (used by the glass component layer + its blur/themed fallbacks).
+ *  Apply alpha at the usage site — these are base colors so each theme reads correctly. */
+export type GlassTokens = {
+  /** Overlay tint painted over the blur (translucent at the call site). */
+  tint: string;
+  /** A stronger tint for higher-contrast contexts (e.g. over photos). */
+  tintStrong: string;
+  /** Hairline specular border on the glass edge. */
+  border: string;
+  /** Top highlight sheen. */
+  highlight: string;
+  /** Scrim painted behind clear glass to keep small text legible. */
+  backdrop: string;
+  /** expo-blur tint family for the non-Liquid-Glass fallback. */
+  blurTint: 'light' | 'dark' | 'default';
+};
+
 export type ThemeTokens = {
   /** Which named theme produced these tokens. */
   id: ThemeId;
   /** Whether this is a dark theme (drives the status-bar content color). */
   isDark: boolean;
   colors: ColorTokens;
+  glass: GlassTokens;
   radius: { sm: number; md: number; lg: number; xl: number; xxl: number; full: number };
   spacing: { xs: number; sm: number; md: number; lg: number; xl: number; xxl: number };
   fontSize: { xs: number; sm: number; md: number; lg: number; xl: number; xxl: number; xxxl: number };
@@ -182,8 +200,17 @@ const sageGrowthColors: ColorTokens = {
   ring: '#2563EB',
 };
 
+// Glass derives mostly from light/dark; steppeSky gets a faintly warm tint to keep its character.
+function glassFor(id: ThemeId, isDark: boolean): GlassTokens {
+  if (isDark) {
+    return { tint: '#13233A', tintStrong: '#0C1828', border: '#86A9D6', highlight: '#FFFFFF', backdrop: '#000000', blurTint: 'dark' };
+  }
+  const tint = id === 'steppeSky' ? '#FFFDF7' : '#FFFFFF';
+  return { tint, tintStrong: tint, border: '#FFFFFF', highlight: '#FFFFFF', backdrop: '#0A2540', blurTint: 'light' };
+}
+
 function buildTheme(id: ThemeId, isDark: boolean, colors: ColorTokens): ThemeTokens {
-  return { id, isDark, colors, radius, spacing, fontSize, fonts, shadow, minTapTarget };
+  return { id, isDark, colors, glass: glassFor(id, isDark), radius, spacing, fontSize, fonts, shadow, minTapTarget };
 }
 
 export const THEMES: Record<ThemeId, ThemeTokens> = {

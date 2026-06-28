@@ -3,7 +3,20 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-06-28 — by: Claude (opus) (appearance + localization upgrade)_
+_Last updated: 2026-06-28 (pm) — by: Claude (opus) (full i18n + Liquid Glass)_
+
+> **2026-06-28 (pm) full localization + Liquid Glass (D-017):** the core daily loop + all detail
+> screens now localize in the selected app language, with **app-language date/number formatting**
+> (`fmtDate`/`fmtDateTime`/`fmtNumber` on `useI18n`) + enum mappers (category/mode/status/role/days);
+> stack titles localize too. **iPhone-first Liquid Glass**: new `src/shared/ui/glass/*`
+> (`GlassSurface`/`GlassPill`/`GlassIconButton`/`GlassHeader`, capability-gated via
+> `isLiquidGlassAvailable` + Reduce-Transparency) + per-theme `glass` tokens; iOS 26 renders the
+> **native Liquid Glass tab bar** (`expo-router/unstable-native-tabs`, SF Symbols, minimize-on-scroll)
+> while Android/iOS<26 keep the refined floating JS tabs; `ScreenHeader` auto-upgrades to glass
+> controls on iOS 26. Blue stays the CTA in all 4 themes; content cards stay solid. Packages added:
+> expo-glass-effect ~0.1.10, expo-blur ~15.0.8 (no reanimated). **No backend/migration.** Commits
+> `b64d80e`→`351e4ee`→feat(ios). typecheck+lint+expo-doctor (18/18) green. Residual i18n (auth
+> secondary/onboarding/profile-edit/proof-composer/schema messages) tracked — infra in place.
 
 > **2026-06-28 appearance + localization upgrade (D-016):** **4 themes** (whiteBlue DEFAULT,
 > darkBlue, steppeSky, sageGrowth — `tokens.ts` `THEMES`; blue is the CTA in all four) + **3

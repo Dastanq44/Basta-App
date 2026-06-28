@@ -54,4 +54,14 @@ export { LanguageOptionCard } from './LanguageOptionCard';
 export type { LanguageOptionCardProps } from './LanguageOptionCard';
 export { ThemeProvider, useTheme, useThemeMode, lightTheme, darkTheme, THEMES } from './theme';
 export type { ThemeTokens, ColorTokens, ThemeId } from './theme';
+export {
+  GlassSurface,
+  GlassPill,
+  GlassIconButton,
+  GlassHeader,
+  isGlassAvailable,
+  useGlassMode,
+  useReduceTransparency,
+} from './glass';
+export type { GlassSurfaceProps, GlassPillProps, GlassIconButtonProps, GlassHeaderProps, GlassMode } from './glass';
 export { KeyboardDoneAccessory, KEYBOARD_DONE_ACCESSORY_ID } from './KeyboardDoneAccessory';

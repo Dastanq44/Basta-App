@@ -299,3 +299,35 @@ Date · Status · Decision · Why · Consequences
 - **Consequences / NOT done:** Liquid Glass intentionally deferred (clean foundations only). i18n
   coverage is extensive on touched surfaces but not 100% app-wide; a language switcher already
   exists (preferences screen). No `system` theme mode anymore.
+
+## D-017 — Full localization + iPhone-first Liquid Glass (2026-06)   [Accepted; extends D-016]
+- **Date:** 2026-06-28
+- **Localization (Phase A):** i18n now drives the **core daily-use surface** in the selected app
+  language, including **app-language date/number formatting** (NOT device locale). Added
+  `formatDate`/`formatDateTime`/`formatNumber` + `fmtDate`/`fmtDateTime`/`fmtNumber` on `useI18n()`,
+  and enum→label mappers (`formatChallengeCategory`/`Mode`/`SubmissionStatus`/`MemberRole`,
+  `formatDays`). Raw enum rendering (`titleCase(category)`, `Solo`, `{n} days`, `Day X`, status/role
+  pills) is replaced with keyed lookups. Stack titles localize via `useI18n` in `app/_layout`.
+  Big en/ru/kk expansion. **Residual** (infra in place, mechanical to finish): auth field labels +
+  verify-email/reset/forgot, onboarding profile-setup, profile/edit, group edit form, ProofComposer,
+  ProfileScreen stat labels, zod schema validation messages, activity-heatmap tooltips.
+- **Liquid Glass (Phase B):** iPhone-first + availability-gated. Packages added: **expo-glass-effect**
+  (`~0.1.10`) + **expo-blur** (`~15.0.8`); native tabs use `expo-router/unstable-native-tabs` (already
+  in expo-router 6, no install). **react-native-reanimated NOT added** (native tabs handle minimize;
+  RN Animated covers press springs) — keeps the toolchain simple.
+  - **Tab bar:** on iOS 26 (where `isLiquidGlassAvailable()`), `app/(tabs)/_layout` renders the
+    **native Liquid Glass tab bar** (`NativeTabs`, SF Symbol icons, localized labels,
+    `minimizeBehavior="onScrollDown"`). Android + iOS<26 keep the refined floating JS `Tabs`.
+  - **Glass layer:** `src/shared/ui/glass/*` — `GlassSurface` (GlassView → BlurView → solid, gated by
+    capability + Reduce Transparency), `GlassPill`, `GlassIconButton` (spring press), `GlassHeader`,
+    `useGlassMode`/`isGlassAvailable`/`useReduceTransparency`. New `glass` token group per theme in
+    `tokens.ts`. `ScreenHeader` auto-upgrades its back/action controls to glass circles on iOS 26, so
+    ALL detail screens get the treatment without per-screen edits.
+  - **Rules honored:** glass is for navigation + controls only; content cards stay solid; **blue
+    stays the primary action color in all 4 themes**; Reduce Transparency → solid; the 4 themes are
+    unchanged. No backend change.
+- **Why:** the user asked for full app localization in the chosen language + a modern, premium,
+  iPhone-first Liquid Glass feel that works WITH the theme system.
+- **Consequences:** Liquid Glass is only the *real* effect on iOS 26 hardware (can't be verified in
+  this dev environment); everywhere else it's a frosted-blur / solid fallback. BottomSheet glass +
+  remaining localization screens are tracked follow-ups.
