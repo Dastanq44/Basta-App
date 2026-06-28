@@ -1,7 +1,6 @@
 // Groups API — thin Supabase wrappers. The DB trigger `trg_groups_add_owner` ensures the
 // creator is added as a `member_role=owner` row in group_members; clients don't have to.
-// SDK 54 / expo-file-system v19: the classic read API lives under the `/legacy` entry.
-import * as FileSystem from 'expo-file-system/legacy';
+import { readLocalImageBytes } from '@/shared/lib/localImage';
 import { supabase } from '@/shared/lib/supabase';
 import { env } from '@/shared/lib/env';
 import type { Group, GroupId, MemberRole, Submission } from '@/entities';
@@ -326,55 +325,16 @@ export class AvatarUploadError extends Error {
   }
 }
 
-// Generous local guard — the picker crops 1:1 at quality 0.8, so real photos land far under
-// this. It only catches a genuinely oversized file before we waste an upload round-trip.
-const MAX_AVATAR_BYTES = 10 * 1024 * 1024;
-
-function describeError(e: unknown): string {
-  if (e instanceof Error) return e.message;
-  if (typeof e === 'string') return e;
+/** Reads a local image URI into bytes via the shared expo-file-system reader, mapping its plain
+ *  errors to the typed `too-large` / `local-read` kinds the group-avatar UI branches on. */
+async function readGroupAvatarBytes(localUri: string): Promise<Uint8Array> {
   try {
-    return JSON.stringify(e);
-  } catch {
-    return String(e);
-  }
-}
-
-/** base64 → bytes. `atob` is provided by Hermes (SDK 54) and typed via the DOM lib. */
-function base64ToBytes(base64: string): Uint8Array {
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes;
-}
-
-/** Reads a local image URI into bytes via expo-file-system. More robust on-device than
- *  `fetch(file://…)` / `fetch(content://…)`, whose RN polyfill fails on some Android builds
- *  and content-provider URIs. Throws a typed `local-read` / `too-large`. */
-async function readLocalImageBytes(localUri: string): Promise<Uint8Array> {
-  let info: FileSystem.FileInfo;
-  try {
-    info = await FileSystem.getInfoAsync(localUri);
+    return await readLocalImageBytes(localUri);
   } catch (e) {
-    throw new AvatarUploadError('local-read', `Could not stat local image: ${describeError(e)}`, e);
+    const msg = e instanceof Error ? e.message : String(e);
+    const kind = /limit is/i.test(msg) ? 'too-large' : 'local-read';
+    throw new AvatarUploadError(kind, msg, e);
   }
-  if (!info.exists) {
-    throw new AvatarUploadError('local-read', 'The selected image no longer exists on this device.');
-  }
-  if (typeof info.size === 'number' && info.size > MAX_AVATAR_BYTES) {
-    const mb = (info.size / (1024 * 1024)).toFixed(1);
-    throw new AvatarUploadError('too-large', `Image is ${mb} MB; the limit is ${MAX_AVATAR_BYTES / (1024 * 1024)} MB.`);
-  }
-  let base64: string;
-  try {
-    base64 = await FileSystem.readAsStringAsync(localUri, { encoding: FileSystem.EncodingType.Base64 });
-  } catch (e) {
-    throw new AvatarUploadError('local-read', `Could not read local image: ${describeError(e)}`, e);
-  }
-  if (!base64) {
-    throw new AvatarUploadError('local-read', 'The selected image is empty or unreadable.');
-  }
-  return base64ToBytes(base64);
 }
 
 /** Maps a Supabase Storage error to a typed kind. Bucket-missing is checked before the generic
@@ -430,7 +390,7 @@ export async function uploadGroupAvatar(groupId: string, localUri: string): Prom
   const remotePath = `${uid}/${groupId}-${Date.now()}.jpg`;
   console.log('[basta][avatar-upload] remotePath', { remotePath });
 
-  const bytes = await readLocalImageBytes(localUri);
+  const bytes = await readGroupAvatarBytes(localUri);
 
   const { error } = await supabase.storage
     .from(GROUP_AVATAR_BUCKET)

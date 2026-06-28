@@ -1,13 +1,14 @@
 import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { type Href, Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { queryClient } from '@/shared/lib/queryClient';
 import { SessionProvider, useSession } from '@/features/auth';
 import { HeaderBackButton, KeyboardDoneAccessory, OfflineBanner, ThemeProvider, useTheme, useThemeMode } from '@/shared/ui';
 import { I18nProvider } from '@/shared/i18n';
+import { PreferencesGateProvider, usePreferencesGate } from '@/features/preferences';
 import { isAtTarget, useOnboardingGate } from '@/navigation/guards';
 import { initOffline } from '@/offline';
 import { push } from '@/services/notifications';
@@ -37,11 +38,13 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <ThemeProvider>
             <I18nProvider>
-              <ThemedStatusBar />
-              <RootNav />
-              {/* Shared iOS "Done" bar above the keyboard. UIKit binds it to multiline
-                  TextInputs by `nativeID`, so a single instance covers the whole app. */}
-              <KeyboardDoneAccessory />
+              <PreferencesGateProvider>
+                <ThemedStatusBar />
+                <RootNav />
+                {/* Shared iOS "Done" bar above the keyboard. UIKit binds it to multiline
+                    TextInputs by `nativeID`, so a single instance covers the whole app. */}
+                <KeyboardDoneAccessory />
+              </PreferencesGateProvider>
             </I18nProvider>
           </ThemeProvider>
         </QueryClientProvider>
@@ -63,16 +66,27 @@ function ThemedStatusBar() {
 function RootNav() {
   const t = useTheme();
   const gate = useOnboardingGate();
+  const prefsGate = usePreferencesGate();
   const segments = useSegments() as string[];
   const router = useRouter();
   const session = useSession();
 
+  const atPreferences = segments[0] === '(onboarding)' && segments[1] === 'preferences';
+
   useEffect(() => {
+    // First-launch personalization takes precedence over the auth/onboarding gate. While the
+    // completion flag hasn't loaded, do nothing (the loader below covers it).
+    if (!prefsGate.ready) return;
+    if (!prefsGate.completed) {
+      if (!atPreferences) router.replace('/(onboarding)/preferences' as Href);
+      return;
+    }
+    // Personalization done → normal auth/onboarding routing.
     if (gate.status !== 'ready') return;
     if (!isAtTarget(segments, gate.target)) {
       router.replace(gate.target);
     }
-  }, [gate, segments, router]);
+  }, [prefsGate, atPreferences, gate, segments, router]);
 
   // Push registration bootstrap (T-050A, refined). The service is user-aware: it
   // checks the SecureStore cache against `currentUserId` and only hits the server
@@ -88,7 +102,10 @@ function RootNav() {
     void push.registerForPush(currentUserId);
   }, [gate, currentUserId]);
 
-  if (gate.status === 'loading') {
+  // Show the splash loader until the preferences flag has loaded, and (once personalization is
+  // done) until the auth/onboarding gate resolves. When personalization is NOT done we fall
+  // through to render the children so the preferences flow itself can show.
+  if (!prefsGate.ready || (prefsGate.completed && gate.status === 'loading')) {
     return (
       <View
         style={{
@@ -164,7 +181,7 @@ function RootNav() {
       <Stack.Screen name="blocked-users" options={{ headerShown: true, title: 'Blocked users' }} />
       <Stack.Screen name="verifications" options={{ headerShown: true, title: 'Verify proofs' }} />
       <Stack.Screen name="profile/edit" options={{ headerShown: true, presentation: 'modal', title: 'Edit profile' }} />
-      <Stack.Screen name="profile/appearance" options={{ headerShown: true, title: 'Appearance' }} />
+      <Stack.Screen name="profile/preferences" options={{ headerShown: true, title: 'Language & theme' }} />
       </Stack>
     </View>
   );

@@ -190,7 +190,15 @@ app.config.ts  eas.json  package.json                                           
 | Shared UI: inline banner / empty-state card / global offline bar | `src/shared/ui/InlineBanner.tsx` · `EmptyStateCard.tsx` · `OfflineBanner.tsx` | live (T-085) |
 | Steppe-Sky ornaments (react-native-svg) | `src/shared/ui/OrnamentDivider.tsx` · `OrnamentMedallion.tsx` | live (D-015) |
 | Redesign shared UI: read-only banner / proof context strip / branded empty | `src/shared/ui/PublicPreviewBanner.tsx` · `ProofContextStrip.tsx` · `BrandEmptyState.tsx` | live (D-015) |
-| In-house i18n (kz/ru/en, device locale, `I18nProvider`/`useI18n`/`useT`) | `src/shared/i18n/index.ts` | live (D-015) |
+| In-house i18n (en-US/kk-KZ/ru-RU, persistence, `tn()` plurals, `I18nProvider`/`useI18n`/`useT`) | `src/shared/i18n/index.ts` | live (D-015, D-016) |
+| App preferences (language / themeId / first-launch flag, SecureStore + backward-compat) | `src/shared/lib/appPreferences.ts` | live (D-016) |
+| Shared robust local-image reader (expo-file-system; user + group avatar uploads) | `src/shared/lib/localImage.ts` | live (D-016) |
+| 4-theme tokens (whiteBlue DEFAULT / darkBlue / steppeSky / sageGrowth) | `src/shared/ui/theme/tokens.ts` `THEMES` | live (D-016) |
+| Theme preview + language option cards | `src/shared/ui/ThemePreviewCard.tsx` · `LanguageOptionCard.tsx` | live (D-016) |
+| Preferences feature (Language/Theme sections + first-launch gate) | `src/features/preferences/*` | live (D-016) |
+| First-launch personalization flow (Language → Theme) | `app/(onboarding)/preferences.tsx` | live (D-016) |
+| Combined Language & theme settings screen (replaces Appearance) | `app/profile/preferences.tsx` | live (D-016) |
+| Challenge icon suggestions per category + picker section map | `src/features/challenges/model/iconSuggestions.ts` | live (D-016) |
 | Theme mode (light/dark/system) + persistence | `src/shared/ui/theme/ThemeProvider.tsx` · `src/shared/lib/themePreference.ts` | live |
 | Reusable group create/join form | `src/features/groups/ui/GroupCreateOrJoinForm.tsx` | live (T-026) |
 | Group create/join modal route | `app/group/join-or-create.tsx` | live (T-026) |

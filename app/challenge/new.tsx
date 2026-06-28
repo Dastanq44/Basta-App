@@ -5,22 +5,25 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  TextInput,
   useWindowDimensions,
   View,
 } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import {
+  CATEGORY_EMOJI_SECTION,
   CHALLENGE_CATEGORIES,
+  EMOJI_SUGGESTIONS,
   createChallengeInput,
   useCreateChallenge,
   type ChallengeCategory,
 } from '@/features/challenges';
 import { useMyGroups } from '@/features/groups';
+import { EmojiPickerSheet } from '@/features/social';
 import {
   Button,
   CalendarPicker,
   Chip,
+  Icon,
   Input,
   ProgressBar,
   Screen,
@@ -28,8 +31,7 @@ import {
   useTheme,
   VisibilityToggle,
 } from '@/shared/ui';
-
-const EMOJIS = ['💪', '🏃', '📚', '🧘', '🎨', '✍️', '💻', '🌅', '💧', '🥗', '😴', '🎯', '🔥', '⭐', '🏆', '🎸', '🚭', '🧠', '🏋️', '☀️'];
+import { useI18n, type I18nKey } from '@/shared/i18n';
 
 function todayISO(): string {
   const d = new Date();
@@ -67,10 +69,12 @@ const AUTO_ADVANCE: ReadonlySet<StepKey> = new Set(['type', 'group', 'category']
 export default function CreateChallengeScreen() {
   const t = useTheme();
   const router = useRouter();
+  const { t: tr } = useI18n();
   const create = useCreateChallenge();
   const groups = useMyGroups();
   const params = useLocalSearchParams<{ groupId?: string }>();
   const presetGroupId = typeof params.groupId === 'string' ? params.groupId : null;
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   // Decision steps (type / group / category) start UNSELECTED — no chip is highlighted until the
   // user actually taps one. (Preset-group entry still forces 'group'.)
@@ -252,7 +256,7 @@ export default function CreateChallengeScreen() {
       case 'type':
         return (
           <View style={{ gap: t.spacing.md }}>
-            <Text variant="heading">Solo or group?</Text>
+            <Text variant="heading">{tr('wizard.type.title')}</Text>
             <View style={{ flexDirection: 'row', gap: t.spacing.sm }}>
               <Chip label="Solo" selected={mode === 'solo'} onPress={() => onPickMode('solo')} />
               <Chip label="Group" selected={mode === 'group'} onPress={() => onPickMode('group')} />
@@ -262,7 +266,7 @@ export default function CreateChallengeScreen() {
       case 'group':
         return (
           <View style={{ gap: t.spacing.md }}>
-            <Text variant="heading">Which group?</Text>
+            <Text variant="heading">{tr('wizard.group.title')}</Text>
             {groups.isPending ? (
               <Text variant="muted">Loading groups…</Text>
             ) : !groups.data || groups.data.length === 0 ? (
@@ -284,10 +288,10 @@ export default function CreateChallengeScreen() {
       case 'category':
         return (
           <View style={{ gap: t.spacing.md }}>
-            <Text variant="heading">Pick a category</Text>
+            <Text variant="heading">{tr('wizard.category.title')}</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.spacing.sm }}>
               {CHALLENGE_CATEGORIES.map((c) => (
-                <Chip key={c} label={c} selected={category === c} onPress={() => onPickCategory(c)} />
+                <Chip key={c} label={tr(`category.${c}` as I18nKey)} selected={category === c} onPress={() => onPickCategory(c)} />
               ))}
             </View>
           </View>
@@ -295,7 +299,7 @@ export default function CreateChallengeScreen() {
       case 'name':
         return (
           <View style={{ gap: t.spacing.md }}>
-            <Text variant="heading">Name your challenge</Text>
+            <Text variant="heading">{tr('wizard.name.title')}</Text>
             <Input
               label="Name"
               value={name}
@@ -306,91 +310,67 @@ export default function CreateChallengeScreen() {
             />
           </View>
         );
-      case 'icon':
+      case 'icon': {
+        // Suggestions are driven by the chosen category (falls back to "other").
+        const suggestions = EMOJI_SUGGESTIONS[category ?? 'other'];
         return (
-          <View style={{ gap: t.spacing.md }}>
-            <Text variant="heading">Pick an icon</Text>
-            <View style={{ alignItems: 'center', gap: t.spacing.xs }}>
+          <View style={{ gap: t.spacing.lg }}>
+            <Text variant="heading">{tr('wizard.icon.title')}</Text>
+            {/* Large preview. */}
+            <View style={{ alignItems: 'center' }}>
               <View
                 style={{
-                  width: 88,
-                  height: 88,
-                  borderRadius: 28,
+                  width: 96,
+                  height: 96,
+                  borderRadius: 30,
                   backgroundColor: t.colors.primarySoft,
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
               >
-                <Text
-                  style={{
-                    // Larger lineHeight + textAlignVertical: 'center' prevent the top of
-                    // taller emojis (e.g. 🏋️, 🚭, 🎸) from being clipped by the box.
-                    fontSize: 44,
-                    lineHeight: 56,
-                    textAlign: 'center',
-                    textAlignVertical: 'center',
-                  }}
-                >
-                  {emoji || '🙂'}
-                </Text>
+                <Text style={{ fontSize: 48, lineHeight: 60, textAlign: 'center' }}>{emoji || '🙂'}</Text>
               </View>
             </View>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.spacing.sm, justifyContent: 'center' }}>
-              {EMOJIS.map((e) => (
-                <Pressable
-                  key={e}
-                  accessibilityRole="button"
-                  onPress={() => setEmoji(e)}
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: t.radius.md,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: emoji === e ? t.colors.primarySoft : t.colors.muted,
-                    borderWidth: emoji === e ? 1.5 : 0,
-                    borderColor: t.colors.primary,
-                  }}
-                >
-                  <Text
+            {/* Suggested set for this category — a single tidy row, not a wall of emoji. */}
+            <View style={{ gap: t.spacing.sm }}>
+              <Text variant="label">{tr('wizard.icon.suggested').toUpperCase()}</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.spacing.sm }}>
+                {suggestions.map((e) => (
+                  <Pressable
+                    key={e}
+                    accessibilityRole="button"
+                    accessibilityLabel={e}
+                    onPress={() => setEmoji(e)}
                     style={{
-                      fontSize: 26,
-                      lineHeight: 34,
-                      textAlign: 'center',
-                      textAlignVertical: 'center',
+                      width: 52,
+                      height: 52,
+                      borderRadius: t.radius.md,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: emoji === e ? t.colors.primarySoft : t.colors.muted,
+                      borderWidth: emoji === e ? 1.5 : 0,
+                      borderColor: t.colors.primary,
                     }}
                   >
-                    {e}
-                  </Text>
-                </Pressable>
-              ))}
+                    <Text style={{ fontSize: 28, lineHeight: 36, textAlign: 'center' }}>{e}</Text>
+                  </Pressable>
+                ))}
+              </View>
             </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm }}>
-              <Text variant="caption">Or type any emoji:</Text>
-              <TextInput
-                value={emoji}
-                onChangeText={setEmoji}
-                placeholder="🙂"
-                placeholderTextColor={t.colors.mutedForeground}
-                style={{
-                  minWidth: 56,
-                  textAlign: 'center',
-                  fontSize: 22,
-                  paddingVertical: 6,
-                  paddingHorizontal: 10,
-                  borderWidth: 1,
-                  borderColor: t.colors.border,
-                  borderRadius: t.radius.md,
-                  color: t.colors.foreground,
-                }}
-              />
-            </View>
+            {/* Full picker — the single path to every other emoji (search + categories). */}
+            <Button
+              label={tr('wizard.icon.browseAll')}
+              variant="secondary"
+              icon={<Icon name="search" size={16} color={t.colors.foreground} />}
+              onPress={() => setPickerOpen(true)}
+            />
           </View>
         );
+      }
       case 'start':
         return (
           <View style={{ gap: t.spacing.md }}>
-            <Text variant="heading">Start date</Text>
+            <Text variant="heading">{tr('wizard.start.title')}</Text>
             {/* minDate=today disables past days; CalendarPicker also auto-hides the back
                 arrow when the displayed view is at or before today's month. */}
             <CalendarPicker value={startDate} onChange={setStartDate} minDate={todayISO()} />
@@ -400,7 +380,7 @@ export default function CreateChallengeScreen() {
         const dayCount = diffDaysInclusive(startDate, endDate);
         return (
           <View style={{ gap: t.spacing.md }}>
-            <Text variant="heading">End date</Text>
+            <Text variant="heading">{tr('wizard.end.title')}</Text>
             <CalendarPicker
               value={endDate}
               onChange={setEndDate}
@@ -511,7 +491,7 @@ export default function CreateChallengeScreen() {
 
         {!autoForKey ? (
           <Button
-            label={lastForKey ? (create.isPending ? 'Creating…' : 'Create') : 'Next'}
+            label={lastForKey ? (create.isPending ? tr('wizard.creating') : tr('wizard.create')) : tr('wizard.next')}
             onPress={isCurrent ? onNext : () => {}}
             loading={isCurrent && create.isPending}
             disabled={create.isPending}
@@ -524,7 +504,7 @@ export default function CreateChallengeScreen() {
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <Screen padded={false} edges={['bottom']}>
-        <Stack.Screen options={{ title: 'New challenge' }} />
+        <Stack.Screen options={{ title: tr('today.newChallenge') }} />
         <View style={{ paddingHorizontal: t.spacing.lg, paddingTop: t.spacing.md, gap: t.spacing.sm }}>
           <StepIndicator total={stepKeys.length} current={safeIdx} />
           <ProgressBar value={progress} height={6} />
@@ -569,12 +549,24 @@ export default function CreateChallengeScreen() {
             Cancel on step 0, Back otherwise. NOT animated. */}
         <View style={{ padding: t.spacing.lg, paddingTop: 0 }}>
           <Button
-            label={safeIdx === 0 ? 'Cancel' : 'Back'}
+            label={safeIdx === 0 ? tr('common.cancel') : tr('common.back')}
             variant="secondary"
             onPress={onBack}
             disabled={create.isPending}
           />
         </View>
+
+        {/* Shared emoji picker — the single "browse all" surface for the icon step. Opens jumped
+            to the category most relevant to the chosen challenge category. */}
+        <EmojiPickerSheet
+          visible={pickerOpen}
+          onClose={() => setPickerOpen(false)}
+          onSelect={(e) => {
+            setEmoji(e);
+            setPickerOpen(false);
+          }}
+          initialCategoryKey={CATEGORY_EMOJI_SECTION[category ?? 'other']}
+        />
       </Screen>
     </KeyboardAvoidingView>
   );

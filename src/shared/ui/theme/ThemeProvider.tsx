@@ -1,57 +1,68 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { useColorScheme } from 'react-native';
-import { darkTheme, lightTheme, type ThemeTokens } from './tokens';
-import { getStoredThemeMode, storeThemeMode, type ThemeMode } from '@/shared/lib/themePreference';
+import { THEMES, type ThemeTokens } from './tokens';
+import {
+  DEFAULT_THEME_ID,
+  getStoredThemeId,
+  storeThemeId,
+  type ThemeId,
+} from '@/shared/lib/appPreferences';
 
-export type { ThemeMode } from '@/shared/lib/themePreference';
+export type { ThemeId } from '@/shared/lib/appPreferences';
 
-const ThemeContext = createContext<ThemeTokens>(lightTheme);
+const ThemeContext = createContext<ThemeTokens>(THEMES[DEFAULT_THEME_ID]);
 
 type ThemeModeContextValue = {
-  /** The user's choice: 'light' | 'dark' | 'system'. */
-  mode: ThemeMode;
-  /** The effective resolved scheme after applying 'system'. */
+  /** The selected named theme. */
+  themeId: ThemeId;
+  /** Effective light/dark scheme of the active theme (drives the status bar). */
   scheme: 'light' | 'dark';
-  /** Change + persist the theme mode. */
-  setMode: (mode: ThemeMode) => void;
+  /** Change + persist the active theme. */
+  setThemeId: (id: ThemeId) => void;
+  /** True until the persisted choice has loaded (so callers can avoid a wrong-theme flash). */
+  ready: boolean;
 };
 
 const ThemeModeContext = createContext<ThemeModeContextValue>({
-  mode: 'system',
+  themeId: DEFAULT_THEME_ID,
   scheme: 'light',
-  setMode: () => {},
+  setThemeId: () => {},
+  ready: false,
 });
 
 /**
- * Resolves the active theme from a user-selectable mode (light / dark / system),
- * falling back to the OS color scheme when 'system'. The choice is loaded from and
- * saved to on-device storage — see `themePreference` (no backend).
+ * Resolves the active theme from one of four named themes (whiteBlue / darkBlue / steppeSky /
+ * sageGrowth). The choice is loaded from and saved to on-device storage (appPreferences) — no
+ * backend. Defaults to White + Blue until a persisted choice loads.
  */
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const system = useColorScheme();
-  const [mode, setModeState] = useState<ThemeMode>('system');
+  const [themeId, setThemeIdState] = useState<ThemeId>(DEFAULT_THEME_ID);
+  const [ready, setReady] = useState(false);
 
-  // Load the persisted choice once on mount.
+  // Load the persisted choice once on mount (migrates the old theme-mode key inside the helper).
   useEffect(() => {
     let active = true;
-    getStoredThemeMode().then((stored) => {
-      if (active && stored) setModeState(stored);
+    getStoredThemeId().then((stored) => {
+      if (active && stored) setThemeIdState(stored);
+      if (active) setReady(true);
     });
     return () => {
       active = false;
     };
   }, []);
 
-  const setMode = (next: ThemeMode) => {
-    setModeState(next);
-    void storeThemeMode(next);
+  const setThemeId = (next: ThemeId) => {
+    setThemeIdState(next);
+    void storeThemeId(next);
   };
 
-  const scheme: 'light' | 'dark' = mode === 'system' ? (system === 'dark' ? 'dark' : 'light') : mode;
-  const tokens = scheme === 'dark' ? darkTheme : lightTheme;
+  const tokens = THEMES[themeId];
+  const scheme: 'light' | 'dark' = tokens.isDark ? 'dark' : 'light';
 
   const value = useMemo(() => tokens, [tokens]);
-  const modeValue = useMemo<ThemeModeContextValue>(() => ({ mode, scheme, setMode }), [mode, scheme]);
+  const modeValue = useMemo<ThemeModeContextValue>(
+    () => ({ themeId, scheme, setThemeId, ready }),
+    [themeId, scheme, ready],
+  );
 
   return (
     <ThemeModeContext.Provider value={modeValue}>
@@ -65,7 +76,7 @@ export function useTheme(): ThemeTokens {
   return useContext(ThemeContext);
 }
 
-/** Read/change the user's theme mode (for a settings toggle). */
+/** Read/change the active theme (for the preferences screen) + the resolved light/dark scheme. */
 export function useThemeMode(): ThemeModeContextValue {
   return useContext(ThemeModeContext);
 }

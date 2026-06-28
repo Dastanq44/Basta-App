@@ -3,7 +3,20 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-06-22 — by: Claude (opus) ("Steppe Sky" redesign + i18n)_
+_Last updated: 2026-06-28 — by: Claude (opus) (appearance + localization upgrade)_
+
+> **2026-06-28 appearance + localization upgrade (D-016):** **4 themes** (whiteBlue DEFAULT,
+> darkBlue, steppeSky, sageGrowth — `tokens.ts` `THEMES`; blue is the CTA in all four) + **3
+> languages** (en-US / kk-KZ / ru-RU) as on-device prefs (`src/shared/lib/appPreferences.ts`, **no
+> migration**). `ThemeProvider` keys on `themeId`; `useThemeMode()` → `{ themeId, setThemeId,
+> scheme, ready }`. In-house i18n gained persistence + `tn()` plurals (Intl.PluralRules) + device
+> fallback; backward-compat for old lang/theme values. **First-launch flow**
+> `app/(onboarding)/preferences.tsx` gated before auth via `PreferencesGateProvider` (no loops).
+> **Preferences screen** `app/profile/preferences.tsx` (replaces Appearance) with `ThemePreviewCard`
+> previews. Goal-1 fixes: notif color → `#2563EB`, `expo-localization` plugin, `uploadMyAvatar`
+> shares `localImage.ts` reader, CalendarPicker localized via Intl. Emoji picker standardized +
+> localized and **reused for the challenge icon step** (preview + suggestions + Browse all). Today
+> hero uses 🔥/✅ badges. Liquid Glass NOT started. typecheck+lint+expo-doctor (18/18) green.
 
 > **2026-06-22 "Steppe Sky" redesign (D-015):** full Kazakh-inspired rebrand — sky-blue primary +
 > reserved gold accent, paper-cream/steppe-night canvases, restrained `react-native-svg` ornaments

@@ -13,6 +13,18 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
 
 ## Active warnings (not bugs — traps to respect)
 
+## [OPEN] W-042 — First-launch preferences flow shows once for EXISTING users after the D-016 update
+- **Date:** 2026-06-28 · **Area:** navigation / preferences
+- **What:** the local-preference gate (`app/_layout` + `PreferencesGateProvider`) shows
+  `app/(onboarding)/preferences.tsx` whenever `basta.prefs-completed` is unset — including existing
+  signed-in users on first launch after this update. **This is intended** (the task asked for it).
+  They are NOT logged out; after "Get started" the normal auth/onboarding gate resumes. To reset in
+  dev, clear the `basta.prefs-completed` SecureStore key (or reinstall).
+- **Also:** CalendarPicker month/weekday names use `Intl.DateTimeFormat(lang, …)`. Kazakh (`kk-KZ`)
+  ICU data may be incomplete on some runtimes → it falls back to English gracefully (wrapped in
+  try/catch). Not a bug; just don't assume kk month names are always fully localized.
+- **No migration** for D-016 — everything is local SecureStore prefs.
+
 ## [OPEN] W-041 — `uploadGroupAvatar` has TEMPORARY diagnostic logging (remove later)
 - **Date:** 2026-06-22 · **Area:** groups / storage
 - **What:** [src/features/groups/api/index.ts](../../src/features/groups/api/index.ts) `uploadGroupAvatar`

@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { Text, useTheme } from '@/shared/ui';
+import { useI18n } from '@/shared/i18n';
 import { EMOJI_CATEGORIES, searchEmojis, type EmojiCategory, type EmojiEntry } from '../model/emojiData';
 
 const COLS = 8;
@@ -28,12 +29,16 @@ export function EmojiPickerSheet({
   visible,
   onClose,
   onSelect,
+  initialCategoryKey,
 }: {
   visible: boolean;
   onClose: () => void;
   onSelect: (emoji: string) => void;
+  /** Optional: jump the pager to this category on open (e.g. challenge icon → "activities"). */
+  initialCategoryKey?: string;
 }) {
   const t = useTheme();
+  const { t: tr } = useI18n();
   const { width: screenW, height: screenH } = useWindowDimensions();
   const sheetH = Math.round(screenH * SHEET_FRACTION);
   // Cell size + symmetric side padding derived from the ACTUAL device width (useWindowDimensions),
@@ -88,6 +93,17 @@ export function EmojiPickerSheet({
     outputRange: EMOJI_CATEGORIES.map((_, i) => i * tabW),
     extrapolate: 'clamp',
   });
+
+  // On open, optionally jump the pager to a relevant category (no animation — it's the start view).
+  useEffect(() => {
+    if (!visible || !initialCategoryKey) return;
+    const idx = EMOJI_CATEGORIES.findIndex((c) => c.key === initialCategoryKey);
+    if (idx > 0) {
+      const id = setTimeout(() => pagerRef.current?.scrollToIndex({ index: idx, animated: false }), 0);
+      return () => clearTimeout(id);
+    }
+    return undefined;
+  }, [visible, initialCategoryKey]);
 
   const close = () => {
     setQuery('');
@@ -152,7 +168,7 @@ export function EmojiPickerSheet({
               <TextInput
                 value={query}
                 onChangeText={setQuery}
-                placeholder="Search emoji"
+                placeholder={tr('emoji.search')}
                 placeholderTextColor={t.colors.mutedForeground}
                 autoCorrect={false}
                 autoCapitalize="none"
@@ -160,7 +176,7 @@ export function EmojiPickerSheet({
                 style={{ flex: 1, color: t.colors.foreground, fontSize: t.fontSize.md }}
               />
               {searching ? (
-                <Pressable accessibilityRole="button" accessibilityLabel="Clear search" hitSlop={8} onPress={() => setQuery('')}>
+                <Pressable accessibilityRole="button" accessibilityLabel={tr('emoji.clearSearch')} hitSlop={8} onPress={() => setQuery('')}>
                   <Text style={{ color: t.colors.mutedForeground, fontSize: 18, fontWeight: '700' }}>✕</Text>
                 </Pressable>
               ) : null}
@@ -178,7 +194,7 @@ export function EmojiPickerSheet({
               contentContainerStyle={{ paddingHorizontal: gridSidePad, paddingBottom: kbHeight + t.spacing.lg }}
               ListEmptyComponent={
                 <Text variant="muted" style={{ textAlign: 'center', marginTop: t.spacing.lg }}>
-                  No emoji match “{query.trim()}”.
+                  {tr('emoji.noResults', { query: query.trim() })}
                 </Text>
               }
             />
@@ -203,7 +219,7 @@ export function EmojiPickerSheet({
                     <Pressable
                       key={c.key}
                       accessibilityRole="button"
-                      accessibilityLabel={c.label}
+                      accessibilityLabel={tr(c.labelKey)}
                       onPress={() => pagerRef.current?.scrollToIndex({ index: i, animated: true })}
                       style={{ width: tabW, height: 36, alignItems: 'center', justifyContent: 'center' }}
                     >

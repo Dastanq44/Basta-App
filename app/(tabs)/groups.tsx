@@ -103,9 +103,9 @@ export default function GroupsScreen() {
 
 function GroupRow({ group, onPress }: { group: GroupListItem; onPress: () => void }) {
   const t = useTheme();
-  const { t: tr } = useI18n();
-  const memberLabel =
-    group.memberCount === 1 ? tr('groups.memberCountOne') : tr('groups.memberCount', { count: group.memberCount });
+  const { t: tr, tn } = useI18n();
+  // Pluralized via Intl.PluralRules — correct for Russian (участник/участника/участников).
+  const memberLabel = tn('members', group.memberCount);
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={group.name}>
       <Card>

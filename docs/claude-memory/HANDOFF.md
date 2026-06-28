@@ -21,6 +21,44 @@
 
 ---
 
+## 2026-06-28 — Claude (opus) / appearance + localization upgrade (4 themes, 3 languages)
+
+**Did:** Frontend/local-pref/packaging upgrade (D-016). **No DB migration.** All green
+(typecheck + lint + expo-doctor 18/18). Highlights:
+- **4 themes** (`tokens.ts` `THEMES`): **whiteBlue (DEFAULT)**, darkBlue, steppeSky, sageGrowth.
+  Blue is the CTA in every theme. `ThemeProvider` now keys on `themeId` (not light/dark/system);
+  `useThemeMode()` → `{ themeId, setThemeId, scheme, ready }`.
+- **3 languages** `en-US` / `kk-KZ` / `ru-RU` with persistence + device fallback + `tn()` plurals
+  (Intl.PluralRules). Backward-compat maps old `en/ru/kz` + old theme-mode values.
+- **First-launch flow** `app/(onboarding)/preferences.tsx` (Language → Theme) gated BEFORE the auth
+  gate via `PreferencesGateProvider` (no loops; works signed-out/mid-onboarding/signed-in).
+- **Preferences screen** `app/profile/preferences.tsx` (replaces Appearance; settings sheet item
+  → "Language & theme") with live language section + theme **preview cards** (`ThemePreviewCard`).
+- **Goal-1 fixes:** app.json notif color → `#2563EB` + `expo-localization` plugin; `uploadMyAvatar`
+  shares the robust `expo-file-system` reader (`src/shared/lib/localImage.ts`) with group avatar
+  upload; CalendarPicker month/weekday localized via Intl.
+- **Emoji:** picker categories reordered to standard order + localized labels/search; **shared
+  `EmojiPickerSheet` reused in the challenge icon step** (preview + category suggestion grid +
+  "Browse all emoji"; removed the raw TextInput). Today hero uses 🔥 / ✅ badges (a11y preserved).
+
+**New files:** `src/shared/lib/appPreferences.ts`, `src/shared/lib/localImage.ts`,
+`src/shared/ui/{ThemePreviewCard,LanguageOptionCard}.tsx`, `src/shared/ui/theme` (4-theme tokens),
+`src/features/preferences/*` (LanguageSection, ThemeSection, gate), `app/(onboarding)/preferences.tsx`,
+`app/profile/preferences.tsx`, `src/features/challenges/model/iconSuggestions.ts`. Deleted
+`src/shared/lib/themePreference.ts`, `app/profile/appearance.tsx`.
+
+**In progress / next:** i18n is extensive on touched surfaces but not 100% app-wide — expand
+coverage on untouched screens (verify/moderation/profile edit). Liquid Glass intentionally NOT
+started (clean foundations only). Optional: localized emoji *keyword search* (browsing is fully
+localized; keyword aliases are a follow-up). See TASKS T-089.
+
+**Test notes:** existing signed-in users will see the first-launch flow once (no completion marker)
+— they are NOT logged out; after "Get started" the normal gate resumes. `npx expo-doctor` 18/18.
+
+**Branch / commit:** `mvp` (commit pending — `feat(appearance): add language theme and emoji improvements`).
+
+---
+
 ## 2026-06-22 — Claude (opus) / "Steppe Sky" Kazakh-inspired redesign + i18n
 
 **Did:** A large contemporary Kazakh-inspired UI redesign (theme "Steppe Sky") + localization

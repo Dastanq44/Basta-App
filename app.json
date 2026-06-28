@@ -19,10 +19,11 @@
       "expo-router",
       "expo-secure-store",
       "expo-asset",
+      "expo-localization",
       [
         "expo-notifications",
         {
-          "color": "#6C5CE7"
+          "color": "#2563EB"
         }
       ]
     ],

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { Text } from './Text';
 import { useTheme } from './theme';
+import { useI18n } from '@/shared/i18n';
 
 export type CalendarPickerProps = {
   /** Selected day as ISO YYYY-MM-DD. */
@@ -26,6 +27,9 @@ export type CalendarPickerProps = {
  */
 export function CalendarPicker({ value, onChange, minDate, maxDate }: CalendarPickerProps) {
   const t = useTheme();
+  const { lang } = useI18n();
+  // Localized month + weekday labels via Intl (falls back to English on any locale-data gap).
+  const weekdays = useMemo(() => buildWeekdays(lang), [lang]);
   const selected = parseISO(value) ?? today();
   // Track which month we're showing. Initialize from the selected day so reopening the
   // picker on a far-future date doesn't dump the user on the current month.
@@ -63,7 +67,7 @@ export function CalendarPicker({ value, onChange, minDate, maxDate }: CalendarPi
           <ArrowButton direction="left" onPress={() => setView(addMonths(view, -1))} color={t.colors.foreground} />
         )}
         <Text variant="subtitle" style={{ color: t.colors.foreground, fontWeight: '600' }}>
-          {monthLabel(view.y, view.m)}
+          {monthLabel(lang, view.y, view.m)}
         </Text>
         {forwardHidden ? (
           <View style={{ width: 36, height: 36 }} />
@@ -74,8 +78,8 @@ export function CalendarPicker({ value, onChange, minDate, maxDate }: CalendarPi
 
       {/* Weekday header row */}
       <View style={{ flexDirection: 'row' }}>
-        {WEEKDAYS.map((d) => (
-          <View key={d} style={{ flex: 1, alignItems: 'center', paddingVertical: 4 }}>
+        {weekdays.map((d, i) => (
+          <View key={i} style={{ flex: 1, alignItems: 'center', paddingVertical: 4 }}>
             <Text variant="caption" style={{ color: t.colors.mutedForeground, fontWeight: '600' }}>
               {d}
             </Text>
@@ -209,11 +213,22 @@ function DayCell({
 // ────────────────────────────────────────────────────────────────────────────
 
 type Day = { y: number; m: number; d: number };
-const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
-const MONTHS = [
+const WEEKDAYS_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
+const MONTHS_EN = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
 ] as const;
+
+/** Localized short weekday labels (Sun→Sat) via Intl, with an English fallback. 2023-01-01 is a
+ *  Sunday, so days 1..7 of that week give the seven weekday names in order. */
+function buildWeekdays(locale: string): string[] {
+  try {
+    const fmt = new Intl.DateTimeFormat(locale, { weekday: 'short' });
+    return Array.from({ length: 7 }, (_, i) => fmt.format(new Date(2023, 0, 1 + i)));
+  } catch {
+    return [...WEEKDAYS_EN];
+  }
+}
 
 function pad(n: number): string {
   return n < 10 ? `0${n}` : String(n);
@@ -258,8 +273,12 @@ function daysInMonth(y: number, m: number): number {
   return new Date(y, m + 1, 0).getDate();
 }
 
-function monthLabel(y: number, m: number): string {
-  return `${MONTHS[m]} ${y}`;
+function monthLabel(locale: string, y: number, m: number): string {
+  try {
+    return new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(new Date(y, m, 1));
+  } catch {
+    return `${MONTHS_EN[m]} ${y}`;
+  }
 }
 
 /** 6 × 7 grid of Day cells starting on Sunday and padded from neighbouring months. */

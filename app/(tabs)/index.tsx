@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import { useCallback, useMemo } from 'react';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { type Href, useFocusEffect, useRouter } from 'expo-router';
@@ -120,16 +119,18 @@ export default function TodayScreen() {
           <OrnamentDivider />
           <View style={{ flexDirection: 'row', gap: t.spacing.md }}>
             <HeroStat
-              icon={<Icon name="flame" size={18} color={t.colors.streak} />}
+              emoji="🔥"
               value={String(o?.currentStreak ?? 0)}
               label={tr('today.streak')}
               tint={t.colors.streak}
+              accessibilityLabel={`${tr('today.currentStreak')}: ${o?.currentStreak ?? 0}`}
             />
             <HeroStat
-              icon={<Icon name="check" size={18} color={t.colors.success} />}
+              emoji="✅"
               value={o ? `${o.todayDone}/${o.todayTotal}` : '0/0'}
               label={tr('today.dueToday')}
               tint={t.colors.success}
+              accessibilityLabel={`${tr('today.doneToday')}: ${o ? `${o.todayDone}/${o.todayTotal}` : '0/0'}`}
             />
           </View>
         </Card>
@@ -213,13 +214,31 @@ export default function TodayScreen() {
   );
 }
 
-/** Inline hero stat — a tinted icon tile + big value + caption. Used in the Today hero. */
-function HeroStat({ icon, value, label, tint }: { icon: ReactNode; value: string; label: string; tint: string }) {
+/** Inline hero stat — an emoji badge in a tinted rounded tile + big value + caption. The emoji is
+ *  a readability cue only; the label text stays visible and the whole tile carries an a11y label. */
+function HeroStat({
+  emoji,
+  value,
+  label,
+  tint,
+  accessibilityLabel,
+}: {
+  emoji: string;
+  value: string;
+  label: string;
+  tint: string;
+  accessibilityLabel: string;
+}) {
   const t = useTheme();
   return (
-    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm }}>
+    <View
+      accessible
+      accessibilityLabel={accessibilityLabel}
+      style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm }}
+    >
       <View style={{ width: 38, height: 38, borderRadius: t.radius.md, backgroundColor: tint + '22', alignItems: 'center', justifyContent: 'center' }}>
-        {icon}
+        {/* lineHeight ≥ fontSize so the emoji glyph isn't clipped at the top of the badge. */}
+        <Text style={{ fontSize: 20, lineHeight: 26 }}>{emoji}</Text>
       </View>
       <View style={{ flex: 1 }}>
         <Text numberOfLines={1} style={{ fontSize: t.fontSize.lg, fontWeight: '800', color: t.colors.foreground }}>{value}</Text>

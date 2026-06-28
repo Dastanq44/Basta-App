@@ -1,6 +1,7 @@
 // Onboarding API — thin Supabase wrappers + the row → domain mapping.
 // Domain entities (User) are kept separate from the snake_case row shape (D-002).
 import { supabase } from '@/shared/lib/supabase';
+import { readLocalImageBytes } from '@/shared/lib/localImage';
 import type { User } from '@/entities';
 import { CURRENT_TERMS_VERSION } from '../model';
 
@@ -285,14 +286,14 @@ export async function uploadMyAvatar(localUri: string): Promise<string> {
   const uid = auth.user?.id;
   if (!uid) throw new Error('Not signed in');
 
-  const res = await fetch(localUri);
-  if (!res.ok) throw new Error(`Could not read image (${res.status})`);
-  const buf = await res.arrayBuffer();
+  // Robust on-device read (expo-file-system, not fetch(localUri)) — same strategy as the group
+  // avatar upload, shared via readLocalImageBytes so the two can't drift.
+  const bytes = await readLocalImageBytes(localUri);
 
   const remotePath = `${uid}/avatar-${Date.now()}.jpg`;
   const { error } = await supabase.storage
     .from(USER_AVATAR_BUCKET)
-    .upload(remotePath, buf, { contentType: 'image/jpeg', upsert: true, cacheControl: '3600' });
+    .upload(remotePath, bytes, { contentType: 'image/jpeg', upsert: true, cacheControl: '3600' });
   if (error) throw error;
 
   // Best-effort: remove the user's previous avatar files so they don't orphan in Storage.

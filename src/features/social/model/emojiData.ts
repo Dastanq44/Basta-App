@@ -1,36 +1,44 @@
 // Emoji dataset for the custom in-app picker (replaces rn-emoji-keyboard). The JSON is the
 // standard grouped emoji list (category → { emoji, name, keywords }); we own the UI, so the
-// category highlight / search / layout are fully under our control.
+// category highlight / search / layout are fully under our control. Category labels are LOCALIZED
+// at render time (via `labelKey` → i18n), not baked into the data.
+import type { I18nKey } from '@/shared/i18n';
 import emojisJson from './emojis.json';
 
 export type EmojiEntry = { emoji: string; name: string; keywords: string[] };
-export type EmojiCategory = { key: string; label: string; icon: string; emojis: EmojiEntry[] };
+export type EmojiCategory = { key: string; labelKey: I18nKey; icon: string; emojis: EmojiEntry[] };
 
 type RawCategory = {
   title: string;
   data: { emoji: string; name: string; keywords?: string[] }[];
 };
 
-// Tab label + a representative emoji icon per category (full-color glyph — the active state is
-// shown by the sliding highlight behind it, so there's no monochrome icon-color to snap).
-const CATEGORY_META: Record<string, { label: string; icon: string }> = {
-  smileys_emotion: { label: 'Smileys', icon: '😀' },
-  people_body: { label: 'People', icon: '🧑' },
-  animals_nature: { label: 'Animals', icon: '🐶' },
-  food_drink: { label: 'Food', icon: '🍔' },
-  travel_places: { label: 'Travel', icon: '✈️' },
-  activities: { label: 'Activities', icon: '⚽' },
-  objects: { label: 'Objects', icon: '💡' },
-  symbols: { label: 'Symbols', icon: '❤️' },
-  flags: { label: 'Flags', icon: '🏳️' },
+// i18n label key + a representative emoji icon per category (full-color glyph). Ordered to match
+// the common keyboard / Emojipedia sequence (Smileys → People → Animals → Food → Activities →
+// Travel → Objects → Symbols → Flags) — note Activities precedes Travel, the standard order.
+const CATEGORY_META: Record<string, { labelKey: I18nKey; icon: string }> = {
+  smileys_emotion: { labelKey: 'emoji.cat.smileys', icon: '😀' },
+  people_body: { labelKey: 'emoji.cat.people', icon: '🧑' },
+  animals_nature: { labelKey: 'emoji.cat.animals', icon: '🐶' },
+  food_drink: { labelKey: 'emoji.cat.food', icon: '🍔' },
+  activities: { labelKey: 'emoji.cat.activities', icon: '⚽' },
+  travel_places: { labelKey: 'emoji.cat.travel', icon: '✈️' },
+  objects: { labelKey: 'emoji.cat.objects', icon: '💡' },
+  symbols: { labelKey: 'emoji.cat.symbols', icon: '❤️' },
+  flags: { labelKey: 'emoji.cat.flags', icon: '🏳️' },
 };
 
-export const EMOJI_CATEGORIES: EmojiCategory[] = (emojisJson as RawCategory[]).map((c) => ({
-  key: c.title,
-  label: CATEGORY_META[c.title]?.label ?? c.title,
-  icon: CATEGORY_META[c.title]?.icon ?? '⭐',
-  emojis: c.data.map((e) => ({ emoji: e.emoji, name: e.name, keywords: e.keywords ?? [] })),
-}));
+const CATEGORY_ORDER = Object.keys(CATEGORY_META);
+
+export const EMOJI_CATEGORIES: EmojiCategory[] = (emojisJson as RawCategory[])
+  .filter((c) => CATEGORY_META[c.title]) // keep only known categories
+  .sort((a, b) => CATEGORY_ORDER.indexOf(a.title) - CATEGORY_ORDER.indexOf(b.title))
+  .map((c) => ({
+    key: c.title,
+    labelKey: CATEGORY_META[c.title]!.labelKey,
+    icon: CATEGORY_META[c.title]!.icon,
+    emojis: c.data.map((e) => ({ emoji: e.emoji, name: e.name, keywords: e.keywords ?? [] })),
+  }));
 
 const ALL_EMOJIS: EmojiEntry[] = EMOJI_CATEGORIES.flatMap((c) => c.emojis);
 

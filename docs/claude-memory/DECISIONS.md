@@ -265,3 +265,37 @@ Date · Status · Decision · Why · Consequences
 - **Why:** the user asked for a restrained Kazakh-inspired modern UI without weakening privacy/RLS.
 - **Consequences:** `accent` changed from indigo (== primary) to gold; it's only used for
   selection/highlight states, which read well in gold. `Avatar` now optionally renders an expo-image.
+
+## D-016 — Four themes, three languages, first-launch personalization (2026-06)   [Accepted; extends D-015]
+- **Date:** 2026-06-28
+- **Decision:** App appearance is now **four named themes** (not light/dark/system): **whiteBlue
+  (DEFAULT)**, darkBlue, steppeSky, sageGrowth — see `src/shared/ui/theme/tokens.ts` `THEMES`.
+  **Blue is the primary CTA in every theme** (gold = Steppe accents only; green = Sage supporting
+  surfaces only, blue stays the action color). **Three languages**: `en-US` (source of truth),
+  `kk-KZ`, `ru-RU`. Both are local-only on-device prefs (SecureStore via
+  `src/shared/lib/appPreferences.ts`), **no backend / no migration**.
+- **Persistence + migration:** `appPreferences` stores `language` / `theme-id` / `prefs-completed`
+  under separate keys, with backward-compat: old langs `en/ru/kz/kk → en-US/ru-RU/kk-KZ`; old
+  theme-mode `light|system → whiteBlue`, `dark → darkBlue` (migrated on first read of `theme-id`).
+- **First-launch flow:** a local-preference gate in `app/_layout` runs BEFORE the auth/onboarding
+  gate. On a fresh install (or an existing user with no completion marker) it shows
+  `app/(onboarding)/preferences.tsx` (Language → Theme, one question per screen), then marks
+  completed and hands back to the normal gate. `PreferencesGateProvider` (features/preferences)
+  owns the flag so completing it advances routing without a loop. Works signed-out / mid-onboarding
+  / signed-in; existing sessions are never lost.
+- **i18n:** kept the in-house provider (no i18n-js). Added `setLanguage` persistence, device-locale
+  fallback, and `tn()` (Intl.PluralRules) for counts — important for Russian. `ThemeProvider`
+  refactored from `mode` to `themeId`; `useThemeMode()` now returns `{ themeId, setThemeId, scheme,
+  ready }` (scheme still drives the status bar / SyncBadge).
+- **Other shipped together:** notifications color `#6C5CE7 → #2563EB` (app.json); `uploadMyAvatar`
+  now shares the robust `expo-file-system` reader (`src/shared/lib/localImage.ts`) with the group
+  avatar upload (no more `fetch(localUri)`); emoji picker categories reordered to the standard
+  keyboard sequence + localized labels; the **shared `EmojiPickerSheet` is reused for challenge
+  icon selection** (preview + per-category suggestion grid + "Browse all emoji" — no more raw emoji
+  TextInput); Today hero uses 🔥 / ✅ emoji badges (labels + a11y preserved); CalendarPicker month +
+  weekday labels localized via `Intl`.
+- **Why:** the user wants a warm, premium, mobile-first Kazakh-rooted feel with real language/theme
+  choice; blue stays the brand anchor; Steppe Sky is available but NOT the default.
+- **Consequences / NOT done:** Liquid Glass intentionally deferred (clean foundations only). i18n
+  coverage is extensive on touched surfaces but not 100% app-wide; a language switcher already
+  exists (preferences screen). No `system` theme mode anymore.
