@@ -1,6 +1,7 @@
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Avatar, Card, Text, useTheme } from '@/shared/ui';
+import { useI18n } from '@/shared/i18n';
 import { useProofSignedUrl } from '@/features/proofs';
 import { userAvatarUrl } from '@/features/onboarding';
 import type { GlobalPost } from '@/entities';
@@ -24,9 +25,10 @@ export type GlobalFeedCardProps = {
  */
 export function GlobalFeedCard({ post, onPress, onPressAuthor }: GlobalFeedCardProps) {
   const t = useTheme();
+  const { t: tr, tn, fmtDate } = useI18n();
   const media = useProofSignedUrl(post.mediaPath);
   const avatarUrl = userAvatarUrl(post.authorAvatarPath);
-  const authorName = post.authorDisplayName || (post.authorUsername ? `@${post.authorUsername}` : 'Member');
+  const authorName = post.authorDisplayName || (post.authorUsername ? `@${post.authorUsername}` : tr('common.member'));
   const contextLine = post.groupName ? `${post.challengeTitle} · ${post.groupName}` : post.challengeTitle;
 
   // Author and content are SIBLING Pressables (not nested) so tapping the author opens the
@@ -47,7 +49,7 @@ export function GlobalFeedCard({ post, onPress, onPressAuthor }: GlobalFeedCardP
             <Text variant="caption" numberOfLines={1}>@{post.authorUsername}</Text>
           ) : null}
         </View>
-        <Text variant="caption">{new Date(post.createdAt).toLocaleDateString(undefined, DATE_FMT)}</Text>
+        <Text variant="caption">{fmtDate(post.createdAt, DATE_FMT)}</Text>
       </Pressable>
 
       {/* Everything else → submission. */}
@@ -75,11 +77,11 @@ export function GlobalFeedCard({ post, onPress, onPressAuthor }: GlobalFeedCardP
               cachePolicy="memory-disk"
             />
           ) : media.isError ? (
-            <Text variant="muted">Couldn&apos;t load the photo.</Text>
+            <Text variant="muted">{tr('submission.photoFailed')}</Text>
           ) : post.mediaPath ? (
             <ActivityIndicator color={t.colors.primary} />
           ) : (
-            <Text variant="muted">No photo.</Text>
+            <Text variant="muted">{tr('submission.noPhoto')}</Text>
           )}
         </View>
 
@@ -100,12 +102,8 @@ export function GlobalFeedCard({ post, onPress, onPressAuthor }: GlobalFeedCardP
             borderTopColor: t.colors.border,
           }}
         >
-          <Text variant="caption">
-            {post.reactionCount} {post.reactionCount === 1 ? 'reaction' : 'reactions'}
-          </Text>
-          <Text variant="caption">
-            {post.commentCount} {post.commentCount === 1 ? 'comment' : 'comments'}
-          </Text>
+          <Text variant="caption">{tn('social.reactions', post.reactionCount)}</Text>
+          <Text variant="caption">{tn('social.comments', post.commentCount)}</Text>
         </View>
       </Pressable>
     </Card>

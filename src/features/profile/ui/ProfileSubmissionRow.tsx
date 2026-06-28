@@ -1,5 +1,6 @@
 import { Pressable, View } from 'react-native';
 import { Card, Text, useTheme } from '@/shared/ui';
+import { useI18n } from '@/shared/i18n';
 import { SyncBadge } from '@/features/proofs';
 import type { Submission } from '@/entities';
 
@@ -14,8 +15,9 @@ export type ProfileSubmissionRowProps = {
  *  optional comment. Matches the app's existing profile list style (not the heavy GlobalFeedCard). */
 export function ProfileSubmissionRow({ submission, onPress }: ProfileSubmissionRowProps) {
   const t = useTheme();
+  const { fmtDate } = useI18n();
   const title = submission.title?.trim() || 'Untitled';
-  const dateLabel = new Date(submission.createdAt).toLocaleDateString(undefined, DATE_FMT);
+  const dateLabel = fmtDate(submission.createdAt, DATE_FMT);
   const subline = submission.challengeGroupName ? `${dateLabel} · ${submission.challengeGroupName}` : dateLabel;
   return (
     <Pressable accessibilityRole="button" onPress={onPress}>

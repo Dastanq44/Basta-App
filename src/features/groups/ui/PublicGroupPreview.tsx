@@ -16,7 +16,7 @@ import {
   Text,
   useTheme,
 } from '@/shared/ui';
-import { useI18n } from '@/shared/i18n';
+import { formatChallengeCategory, formatDays, useI18n } from '@/shared/i18n';
 import { ReportSheet } from '@/features/moderation';
 import type { Submission } from '@/entities';
 import { groupAvatarUrl, type GroupAccess, type PublicGroupChallenge } from '../api';
@@ -31,7 +31,7 @@ type Tab = 'overview' | 'challenges' | 'proofs';
 export function PublicGroupPreview({ access }: { access: GroupAccess }) {
   const t = useTheme();
   const router = useRouter();
-  const { t: tr } = useI18n();
+  const { t: tr, fmtDate } = useI18n();
   const challenges = usePublicGroupChallenges(access.id);
   const submissions = usePublicGroupSubmissions(access.id);
   const [tab, setTab] = useState<Tab>('overview');
@@ -49,7 +49,7 @@ export function PublicGroupPreview({ access }: { access: GroupAccess }) {
             ? {
                 icon: <Icon name="settings" size={22} color={t.colors.foreground} />,
                 onPress: () => setMenuOpen(true),
-                accessibilityLabel: 'Group actions',
+                accessibilityLabel: tr('group.settings'),
               }
             : undefined
         }
@@ -58,7 +58,7 @@ export function PublicGroupPreview({ access }: { access: GroupAccess }) {
       <View style={{ paddingHorizontal: t.spacing.lg, paddingTop: t.spacing.md }}>
         <SegmentedControl
           options={[
-            { label: 'Overview', value: 'overview' },
+            { label: tr('group.overview'), value: 'overview' },
             { label: tr('common.challenges'), value: 'challenges' },
             { label: tr('common.proofs'), value: 'proofs' },
           ]}
@@ -84,9 +84,9 @@ export function PublicGroupPreview({ access }: { access: GroupAccess }) {
                 <Text variant="subtitle">{access.memberCount}</Text>
               </View>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: t.spacing.sm }}>
-                <Text variant="muted">Created</Text>
+                <Text variant="muted">{tr('group.created')}</Text>
                 <Text variant="subtitle">
-                  {access.createdAt ? new Date(access.createdAt).toLocaleDateString(undefined, DATE_FMT) : '—'}
+                  {access.createdAt ? fmtDate(access.createdAt, DATE_FMT) : '—'}
                 </Text>
               </View>
             </Card>
@@ -97,7 +97,7 @@ export function PublicGroupPreview({ access }: { access: GroupAccess }) {
           challenges.isPending ? (
             <Text variant="muted">{tr('common.loading')}</Text>
           ) : (challenges.data ?? []).length === 0 ? (
-            <EmptyStateCard title="No challenges yet" body="This group's public challenges will appear here." icon="🎯" />
+            <EmptyStateCard title={tr('group.noChallenges')} body={tr('group.noChallengesBody')} icon="🎯" />
           ) : (
             (challenges.data ?? []).map((c) => (
               <PublicChallengeRow key={c.id} challenge={c} onPress={() => router.push(`/challenge/${c.id}` as Href)} />
@@ -106,7 +106,7 @@ export function PublicGroupPreview({ access }: { access: GroupAccess }) {
         ) : submissions.isPending ? (
           <Text variant="muted">{tr('common.loading')}</Text>
         ) : (submissions.data ?? []).length === 0 ? (
-          <EmptyStateCard title="No proofs yet" body="Verified proofs shared to Global from this group will appear here." icon="📸" />
+          <EmptyStateCard title={tr('group.noProofs')} body={tr('group.noProofsBody')} icon="📸" />
         ) : (
           (submissions.data ?? []).map((s) => (
             <PreviewSubmissionRow key={s.id} submission={s} onPress={() => router.push(`/submission/${s.id}` as Href)} />
@@ -130,7 +130,7 @@ export function PublicGroupPreview({ access }: { access: GroupAccess }) {
       {/* 3-dot actions → bottom sheet (then the report window). */}
       <BottomSheet visible={menuOpen} onClose={() => setMenuOpen(false)}>
         <BottomSheetMenuItem
-          label="Report group"
+          label={tr('report.reportGroup')}
           onPress={() => {
             setMenuOpen(false);
             setTimeout(() => setReportOpen(true), 250);
@@ -151,13 +151,14 @@ export function PublicGroupPreview({ access }: { access: GroupAccess }) {
 
 function PublicChallengeRow({ challenge, onPress }: { challenge: PublicGroupChallenge; onPress: () => void }) {
   const t = useTheme();
+  const { lang } = useI18n();
   return (
     <Pressable accessibilityRole="button" onPress={onPress}>
       <Card>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.md, justifyContent: 'space-between' }}>
           <View style={{ flex: 1, gap: 2 }}>
             <Text variant="subtitle" numberOfLines={1}>{challenge.title}</Text>
-            <Text variant="muted">{challenge.category} · {challenge.durationDays} days</Text>
+            <Text variant="muted">{formatChallengeCategory(lang, challenge.category)} · {formatDays(lang, challenge.durationDays)}</Text>
           </View>
           <Text variant="muted">›</Text>
         </View>
@@ -168,8 +169,9 @@ function PublicChallengeRow({ challenge, onPress }: { challenge: PublicGroupChal
 
 function PreviewSubmissionRow({ submission, onPress }: { submission: Submission; onPress: () => void }) {
   const t = useTheme();
-  const author = submission.authorDisplayName || (submission.authorUsername ? `@${submission.authorUsername}` : 'Member');
-  const date = new Date(submission.createdAt).toLocaleDateString(undefined, DATE_FMT);
+  const { t: tr, tn, fmtDate } = useI18n();
+  const author = submission.authorDisplayName || (submission.authorUsername ? `@${submission.authorUsername}` : tr('common.member'));
+  const date = fmtDate(submission.createdAt, DATE_FMT);
   return (
     <Pressable accessibilityRole="button" onPress={onPress}>
       <Card>
@@ -179,7 +181,7 @@ function PreviewSubmissionRow({ submission, onPress }: { submission: Submission;
             {author}{submission.challengeTitle ? ` · ${submission.challengeTitle}` : ''} · {date}
           </Text>
           <Text variant="caption" style={{ color: t.colors.mutedForeground }}>
-            {submission.reactionCount ?? 0} reactions · {submission.commentCount ?? 0} comments
+            {tn('social.reactions', submission.reactionCount ?? 0)} · {tn('social.comments', submission.commentCount ?? 0)}
           </Text>
         </View>
       </Card>

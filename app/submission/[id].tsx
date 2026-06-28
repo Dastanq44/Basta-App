@@ -27,7 +27,7 @@ const SUBMISSION_DETAIL_DATE_FMT: Intl.DateTimeFormatOptions = {
 export default function SubmissionScreen() {
   const t = useTheme();
   const router = useRouter();
-  const { t: tr } = useI18n();
+  const { t: tr, fmtDateTime } = useI18n();
   const { id } = useLocalSearchParams<{ id: string }>();
   const session = useSession();
   const myUid = session.session?.user.id;
@@ -74,9 +74,9 @@ export default function SubmissionScreen() {
       <Screen padded={false} edges={['top']}>
         <ScreenHeader title={tr('common.proof')} onBack={() => router.back()} />
         <View style={{ padding: t.spacing.lg, gap: t.spacing.sm }}>
-          <Text variant="title">Proof unavailable</Text>
+          <Text variant="title">{tr('submission.unavailable')}</Text>
           <Text variant="caption" style={{ color: t.colors.destructive }}>
-            {submission.error instanceof Error ? submission.error.message : 'Could not load this proof.'}
+            {submission.error instanceof Error ? submission.error.message : tr('submission.unavailableBody')}
           </Text>
         </View>
       </Screen>
@@ -92,13 +92,10 @@ export default function SubmissionScreen() {
   if (isBlocked) {
     return (
       <Screen padded={false} edges={['top']}>
-        <ScreenHeader title="Hidden" onBack={() => router.back()} />
+        <ScreenHeader title={tr('submission.hidden')} onBack={() => router.back()} />
         <View style={{ padding: t.spacing.lg, gap: t.spacing.md }}>
-          <Text variant="title">Hidden</Text>
-          <Text variant="muted">
-            This proof is from a user you've blocked. Unblock them from your Profile to see
-            their proofs again.
-          </Text>
+          <Text variant="title">{tr('submission.hidden')}</Text>
+          <Text variant="muted">{tr('submission.hiddenBody')}</Text>
         </View>
       </Screen>
     );
@@ -107,18 +104,18 @@ export default function SubmissionScreen() {
   const confirmBlock = () => {
     if (isMine) return;
     Alert.alert(
-      'Block this user?',
-      "You won't see their proofs, comments, or reactions. You can unblock anytime from Profile.",
+      tr('submission.blockConfirmTitle'),
+      tr('submission.blockConfirmBody'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: tr('common.cancel'), style: 'cancel' },
         {
-          text: 'Block',
+          text: tr('common.block'),
           style: 'destructive',
           onPress: () =>
             blockUser.mutate(s.authorId, {
               onSuccess: () => router.back(),
               onError: (e: unknown) =>
-                Alert.alert('Could not block', e instanceof Error ? e.message : 'Unknown error'),
+                Alert.alert(tr('submission.couldNotBlock'), e instanceof Error ? e.message : tr('common.error')),
             }),
         },
       ],
@@ -131,25 +128,25 @@ export default function SubmissionScreen() {
   const contextItems: ProofContextItem[] = [
     {
       key: 'author',
-      label: 'Author',
-      value: s.authorDisplayName || (s.authorUsername ? `@${s.authorUsername}` : 'Member'),
+      label: tr('submission.author'),
+      value: s.authorDisplayName || (s.authorUsername ? `@${s.authorUsername}` : tr('common.member')),
       sub: s.authorDisplayName && s.authorUsername ? `@${s.authorUsername}` : undefined,
       avatarName: s.authorDisplayName ?? s.authorUsername ?? null,
       onPress: () => router.push(`/user/${s.authorId}` as Href),
     },
     {
       key: 'challenge',
-      label: 'Challenge',
-      value: s.challengeTitle ?? 'Challenge',
-      sub: tr('challenges.day') + ` ${s.challengeDay + 1}`,
+      label: tr('submission.challenge'),
+      value: s.challengeTitle ?? tr('submission.challenge'),
+      sub: tr('day.n', { n: s.challengeDay + 1 }),
       onPress: () => router.push(`/challenge/${s.challengeId}` as Href),
     },
     ...(s.challengeGroupId
       ? [
           {
             key: 'group',
-            label: 'Group',
-            value: s.challengeGroupName ?? 'Group',
+            label: tr('submission.group'),
+            value: s.challengeGroupName ?? tr('submission.group'),
             onPress: () => router.push(`/group/${s.challengeGroupId}` as Href),
           } satisfies ProofContextItem,
         ]
@@ -168,7 +165,7 @@ export default function SubmissionScreen() {
             : {
                 icon: <Icon name="settings" size={22} color={t.colors.foreground} />,
                 onPress: () => setMenuOpen(true),
-                accessibilityLabel: 'Proof actions',
+                accessibilityLabel: tr('submission.proofActions'),
               }
         }
       />
@@ -187,7 +184,7 @@ export default function SubmissionScreen() {
         {/* Date + sync badge. */}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm }}>
           <Text variant="muted" style={{ flex: 1 }}>
-            {new Date(s.createdAt).toLocaleString(undefined, SUBMISSION_DETAIL_DATE_FMT)}
+            {fmtDateTime(s.createdAt, SUBMISSION_DETAIL_DATE_FMT)}
           </Text>
           <SyncBadge status={s.status} />
         </View>
@@ -222,11 +219,11 @@ export default function SubmissionScreen() {
                 cachePolicy="memory-disk"
               />
             ) : media.isError ? (
-              <Text variant="muted">Couldn&apos;t load the photo.</Text>
+              <Text variant="muted">{tr('submission.photoFailed')}</Text>
             ) : s.mediaRemotePath ? (
               <ActivityIndicator color={t.colors.primary} />
             ) : (
-              <Text variant="muted">No photo attached.</Text>
+              <Text variant="muted">{tr('submission.noPhoto')}</Text>
             )}
           </View>
           {s.comment ? (
@@ -251,7 +248,7 @@ export default function SubmissionScreen() {
       {/* Non-author proof actions, behind the top-right 3-dot menu. */}
       <BottomSheet visible={menuOpen} onClose={() => setMenuOpen(false)}>
         <BottomSheetMenuItem
-          label="Report this proof"
+          label={tr('submission.reportProof')}
           onPress={() => {
             setMenuOpen(false);
             // Let the menu sheet finish dismissing before the report modal opens (two modals
@@ -260,7 +257,7 @@ export default function SubmissionScreen() {
           }}
         />
         <BottomSheetMenuItem
-          label={blockUser.isPending ? 'Blocking…' : 'Block author'}
+          label={blockUser.isPending ? tr('submission.blocking') : tr('submission.blockAuthor')}
           destructive
           onPress={() => {
             setMenuOpen(false);

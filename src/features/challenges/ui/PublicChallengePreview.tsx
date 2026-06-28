@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { type Href, useRouter } from 'expo-router';
 import { BottomSheet, BottomSheetMenuItem, Button, Card, Icon, PublicPreviewBanner, Screen, ScreenHeader, Text, useTheme } from '@/shared/ui';
-import { useI18n } from '@/shared/i18n';
+import { formatChallengeCategory, formatDays, useI18n } from '@/shared/i18n';
 import { ReportSheet } from '@/features/moderation';
 import type { Submission } from '@/entities';
 import type { ChallengeAccess } from '../api';
@@ -15,7 +15,7 @@ const DATE_FMT: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short', 
 export function PublicChallengePreview({ access }: { access: ChallengeAccess }) {
   const t = useTheme();
   const router = useRouter();
-  const { t: tr } = useI18n();
+  const { t: tr, lang } = useI18n();
   const subs = usePublicChallengeSubmissions(access.id);
   const [menuOpen, setMenuOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
@@ -31,7 +31,7 @@ export function PublicChallengePreview({ access }: { access: ChallengeAccess }) 
             ? {
                 icon: <Icon name="settings" size={22} color={t.colors.foreground} />,
                 onPress: () => setMenuOpen(true),
-                accessibilityLabel: 'Challenge actions',
+                accessibilityLabel: tr('challenge.settings'),
               }
             : undefined
         }
@@ -44,9 +44,9 @@ export function PublicChallengePreview({ access }: { access: ChallengeAccess }) 
           <View style={{ gap: t.spacing.md, marginBottom: t.spacing.sm }}>
             {/* Title is owned by the ScreenHeader — not duplicated here. */}
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.spacing.xs }}>
-              <Chip label={titleCase(access.category)} />
-              <Chip label={isGroup ? (access.groupName ? `${tr('common.groups')} · ${access.groupName}` : tr('common.groups')) : 'Solo'} />
-              <Chip label={`${access.durationDays} days`} />
+              <Chip label={formatChallengeCategory(lang, access.category)} />
+              <Chip label={isGroup ? (access.groupName ? `${tr('common.groups')} · ${access.groupName}` : tr('common.groups')) : tr('mode.solo')} />
+              <Chip label={formatDays(lang, access.durationDays)} />
             </View>
             {access.proofRequirement ? (
               <Text variant="body" style={{ color: t.colors.mutedForeground }}>{access.proofRequirement}</Text>
@@ -58,7 +58,7 @@ export function PublicChallengePreview({ access }: { access: ChallengeAccess }) 
           </View>
         }
         ListEmptyComponent={
-          subs.isPending ? <Text variant="muted">{tr('common.loading')}</Text> : <Text variant="muted">No proofs yet.</Text>
+          subs.isPending ? <Text variant="muted">{tr('common.loading')}</Text> : <Text variant="muted">{tr('challenge.noProofs')}</Text>
         }
         renderItem={({ item }) => (
           <PreviewSubmissionRow submission={item} onPress={() => router.push(`/submission/${item.id}` as Href)} />
@@ -84,7 +84,7 @@ export function PublicChallengePreview({ access }: { access: ChallengeAccess }) 
       {/* 3-dot actions → bottom sheet (then the report window). */}
       <BottomSheet visible={menuOpen} onClose={() => setMenuOpen(false)}>
         <BottomSheetMenuItem
-          label="Report challenge"
+          label={tr('report.reportChallenge')}
           onPress={() => {
             setMenuOpen(false);
             // Let the menu sheet finish dismissing before the report modal opens.
@@ -106,16 +106,17 @@ export function PublicChallengePreview({ access }: { access: ChallengeAccess }) 
 
 function PreviewSubmissionRow({ submission, onPress }: { submission: Submission; onPress: () => void }) {
   const t = useTheme();
-  const author = submission.authorDisplayName || (submission.authorUsername ? `@${submission.authorUsername}` : 'Member');
-  const date = new Date(submission.createdAt).toLocaleDateString(undefined, DATE_FMT);
+  const { t: tr, tn, fmtDate } = useI18n();
+  const author = submission.authorDisplayName || (submission.authorUsername ? `@${submission.authorUsername}` : tr('common.member'));
+  const date = fmtDate(submission.createdAt, DATE_FMT);
   return (
     <Pressable accessibilityRole="button" onPress={onPress}>
       <Card>
         <View style={{ gap: 2 }}>
           <Text variant="subtitle" numberOfLines={1}>{submission.title}</Text>
-          <Text variant="muted" numberOfLines={1}>{author} · Day {submission.challengeDay + 1} · {date}</Text>
+          <Text variant="muted" numberOfLines={1}>{author} · {tr('day.n', { n: submission.challengeDay + 1 })} · {date}</Text>
           <Text variant="caption" style={{ color: t.colors.mutedForeground }}>
-            {submission.reactionCount ?? 0} reactions · {submission.commentCount ?? 0} comments
+            {tn('social.reactions', submission.reactionCount ?? 0)} · {tn('social.comments', submission.commentCount ?? 0)}
           </Text>
         </View>
       </Card>
@@ -139,9 +140,4 @@ function Chip({ label }: { label: string }) {
       <Text style={{ color: t.colors.foreground, fontWeight: '600' }}>{label}</Text>
     </View>
   );
-}
-
-function titleCase(s: string): string {
-  if (!s) return s;
-  return s[0]!.toUpperCase() + s.slice(1);
 }

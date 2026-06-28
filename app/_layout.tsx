@@ -7,7 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { queryClient } from '@/shared/lib/queryClient';
 import { SessionProvider, useSession } from '@/features/auth';
 import { HeaderBackButton, KeyboardDoneAccessory, OfflineBanner, ThemeProvider, useTheme, useThemeMode } from '@/shared/ui';
-import { I18nProvider } from '@/shared/i18n';
+import { I18nProvider, useI18n } from '@/shared/i18n';
 import { PreferencesGateProvider, usePreferencesGate } from '@/features/preferences';
 import { isAtTarget, useOnboardingGate } from '@/navigation/guards';
 import { initOffline } from '@/offline';
@@ -65,6 +65,7 @@ function ThemedStatusBar() {
 
 function RootNav() {
   const t = useTheme();
+  const { t: tr } = useI18n();
   const gate = useOnboardingGate();
   const prefsGate = usePreferencesGate();
   const segments = useSegments() as string[];
@@ -150,38 +151,38 @@ function RootNav() {
           circular tint behind the back / 3-dot icons that fades during transitions)
           can't be disabled through React Navigation options. */}
       <Stack.Screen name="challenge/[id]" options={{ headerShown: false }} />
-      <Stack.Screen name="challenge/new" options={{ headerShown: true, title: 'New challenge' }} />
+      <Stack.Screen name="challenge/new" options={{ headerShown: true, title: tr('today.newChallenge') }} />
       <Stack.Screen
         name="challenge/[id]/submit-proof"
-        options={{ headerShown: true, presentation: 'modal', title: 'Submit proof' }}
+        options={{ headerShown: true, presentation: 'modal', title: tr('proof.submitTitle') }}
       />
       <Stack.Screen
         name="challenge/[id]/edit-proof"
-        options={{ headerShown: true, presentation: 'modal', title: 'Edit proof' }}
+        options={{ headerShown: true, presentation: 'modal', title: tr('proof.editTitle') }}
       />
       <Stack.Screen
         name="challenge/[id]/edit"
-        options={{ headerShown: true, presentation: 'modal', title: 'Edit challenge' }}
+        options={{ headerShown: true, presentation: 'modal', title: tr('challenge.editChallenge') }}
       />
-      <Stack.Screen name="verify/[submissionId]" options={{ headerShown: true, title: 'Verify proof' }} />
+      <Stack.Screen name="verify/[submissionId]" options={{ headerShown: true, title: tr('verify.title') }} />
       <Stack.Screen name="group/[id]" options={{ headerShown: false }} />
       <Stack.Screen
         name="group/[id]/edit"
-        options={{ headerShown: true, presentation: 'modal', title: 'Edit group' }}
+        options={{ headerShown: true, presentation: 'modal', title: tr('groupForm.editTitle') }}
       />
       <Stack.Screen
         name="group/join-or-create"
-        options={{ headerShown: true, presentation: 'modal', title: 'New group' }}
+        options={{ headerShown: true, presentation: 'modal', title: tr('groups.newGroup') }}
       />
-      <Stack.Screen name="group/archived" options={{ headerShown: true, title: 'Archived groups' }} />
+      <Stack.Screen name="group/archived" options={{ headerShown: true, title: tr('groups.archived') }} />
       {/* submission/[id] renders its own in-body ScreenHeader (like challenge/group) so the
           native bar-button tap-highlight isn't visible. */}
       <Stack.Screen name="submission/[id]" options={{ headerShown: false }} />
-      <Stack.Screen name="user/[id]" options={{ headerShown: true, title: 'Profile' }} />
-      <Stack.Screen name="blocked-users" options={{ headerShown: true, title: 'Blocked users' }} />
-      <Stack.Screen name="verifications" options={{ headerShown: true, title: 'Verify proofs' }} />
-      <Stack.Screen name="profile/edit" options={{ headerShown: true, presentation: 'modal', title: 'Edit profile' }} />
-      <Stack.Screen name="profile/preferences" options={{ headerShown: true, title: 'Language & theme' }} />
+      <Stack.Screen name="user/[id]" options={{ headerShown: true, title: tr('nav.profile') }} />
+      <Stack.Screen name="blocked-users" options={{ headerShown: true, title: tr('blocked.title') }} />
+      <Stack.Screen name="verifications" options={{ headerShown: true, title: tr('verify.titlePlural') }} />
+      <Stack.Screen name="profile/edit" options={{ headerShown: true, presentation: 'modal', title: tr('profileEdit.title') }} />
+      <Stack.Screen name="profile/preferences" options={{ headerShown: true, title: tr('settings.languageTheme') }} />
       </Stack>
     </View>
   );

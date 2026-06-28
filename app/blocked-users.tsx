@@ -1,6 +1,7 @@
 import { Alert, FlatList, View } from 'react-native';
 import { Stack } from 'expo-router';
 import { Button, Card, Screen, Text, useTheme } from '@/shared/ui';
+import { useI18n } from '@/shared/i18n';
 import { useMyBlocks, useUnblockUser } from '@/features/moderation';
 import type { Block } from '@/entities';
 
@@ -11,25 +12,24 @@ import type { Block } from '@/entities';
 export default function BlockedUsersScreen() {
   const blocks = useMyBlocks();
   const t = useTheme();
+  const { t: tr } = useI18n();
 
   return (
     <Screen padded={false}>
-      <Stack.Screen options={{ title: 'Blocked users' }} />
+      <Stack.Screen options={{ title: tr('blocked.title') }} />
       <FlatList
         data={blocks.data ?? []}
         keyExtractor={(b) => b.blockedId}
         contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.md, paddingBottom: t.spacing.xl }}
         ListEmptyComponent={
           blocks.isPending ? (
-            <Text variant="muted">Loading…</Text>
+            <Text variant="muted">{tr('common.loading')}</Text>
           ) : blocks.isError ? (
             <Text variant="caption" style={{ color: t.colors.destructive }}>
-              {blocks.error instanceof Error ? blocks.error.message : 'Could not load blocked users.'}
+              {blocks.error instanceof Error ? blocks.error.message : tr('blocked.loadError')}
             </Text>
           ) : (
-            <Text variant="muted">
-              You haven't blocked anyone. Use "Block author" on a proof to add someone here.
-            </Text>
+            <Text variant="muted">{tr('blocked.emptyBody')}</Text>
           )
         }
         renderItem={({ item }) => <BlockedRow block={item} />}
@@ -42,20 +42,21 @@ export default function BlockedUsersScreen() {
 
 function BlockedRow({ block }: { block: Block }) {
   const t = useTheme();
+  const { t: tr, fmtDate } = useI18n();
   const unblock = useUnblockUser();
 
   const confirmUnblock = () => {
     Alert.alert(
-      'Unblock this user?',
-      "You'll see their proofs, comments, and reactions again.",
+      tr('blocked.unblockTitle'),
+      tr('blocked.unblockBody'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: tr('common.cancel'), style: 'cancel' },
         {
-          text: 'Unblock',
+          text: tr('blocked.unblock'),
           onPress: () =>
             unblock.mutate(block.blockedId, {
               onError: (e: unknown) =>
-                Alert.alert('Could not unblock', e instanceof Error ? e.message : 'Unknown error'),
+                Alert.alert(tr('blocked.couldNotUnblock'), e instanceof Error ? e.message : tr('common.error')),
             }),
         },
       ],
@@ -66,14 +67,14 @@ function BlockedRow({ block }: { block: Block }) {
   return (
     <Card>
       <View style={{ gap: t.spacing.xs }}>
-        <Text variant="muted">User id</Text>
+        <Text variant="muted">{tr('blocked.userId')}</Text>
         <Text variant="body" style={{ fontFamily: 'monospace' }}>
           {block.blockedId}
         </Text>
-        <Text variant="caption">Blocked {new Date(block.createdAt).toLocaleDateString()}</Text>
+        <Text variant="caption">{tr('blocked.blockedOn', { date: fmtDate(block.createdAt) })}</Text>
         <View style={{ marginTop: t.spacing.sm }}>
           <Button
-            label={unblock.isPending ? 'Unblocking…' : 'Unblock'}
+            label={unblock.isPending ? tr('blocked.unblocking') : tr('blocked.unblock')}
             variant="secondary"
             size="sm"
             onPress={confirmUnblock}

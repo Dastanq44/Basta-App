@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Button, Card, Input, Screen, Text, useTheme } from '@/shared/ui';
+import { useI18n, type I18nKey } from '@/shared/i18n';
 import type { ReportTargetType } from '@/entities';
-import { REPORT_REASON_LABELS, REPORT_REASONS, reportInput, type ReportReason } from '../model';
+import { REPORT_REASONS, reportInput, type ReportReason } from '../model';
 import { useReport } from '../hooks';
 
 export type ReportSheetProps = {
@@ -19,8 +20,9 @@ export type ReportSheetProps = {
  * Modal report form. Presents the canonical reason list + optional details. Submits via
  * `report_target` RPC. On success we show a brief "Thanks" state and auto-dismiss.
  */
-export function ReportSheet({ visible, onClose, targetType, targetId, targetLabel }: ReportSheetProps) {
+export function ReportSheet({ visible, onClose, targetType, targetId }: ReportSheetProps) {
   const t = useTheme();
+  const { t: tr } = useI18n();
   const [reason, setReason] = useState<ReportReason | null>(null);
   const [details, setDetails] = useState('');
   const [fieldError, setFieldError] = useState<string | undefined>();
@@ -40,7 +42,7 @@ export function ReportSheet({ visible, onClose, targetType, targetId, targetLabe
   const onSubmit = () => {
     setFieldError(undefined);
     if (!reason) {
-      setFieldError('Pick a reason');
+      setFieldError(tr('report.pickReason'));
       return;
     }
     const parsed = reportInput.safeParse({
@@ -50,7 +52,7 @@ export function ReportSheet({ visible, onClose, targetType, targetId, targetLabe
       details: details.trim() || undefined,
     });
     if (!parsed.success) {
-      setFieldError(parsed.error.issues[0]?.message ?? 'Check the form');
+      setFieldError(parsed.error.issues[0]?.message ?? tr('common.error'));
       return;
     }
     mutation.mutate(parsed.data, {
@@ -74,24 +76,21 @@ export function ReportSheet({ visible, onClose, targetType, targetId, targetLabe
           <Screen>
           <ScrollView contentContainerStyle={{ gap: t.spacing.lg, paddingBottom: t.spacing.xl }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text variant="title">Report</Text>
+              <Text variant="title">{tr('report.title')}</Text>
               <Pressable accessibilityRole="button" onPress={onClose} hitSlop={8}>
-                <Text variant="muted">Close</Text>
+                <Text variant="muted">{tr('common.close')}</Text>
               </Pressable>
             </View>
 
-            <Text variant="muted">
-              Reporting {targetLabel ?? `this ${targetType}`}. Our team reviews reports and
-              takes action where appropriate.
-            </Text>
+            <Text variant="muted">{tr('report.intro')}</Text>
 
             <View style={{ gap: t.spacing.xs }}>
-              <Text variant="caption">Reason</Text>
+              <Text variant="caption">{tr('report.reason')}</Text>
               <View style={{ gap: t.spacing.xs }}>
                 {REPORT_REASONS.map((r) => (
                   <ReasonRow
                     key={r}
-                    label={REPORT_REASON_LABELS[r]}
+                    label={tr(`report.reason.${r}` as I18nKey)}
                     selected={reason === r}
                     onPress={() => setReason(r)}
                   />
@@ -105,10 +104,10 @@ export function ReportSheet({ visible, onClose, targetType, targetId, targetLabe
             </View>
 
             <Input
-              label="Details (optional)"
+              label={tr('report.details')}
               value={details}
               onChangeText={setDetails}
-              placeholder="Anything else moderators should know?"
+              placeholder={tr('report.detailsPlaceholder')}
               multiline
               numberOfLines={3}
               editable={!mutation.isPending && !mutation.isSuccess}
@@ -116,22 +115,18 @@ export function ReportSheet({ visible, onClose, targetType, targetId, targetLabe
 
             {mutation.isError ? (
               <Text variant="caption" style={{ color: t.colors.destructive }}>
-                {mutation.error instanceof Error
-                  ? mutation.error.message
-                  : 'Could not submit report.'}
+                {mutation.error instanceof Error ? mutation.error.message : tr('report.couldNotSubmit')}
               </Text>
             ) : null}
 
             {mutation.isSuccess ? (
               <Card>
-                <Text variant="heading">Thanks for flagging this.</Text>
-                <Text variant="muted">
-                  Our team will review it. You can close this now.
-                </Text>
+                <Text variant="heading">{tr('report.thanksTitle')}</Text>
+                <Text variant="muted">{tr('report.thanksBody')}</Text>
               </Card>
             ) : (
               <Button
-                label={mutation.isPending ? 'Sending…' : 'Submit report'}
+                label={mutation.isPending ? tr('report.submitting') : tr('report.submit')}
                 onPress={onSubmit}
                 loading={mutation.isPending}
                 disabled={mutation.isPending}

@@ -18,7 +18,7 @@ import {
   Text,
   useTheme,
 } from '@/shared/ui';
-import { useI18n } from '@/shared/i18n';
+import { formatChallengeCategory, formatDays, useI18n } from '@/shared/i18n';
 import { useSession } from '@/features/auth';
 import { useChallenges } from '@/features/challenges';
 import {
@@ -42,7 +42,7 @@ type Tab = 'overview' | 'challenges' | 'board';
 export default function GroupScreen() {
   const t = useTheme();
   const router = useRouter();
-  const { t: tr } = useI18n();
+  const { t: tr, fmtDate } = useI18n();
   const { id } = useLocalSearchParams<{ id: string }>();
   const session = useSession();
   const myUid = session.session?.user.id;
@@ -92,19 +92,19 @@ export default function GroupScreen() {
 
   const confirmTransfer = (entry: LeaderboardEntry) => {
     if (!id) return;
-    const displayName = entry.displayName || entry.username || 'this member';
+    const displayName = entry.displayName || entry.username || tr('common.member');
     Alert.alert(
-      `Make ${displayName} the leader?`,
-      "They'll be able to rename and archive the group. You'll become a regular member.",
+      tr('group.transferConfirmTitle'),
+      tr('group.transferConfirmBody', { name: displayName }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: tr('common.cancel'), style: 'cancel' },
         {
-          text: 'Transfer',
+          text: tr('group.transferOwner'),
           style: 'destructive',
           onPress: () =>
             transfer.mutate(
               { groupId: id, newOwnerId: entry.userId },
-              { onError: (e) => Alert.alert('Could not transfer', e instanceof Error ? e.message : 'Unknown error') },
+              { onError: (e) => Alert.alert(tr('group.couldNotTransfer'), e instanceof Error ? e.message : tr('common.error')) },
             ),
         },
       ],
@@ -115,17 +115,17 @@ export default function GroupScreen() {
   const confirmLeave = () => {
     if (!id) return;
     Alert.alert(
-      'Leave this group?',
-      'You will need a fresh invite code to rejoin.',
+      tr('group.leaveConfirmTitle'),
+      tr('group.leaveConfirmBody'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: tr('common.cancel'), style: 'cancel' },
         {
-          text: 'Leave',
+          text: tr('common.leave'),
           style: 'destructive',
           onPress: () =>
             leave.mutate(id, {
               onSuccess: () => router.replace('/(tabs)/groups'),
-              onError: (e) => Alert.alert('Could not leave', e instanceof Error ? e.message : 'Unknown error'),
+              onError: (e) => Alert.alert(tr('group.couldNotLeave'), e instanceof Error ? e.message : tr('common.error')),
             }),
         },
       ],
@@ -136,17 +136,17 @@ export default function GroupScreen() {
   const confirmArchive = () => {
     if (!id) return;
     Alert.alert(
-      'Archive this group?',
-      'It disappears from active lists. Existing data is preserved.',
+      tr('group.archiveConfirmTitle'),
+      tr('group.archiveConfirmBody'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: tr('common.cancel'), style: 'cancel' },
         {
-          text: 'Archive',
+          text: tr('group.archiveGroup'),
           style: 'destructive',
           onPress: () =>
             archive.mutate(id, {
               onSuccess: () => router.replace('/(tabs)/groups'),
-              onError: (e) => Alert.alert('Could not archive', e instanceof Error ? e.message : 'Unknown error'),
+              onError: (e) => Alert.alert(tr('group.couldNotArchive'), e instanceof Error ? e.message : tr('common.error')),
             }),
         },
       ],
@@ -158,18 +158,18 @@ export default function GroupScreen() {
   if (access.isPending) {
     return (
       <Screen edges={['top', 'bottom']}>
-        <ScreenHeader title="Group" onBack={() => router.back()} />
-        <Text variant="muted">Loading…</Text>
+        <ScreenHeader title={tr('common.groups')} onBack={() => router.back()} />
+        <Text variant="muted">{tr('common.loading')}</Text>
       </Screen>
     );
   }
   if (access.isError || !access.data) {
     return (
       <Screen edges={['top', 'bottom']}>
-        <ScreenHeader title="Group" onBack={() => router.back()} />
+        <ScreenHeader title={tr('common.groups')} onBack={() => router.back()} />
         <View style={{ gap: t.spacing.md }}>
-          <Text variant="title">Group unavailable</Text>
-          <Text variant="muted">This group is private, archived, or no longer exists.</Text>
+          <Text variant="title">{tr('group.unavailable')}</Text>
+          <Text variant="muted">{tr('group.unavailableBody')}</Text>
         </View>
       </Screen>
     );
@@ -182,12 +182,10 @@ export default function GroupScreen() {
   if (!groups.isPending && !group) {
     return (
       <Screen edges={['top', 'bottom']}>
-        <ScreenHeader title="Group" onBack={() => router.back()} />
+        <ScreenHeader title={tr('common.groups')} onBack={() => router.back()} />
         <View style={{ gap: t.spacing.md }}>
-          <Text variant="title">Group unavailable</Text>
-          <Text variant="muted">
-            This group has been archived, you&apos;re no longer a member, or it no longer exists.
-          </Text>
+          <Text variant="title">{tr('group.unavailable')}</Text>
+          <Text variant="muted">{tr('group.unavailableBody')}</Text>
         </View>
       </Screen>
     );
@@ -198,21 +196,21 @@ export default function GroupScreen() {
       {/* Custom in-body header — replaces the native UINavigationBar so the bar-button
           system tap-highlight ("white circle behind the icons") never renders. */}
       <ScreenHeader
-        title={group?.name ?? 'Group'}
+        title={group?.name ?? tr('common.groups')}
         onBack={() => router.back()}
         rightAction={{
           icon: <Icon name="settings" size={22} color={t.colors.foreground} />,
           onPress: () => setMenuOpen(true),
-          accessibilityLabel: 'Group settings',
+          accessibilityLabel: tr('group.settings'),
         }}
       />
 
       <View style={{ paddingHorizontal: t.spacing.lg, paddingTop: t.spacing.md }}>
         <SegmentedControl
           options={[
-            { label: 'Overview', value: 'overview' },
+            { label: tr('group.overview'), value: 'overview' },
             { label: tr('common.challenges'), value: 'challenges' },
-            { label: 'Leaderboard', value: 'board' },
+            { label: tr('group.leaderboard'), value: 'board' },
           ]}
           value={tab}
           onChange={setTab}
@@ -224,7 +222,7 @@ export default function GroupScreen() {
           <View style={{ alignItems: 'center', gap: t.spacing.sm }}>
             <Avatar name={group?.name ?? '?'} uri={overview.data?.avatarUrl} size={88} />
             <Text variant="title" style={{ textAlign: 'center' }}>
-              {group?.name ?? 'Group'}
+              {group?.name ?? tr('common.groups')}
             </Text>
             {overview.data?.description ? (
               <Text variant="muted" style={{ textAlign: 'center' }}>
@@ -237,37 +235,37 @@ export default function GroupScreen() {
 
           <Card>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <Text variant="muted">Members</Text>
+              <Text variant="muted">{tr('group.members')}</Text>
               <Text variant="subtitle">{overview.data?.memberCount ?? '—'}</Text>
             </View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: t.spacing.sm }}>
-              <Text variant="muted">Created</Text>
+              <Text variant="muted">{tr('group.created')}</Text>
               <Text variant="subtitle">
-                {overview.data?.createdAt ? new Date(overview.data.createdAt).toLocaleDateString() : '—'}
+                {overview.data?.createdAt ? fmtDate(overview.data.createdAt) : '—'}
               </Text>
             </View>
           </Card>
 
           {/* Create-in-group button → wizard pre-seeded with this group. */}
           <Button
-            label="+ New challenge"
+            label={tr('group.newChallengeShort')}
             onPress={() => router.push(`/challenge/new?groupId=${id}` as Href)}
           />
         </ScrollView>
       ) : tab === 'challenges' ? (
         <ScrollView contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.sm, paddingBottom: t.spacing.xl }}>
           <Button
-            label="+ New challenge"
+            label={tr('group.newChallengeShort')}
             onPress={() => router.push(`/challenge/new?groupId=${id}` as Href)}
           />
           {challenges.isPending ? (
-            <Text variant="muted">Loading…</Text>
+            <Text variant="muted">{tr('common.loading')}</Text>
           ) : activeGroupChallenges.length > 0 ? (
             activeGroupChallenges.map((c) => (
               <GroupChallengeRow key={c.id} challenge={c} onPress={() => router.push(`/challenge/${c.id}` as Href)} />
             ))
           ) : (
-            <EmptyStateCard title="No active challenges" body="Create a challenge for this group to get going." />
+            <EmptyStateCard title={tr('group.noActiveChallenges')} body={tr('group.noActiveChallengesBody')} />
           )}
         </ScrollView>
       ) : (
@@ -277,13 +275,13 @@ export default function GroupScreen() {
           contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.sm, paddingBottom: t.spacing.xl }}
           ListEmptyComponent={
             board.isPending ? (
-              <Text variant="muted">Loading…</Text>
+              <Text variant="muted">{tr('common.loading')}</Text>
             ) : board.isError ? (
               <Text variant="caption" style={{ color: t.colors.destructive }}>
-                {board.error instanceof Error ? board.error.message : 'Could not load the leaderboard.'}
+                {board.error instanceof Error ? board.error.message : tr('group.leaderboardError')}
               </Text>
             ) : (
-              <Text variant="muted">No members yet.</Text>
+              <Text variant="muted">{tr('group.noMembers')}</Text>
             )
           }
           refreshControl={
@@ -342,7 +340,7 @@ export default function GroupScreen() {
               }}
             >
               <Text style={{ color: t.colors.mutedForeground, fontSize: t.fontSize.sm, fontWeight: '600' }}>
-                Copied to clipboard
+                {tr('group.codeCopied')}
               </Text>
             </View>
           </Animated.View>
@@ -365,7 +363,7 @@ export default function GroupScreen() {
                 setToastVisible(false);
                 setTimeout(() => setToastVisible(true), 0);
               } catch (e) {
-                Alert.alert('Could not copy', e instanceof Error ? e.message : 'Unknown error');
+                Alert.alert(tr('group.couldNotCopy'), e instanceof Error ? e.message : tr('common.error'));
               }
             }}
             style={({ pressed }) => ({
@@ -377,7 +375,7 @@ export default function GroupScreen() {
               gap: t.spacing.xs,
             })}
           >
-            <Text variant="muted">Invite code</Text>
+            <Text variant="muted">{tr('group.inviteCode')}</Text>
             <View
               style={{
                 backgroundColor: t.colors.primarySoft,
@@ -390,21 +388,21 @@ export default function GroupScreen() {
                 {group.inviteCode}
               </Text>
             </View>
-            <Text variant="caption">Tap to copy.</Text>
+            <Text variant="caption">{tr('group.tapToCopy')}</Text>
           </Pressable>
         ) : null}
 
         {isOwner ? (
           <>
             <BottomSheetMenuItem
-              label="Edit group"
+              label={tr('group.editGroup')}
               onPress={() => {
                 setMenuOpen(false);
                 router.push(`/group/${id}/edit` as Href);
               }}
             />
             <BottomSheetMenuItem
-              label="Transfer leadership"
+              label={tr('group.transferLeadership')}
               onPress={() => {
                 setMenuOpen(false);
                 setTransferOpen(true);
@@ -414,7 +412,7 @@ export default function GroupScreen() {
                 tone, not the destructive red — per the user's request. The Alert.alert
                 confirmation downstream still describes the consequence clearly. */}
             <BottomSheetMenuItem
-              label={archive.isPending ? 'Archiving…' : 'Archive group'}
+              label={archive.isPending ? tr('group.archiving') : tr('group.archiveGroup')}
               onPress={() => {
                 setMenuOpen(false);
                 confirmArchive();
@@ -423,7 +421,7 @@ export default function GroupScreen() {
           </>
         ) : null}
         <BottomSheetMenuItem
-          label={leave.isPending ? 'Leaving…' : 'Leave group'}
+          label={leave.isPending ? tr('group.leaving') : tr('group.leaveGroup')}
           destructive
           onPress={() => {
             setMenuOpen(false);
@@ -434,7 +432,7 @@ export default function GroupScreen() {
             their own group, so hide the affordance for them. */}
         {isOwner ? null : (
           <BottomSheetMenuItem
-            label="Report group"
+            label={tr('report.reportGroup')}
             onPress={() => {
               setMenuOpen(false);
               setTimeout(() => setReportOpen(true), 250);
@@ -475,6 +473,7 @@ function GroupChallengeRow({
   onPress: () => void;
 }) {
   const t = useTheme();
+  const { lang } = useI18n();
   return (
     <Pressable accessibilityRole="button" onPress={onPress}>
       <Card>
@@ -491,7 +490,7 @@ function GroupChallengeRow({
               {challenge.title}
             </Text>
             <Text variant="muted">
-              {challenge.category} · {challenge.durationDays} days
+              {formatChallengeCategory(lang, challenge.category)} · {formatDays(lang, challenge.durationDays)}
             </Text>
           </View>
           <Text variant="muted">›</Text>
@@ -513,7 +512,8 @@ function LeaderboardRow({
   onPress: () => void;
 }) {
   const t = useTheme();
-  const name = entry.displayName || entry.username || 'Member';
+  const { t: tr } = useI18n();
+  const name = entry.displayName || entry.username || tr('common.member');
   const avatarRemoteUrl = userAvatarUrl(entry.avatarUrl ?? null);
   return (
     <Pressable
@@ -534,12 +534,12 @@ function LeaderboardRow({
           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <Text variant="heading" numberOfLines={1}>
               {name}
-              {isMe ? <Text variant="muted">  (You)</Text> : null}
+              {isMe ? <Text variant="muted">  {tr('group.you')}</Text> : null}
             </Text>
             {isLeader ? <CrownIcon size={14} /> : null}
           </View>
           <Text variant="heading">{entry.verifiedCount}</Text>
-          <Text variant="muted">proofs</Text>
+          <Text variant="muted">{tr('group.proofsLower')}</Text>
         </View>
       </Card>
     </Pressable>
@@ -560,18 +560,17 @@ function TransferLeadershipSheet({
   onPick: (entry: LeaderboardEntry) => void;
 }) {
   const t = useTheme();
+  const { t: tr } = useI18n();
   return (
     <BottomSheet visible={visible} onClose={onClose}>
       <View style={{ gap: t.spacing.sm, paddingBottom: t.spacing.xs }}>
-        <Text variant="heading">Transfer leadership</Text>
-        <Text variant="muted">
-          Pick the member who should become the new leader. You&apos;ll be asked to confirm.
-        </Text>
+        <Text variant="heading">{tr('group.transferLeadership')}</Text>
+        <Text variant="muted">{tr('group.transferPickBody')}</Text>
         {members.length === 0 ? (
-          <Text variant="muted">No other members to transfer to.</Text>
+          <Text variant="muted">{tr('group.noOtherMembers')}</Text>
         ) : (
           members.map((m) => {
-            const name = m.displayName || m.username || 'Member';
+            const name = m.displayName || m.username || tr('common.member');
             const avatarRemoteUrl = userAvatarUrl(m.avatarUrl ?? null);
             return (
               <Pressable

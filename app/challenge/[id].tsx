@@ -44,6 +44,7 @@ import {
   useSubmissions,
   useTodaySubmission,
 } from '@/features/proofs';
+import { formatChallengeCategory, formatDays, useI18n, type I18nKey } from '@/shared/i18n';
 import type {
   ChallengeMode,
   ContestantStreak,
@@ -63,6 +64,7 @@ export default function ChallengeDetailScreen() {
   // Resolve access first. In public-preview mode the member-only hooks are DISABLED by passing
   // `undefined` (they all gate on `enabled: !!id`), so no participant-only RPC runs for a viewer
   // who can only see the public preview.
+  const { t: tr, lang } = useI18n();
   const access = useChallengeAccess(id);
   const memberId = access.data?.accessMode === 'member' ? id : undefined;
   const challenge = useChallenge(memberId);
@@ -103,15 +105,15 @@ export default function ChallengeDetailScreen() {
   if (access.isPending) {
     return (
       <Screen>
-        <Text variant="muted">Loading…</Text>
+        <Text variant="muted">{tr('common.loading')}</Text>
       </Screen>
     );
   }
   if (access.isError || !access.data) {
     return (
       <Screen>
-        <Text variant="title">Challenge unavailable</Text>
-        <Text variant="muted">This challenge is private, archived, or no longer exists.</Text>
+        <Text variant="title">{tr('challenge.unavailable')}</Text>
+        <Text variant="muted">{tr('challenge.unavailableBody')}</Text>
       </Screen>
     );
   }
@@ -123,16 +125,16 @@ export default function ChallengeDetailScreen() {
   if (challenge.isPending) {
     return (
       <Screen>
-        <Text variant="muted">Loading…</Text>
+        <Text variant="muted">{tr('common.loading')}</Text>
       </Screen>
     );
   }
   if (challenge.isError || !challenge.data) {
     return (
       <Screen>
-        <Text variant="title">Challenge unavailable</Text>
+        <Text variant="title">{tr('challenge.unavailable')}</Text>
         <Text variant="caption" style={{ color: t.colors.destructive }}>
-          {challenge.error instanceof Error ? challenge.error.message : 'Could not load.'}
+          {challenge.error instanceof Error ? challenge.error.message : tr('challenge.unavailableError')}
         </Text>
       </Screen>
     );
@@ -156,19 +158,18 @@ export default function ChallengeDetailScreen() {
 
   const confirmDelete = () => {
     Alert.alert(
-      'Delete this challenge?',
-      'This permanently deletes the challenge and ALL its submissions, comments, and streaks for ' +
-        'everyone. This cannot be undone.',
+      tr('challenge.deleteConfirmTitle'),
+      tr('challenge.deleteConfirmBody'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: tr('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: tr('common.delete'),
           style: 'destructive',
           onPress: () =>
             del.mutate(c.id, {
               onSuccess: () => router.replace('/(tabs)/challenges'),
               onError: (e: unknown) =>
-                Alert.alert('Could not delete', e instanceof Error ? e.message : 'Unknown error'),
+                Alert.alert(tr('challenge.couldNotDelete'), e instanceof Error ? e.message : tr('common.error')),
             }),
         },
       ],
@@ -186,7 +187,7 @@ export default function ChallengeDetailScreen() {
         rightAction={{
           icon: <Icon name="settings" size={22} color={t.colors.foreground} />,
           onPress: () => setMenuOpen(true),
-          accessibilityLabel: 'Challenge settings',
+          accessibilityLabel: tr('challenge.settings'),
         }}
       />
       <FlatList
@@ -198,17 +199,17 @@ export default function ChallengeDetailScreen() {
             {/* Title is owned by the ScreenHeader above — not duplicated here. */}
             {/* Encapsulated, divided metadata chips. */}
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.spacing.xs }}>
-              <MetaChip label={titleCase(c.category)} />
+              <MetaChip label={formatChallengeCategory(lang, c.category)} />
               <MetaChip
                 label={
                   c.mode === 'group'
                     ? hostGroup
-                      ? `Group · ${hostGroup.name}`
-                      : 'Group'
-                    : 'Solo'
+                      ? `${tr('mode.group')} · ${hostGroup.name}`
+                      : tr('mode.group')
+                    : tr('mode.solo')
                 }
               />
-              <MetaChip label={`${c.durationDays} days`} />
+              <MetaChip label={formatDays(lang, c.durationDays)} />
             </View>
 
             {c.proofRequirement ? (
@@ -229,11 +230,8 @@ export default function ChallengeDetailScreen() {
 
             {isArchived ? (
               <Card style={{ backgroundColor: t.colors.muted }}>
-                <Text variant="heading">Archived</Text>
-                <Text variant="muted">
-                  This challenge has been archived. History remains, but no new proofs can be
-                  submitted.
-                </Text>
+                <Text variant="heading">{tr('challenge.archived')}</Text>
+                <Text variant="muted">{tr('challenge.archivedBody')}</Text>
               </Card>
             ) : null}
 
@@ -241,11 +239,11 @@ export default function ChallengeDetailScreen() {
             {streak.data ? (
               <View style={{ flexDirection: 'row', gap: t.spacing.md }}>
                 <Card style={{ flex: 1 }}>
-                  <Text variant="muted">Current streak</Text>
+                  <Text variant="muted">{tr('challenge.currentStreak')}</Text>
                   <Text variant="title">🔥 {streak.data.current}</Text>
                 </Card>
                 <Card style={{ flex: 1 }}>
-                  <Text variant="muted">Best Streak</Text>
+                  <Text variant="muted">{tr('challenge.bestStreak')}</Text>
                   <Text variant="title">{streak.data.longest}</Text>
                 </Card>
               </View>
@@ -265,12 +263,12 @@ export default function ChallengeDetailScreen() {
             {/* Primary action is a STICKY bottom CTA (below the list) — not in the scroll. */}
 
             <Text variant="heading" style={{ marginTop: t.spacing.md }}>
-              Recent proofs
+              {tr('challenge.recentProofs')}
             </Text>
           </View>
         }
         ListEmptyComponent={
-          submissions.isPending ? null : <Text variant="muted">No proofs yet.</Text>
+          submissions.isPending ? null : <Text variant="muted">{tr('challenge.noProofs')}</Text>
         }
         refreshControl={
           <RefreshControl
@@ -301,7 +299,7 @@ export default function ChallengeDetailScreen() {
           }}
         >
           <Button
-            label={primary.label}
+            label={tr(primary.labelKey)}
             onPress={() => {
               if (primary.kind === 'submit') {
                 router.push(`/challenge/${c.id}/submit-proof`);
@@ -318,14 +316,14 @@ export default function ChallengeDetailScreen() {
         {isCreator && !isArchived ? (
           <>
             <BottomSheetMenuItem
-              label="Edit challenge"
+              label={tr('challenge.editChallenge')}
               onPress={() => {
                 setMenuOpen(false);
                 router.push(`/challenge/${c.id}/edit` as Href);
               }}
             />
             <BottomSheetMenuItem
-              label={del.isPending ? 'Deleting…' : 'Delete challenge'}
+              label={del.isPending ? tr('challenge.deleting') : tr('challenge.deleteChallenge')}
               destructive
               onPress={() => {
                 setMenuOpen(false);
@@ -336,7 +334,7 @@ export default function ChallengeDetailScreen() {
         ) : null}
         {!isCreator ? (
           <BottomSheetMenuItem
-            label="Report challenge"
+            label={tr('report.reportChallenge')}
             onPress={() => {
               setMenuOpen(false);
               setTimeout(() => setReportOpen(true), 250);
@@ -371,8 +369,8 @@ export default function ChallengeDetailScreen() {
 // --------------------------------------------------------------------------------------
 type PrimaryAction =
   | { kind: 'hidden' }
-  | { kind: 'submit'; label: string }
-  | { kind: 'redact'; label: string };
+  | { kind: 'submit'; labelKey: I18nKey }
+  | { kind: 'redact'; labelKey: I18nKey };
 
 function computePrimaryAction(args: {
   isArchived: boolean;
@@ -382,12 +380,12 @@ function computePrimaryAction(args: {
 }): PrimaryAction {
   if (args.isArchived) return { kind: 'hidden' };
   if (args.queuedStatus) return { kind: 'hidden' };
-  if (!args.todayStatus) return { kind: 'submit', label: "Submit today's proof" };
-  if (args.mode === 'solo') return { kind: 'redact', label: 'Edit proof' };
+  if (!args.todayStatus) return { kind: 'submit', labelKey: 'challenge.submitToday' };
+  if (args.mode === 'solo') return { kind: 'redact', labelKey: 'challenge.editProof' };
   // group
   if (args.todayStatus === 'verified') return { kind: 'hidden' };
-  if (args.todayStatus === 'rejected') return { kind: 'redact', label: 'Edit and resubmit' };
-  return { kind: 'redact', label: 'Edit proof' };
+  if (args.todayStatus === 'rejected') return { kind: 'redact', labelKey: 'challenge.editResubmit' };
+  return { kind: 'redact', labelKey: 'challenge.editProof' };
 }
 
 // --------------------------------------------------------------------------------------
@@ -425,7 +423,8 @@ function StatusBar({
   todayStatus: ServerSubmissionStatus | null;
 }) {
   const t = useTheme();
-  const { label, tone } = describeStatus(mode, todayStatus);
+  const { t: tr } = useI18n();
+  const { labelKey, tone } = describeStatus(mode, todayStatus);
   const color = { danger: t.colors.destructive, pending: t.colors.warning, done: t.colors.success }[tone];
   return (
     <View
@@ -438,8 +437,8 @@ function StatusBar({
         borderColor: color,
       }}
     >
-      <Text variant="caption" style={{ color: t.colors.mutedForeground }}>Today</Text>
-      <Text variant="heading" style={{ color: t.colors.foreground }}>{label}</Text>
+      <Text variant="caption" style={{ color: t.colors.mutedForeground }}>{tr('challenge.todayLabel')}</Text>
+      <Text variant="heading" style={{ color: t.colors.foreground }}>{tr(labelKey)}</Text>
     </View>
   );
 }
@@ -447,16 +446,16 @@ function StatusBar({
 function describeStatus(
   mode: ChallengeMode,
   todayStatus: ServerSubmissionStatus | null,
-): { label: string; tone: StatusTone } {
+): { labelKey: I18nKey; tone: StatusTone } {
   if (mode === 'solo') {
-    if (!todayStatus) return { label: 'Not submitted', tone: 'danger' };
-    return { label: 'Submitted', tone: 'done' };
+    if (!todayStatus) return { labelKey: 'status.notSubmitted', tone: 'danger' };
+    return { labelKey: 'status.submitted', tone: 'done' };
   }
   // group
-  if (!todayStatus) return { label: 'Not submitted', tone: 'danger' };
-  if (todayStatus === 'pending_verification') return { label: 'Pending verification', tone: 'pending' };
-  if (todayStatus === 'verified') return { label: 'Verified', tone: 'done' };
-  return { label: 'Rejected', tone: 'danger' };
+  if (!todayStatus) return { labelKey: 'status.notSubmitted', tone: 'danger' };
+  if (todayStatus === 'pending_verification') return { labelKey: 'status.pending', tone: 'pending' };
+  if (todayStatus === 'verified') return { labelKey: 'status.verified', tone: 'done' };
+  return { labelKey: 'status.rejected', tone: 'danger' };
 }
 
 type StreakSortKey = 'current' | 'longest';
@@ -475,6 +474,7 @@ function ContestantsStreakRibbon({
   isPending: boolean;
 }) {
   const t = useTheme();
+  const { t: tr } = useI18n();
   // Streak leaderboard shows ALL contestants including the current user (Dastan's change).
   // Keep only rows with a real userId; `_myUid` is intentionally unused now.
   const others = useMemo(() => data.filter((d) => d.userId), [data]);
@@ -526,7 +526,7 @@ function ContestantsStreakRibbon({
     >
       <View style={{ paddingHorizontal: t.spacing.xs, paddingTop: 2 }}>
         <Text variant="caption" style={{ color: t.colors.mutedForeground }}>
-          Other contestants
+          {tr('challenge.otherContestants')}
         </Text>
       </View>
 
@@ -557,6 +557,7 @@ function ContestantsHeaderRow({
   onSort: (key: StreakSortKey) => void;
 }) {
   const t = useTheme();
+  const { t: tr } = useI18n();
   const arrow = (k: StreakSortKey) =>
     sort.key === k ? (sort.direction === 'desc' ? ' ↓' : ' ↑') : '';
   const activeStyle = (k: StreakSortKey) =>
@@ -575,7 +576,7 @@ function ContestantsHeaderRow({
       }}
     >
       <Text variant="caption" style={{ flex: 1, color: t.colors.mutedForeground }}>
-        Name
+        {tr('challenge.colName')}
       </Text>
       <Pressable
         accessibilityRole="button"
@@ -585,7 +586,7 @@ function ContestantsHeaderRow({
         style={{ width: 60 }}
       >
         <Text variant="caption" style={[{ textAlign: 'right' }, activeStyle('longest')]}>
-          Best{arrow('longest')}
+          {tr('challenge.colBest')}{arrow('longest')}
         </Text>
       </Pressable>
       <Pressable
@@ -596,7 +597,7 @@ function ContestantsHeaderRow({
         style={{ width: 72 }}
       >
         <Text variant="caption" style={[{ textAlign: 'right' }, activeStyle('current')]}>
-          Current{arrow('current')}
+          {tr('challenge.colCurrent')}{arrow('current')}
         </Text>
       </Pressable>
     </View>
@@ -613,7 +614,8 @@ function ContestantsBodyRow({
   isLast: boolean;
 }) {
   const t = useTheme();
-  const name = entry.displayName || entry.username || 'Member';
+  const { t: tr } = useI18n();
+  const name = entry.displayName || entry.username || tr('common.member');
   const activeWeight = (k: StreakSortKey) =>
     sortKey === k ? ('700' as const) : ('500' as const);
   return (
@@ -666,6 +668,7 @@ function SubmissionRow({
 }) {
   const t = useTheme();
   const router = useRouter();
+  const { t: tr } = useI18n();
   // A co-participant may verify another member's still-pending proof (server enforces this too).
   const canVerify =
     submission.status === 'pending_verification' &&
@@ -674,7 +677,7 @@ function SubmissionRow({
 
   const authorLabel =
     submission.authorDisplayName ||
-    (submission.authorUsername ? `@${submission.authorUsername}` : 'Member');
+    (submission.authorUsername ? `@${submission.authorUsername}` : tr('common.member'));
 
   return (
     // Tap the row → submission detail (photo + reactions + comments). The Verify button below is a
@@ -688,14 +691,14 @@ function SubmissionRow({
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <View style={{ flex: 1, gap: 2 }}>
               <Text variant="heading">{submission.title}</Text>
-              <Text variant="muted">{authorLabel} · Day {submission.challengeDay + 1}</Text>
+              <Text variant="muted">{authorLabel} · {tr('day.n', { n: submission.challengeDay + 1 })}</Text>
             </View>
             <SyncBadge status={submission.status} />
           </View>
           {submission.comment ? <Text variant="muted">{submission.comment}</Text> : null}
           {canVerify ? (
             <Button
-              label="Verify proof"
+              label={tr('verify.title')}
               variant="secondary"
               size="sm"
               // typedRoutes hasn't generated verify/[submissionId] in the route union yet;
@@ -707,9 +710,4 @@ function SubmissionRow({
       </Card>
     </Pressable>
   );
-}
-
-function titleCase(s: string): string {
-  if (!s) return s;
-  return s[0]!.toUpperCase() + s.slice(1);
 }

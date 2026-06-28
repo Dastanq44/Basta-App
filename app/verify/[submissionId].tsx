@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Image, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Button, Card, Screen, Text, useTheme } from '@/shared/ui';
+import { formatSubmissionStatus, useI18n } from '@/shared/i18n';
 import { useSession } from '@/features/auth';
 import { SyncBadge, useProofSignedUrl, useSubmission } from '@/features/proofs';
 import { useVerifySubmission } from '@/features/verification';
@@ -12,6 +13,7 @@ import type { VerificationResult } from '@/entities';
 export default function VerifySubmissionScreen() {
   const t = useTheme();
   const router = useRouter();
+  const { t: tr, lang } = useI18n();
   const { submissionId } = useLocalSearchParams<{ submissionId: string }>();
   const session = useSession();
   const submission = useSubmission(submissionId);
@@ -23,18 +25,18 @@ export default function VerifySubmissionScreen() {
   if (submission.isPending) {
     return (
       <Screen>
-        <Stack.Screen options={{ title: 'Verify proof' }} />
-        <Text variant="muted">Loading…</Text>
+        <Stack.Screen options={{ title: tr('verify.title') }} />
+        <Text variant="muted">{tr('common.loading')}</Text>
       </Screen>
     );
   }
   if (submission.isError || !submission.data) {
     return (
       <Screen>
-        <Stack.Screen options={{ title: 'Verify proof' }} />
-        <Text variant="title">Proof unavailable</Text>
+        <Stack.Screen options={{ title: tr('verify.title') }} />
+        <Text variant="title">{tr('verify.unavailable')}</Text>
         <Text variant="caption" style={{ color: t.colors.destructive }}>
-          {submission.error instanceof Error ? submission.error.message : 'Could not load this proof.'}
+          {submission.error instanceof Error ? submission.error.message : tr('verify.couldNotLoad')}
         </Text>
       </Screen>
     );
@@ -75,18 +77,18 @@ export default function VerifySubmissionScreen() {
           {media.data ? (
             <Image source={{ uri: media.data }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
           ) : media.isError ? (
-            <Text variant="muted">Couldn’t load the photo.</Text>
+            <Text variant="muted">{tr('submission.photoFailed')}</Text>
           ) : s.mediaRemotePath ? (
             <ActivityIndicator color={t.colors.primary} />
           ) : (
-            <Text variant="muted">No photo attached.</Text>
+            <Text variant="muted">{tr('submission.noPhoto')}</Text>
           )}
         </View>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <View style={{ flex: 1, gap: 2 }}>
             <Text variant="heading">{s.title}</Text>
-            <Text variant="muted">Day {s.challengeDay + 1}</Text>
+            <Text variant="muted">{tr('day.n', { n: s.challengeDay + 1 })}</Text>
           </View>
           <SyncBadge status={s.status} />
         </View>
@@ -99,21 +101,21 @@ export default function VerifySubmissionScreen() {
 
         {verify.isError ? (
           <Text variant="caption" style={{ color: t.colors.destructive }}>
-            {verify.error instanceof Error ? verify.error.message : 'Could not record your verification.'}
+            {verify.error instanceof Error ? verify.error.message : tr('verify.couldNotRecord')}
           </Text>
         ) : null}
 
         {isOwn ? (
-          <Text variant="muted">You can’t verify your own proof.</Text>
+          <Text variant="muted">{tr('verify.cannotOwn')}</Text>
         ) : isResolved ? (
-          <Text variant="muted">This proof has already been {s.status}.</Text>
+          <Text variant="muted">{tr('verify.alreadyResolved', { status: formatSubmissionStatus(lang, s.status).toLowerCase() })}</Text>
         ) : null}
 
         {canVote ? (
           <View style={{ flexDirection: 'row', gap: t.spacing.md }}>
             <View style={{ flex: 1 }}>
               <Button
-                label="Reject"
+                label={tr('verify.reject')}
                 variant="destructive"
                 loading={pending === 'reject'}
                 disabled={verify.isPending}
@@ -122,7 +124,7 @@ export default function VerifySubmissionScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Button
-                label="Approve"
+                label={tr('verify.approve')}
                 loading={pending === 'approve'}
                 disabled={verify.isPending}
                 onPress={() => onVote('approve')}
