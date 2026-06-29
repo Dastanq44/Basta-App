@@ -21,6 +21,24 @@
 
 ---
 
+## 2026-06-29 (pm·2) — Claude (opus) / native headers for detail screens (D-019)
+
+**Did (committed `83becbb` was the prior round; THIS round not yet committed):** replaced the in-body
+glass-circle header on the detail screens with the **native iOS stack header** (Apple bar buttons),
+per user request ("use Apple's buttons, like the Archive page; center them so they look neat").
+- New shared **`HeaderActionButton`** (flat 3-dot, `headerRight`) in `ScreenHeader.tsx`; exported.
+- `app/_layout`: `challenge/[id]`, `group/[id]`, `submission/[id]` → `headerShown: true`; added
+  `headerTitleAlign:'center'` to the global header options (neat centered titles on iOS + Android).
+- `challenge/[id]`, `group/[id]`, `submission/[id]`, `PublicChallengePreview`, `PublicGroupPreview`:
+  removed `<ScreenHeader>`; each sets `title` + `headerRight` via inline `<Stack.Screen options=…>`;
+  dropped the `'top'` Screen edge (native header owns it). Back button comes from the global
+  `headerLeft` (shared `ChevronLeftIcon`) — same as the Archive page.
+- typecheck + lint clean. See **D-019** (reverses D-018's header strategy for detail screens).
+- `ScreenHeader`/`GlassHeader`/`GlassIconButton` are still exported but no longer used by detail
+  screens; safe to remove later if nothing else adopts them.
+
+---
+
 ## 2026-06-29 (pm) — Claude (opus) / UX polish round (6 user-reported items)
 
 **Did (NOT yet committed — awaiting user's go-ahead):** 15 files touched (+ new `model/title.ts`).

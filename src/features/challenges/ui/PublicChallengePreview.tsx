@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
-import { type Href, useRouter } from 'expo-router';
-import { BottomSheet, BottomSheetMenuItem, Button, Card, Icon, PublicPreviewBanner, Screen, ScreenHeader, Text, useTheme } from '@/shared/ui';
+import { type Href, Stack, useRouter } from 'expo-router';
+import { BottomSheet, BottomSheetMenuItem, Button, Card, HeaderActionButton, PublicPreviewBanner, Screen, Text, useTheme } from '@/shared/ui';
 import { formatChallengeCategory, formatDays, useI18n } from '@/shared/i18n';
 import { ReportSheet } from '@/features/moderation';
 import type { Submission } from '@/entities';
@@ -24,19 +24,15 @@ export function PublicChallengePreview({ access }: { access: ChallengeAccess }) 
   const { emoji, name } = splitChallengeTitle(access.title);
 
   return (
-    <Screen padded={false} edges={['top', 'bottom']}>
-      <ScreenHeader
-        title={access.title}
-        onBack={() => router.back()}
-        rightAction={
-          access.canReport
-            ? {
-                icon: <Icon name="settings" size={22} color={t.colors.foreground} />,
-                onPress: () => setMenuOpen(true),
-                accessibilityLabel: tr('challenge.settings'),
-              }
-            : undefined
-        }
+    <Screen padded={false} edges={['bottom']}>
+      {/* Native stack header — back chevron + centered title; Report lives in the native 3-dot. */}
+      <Stack.Screen
+        options={{
+          title: access.title,
+          headerRight: access.canReport
+            ? () => <HeaderActionButton onPress={() => setMenuOpen(true)} accessibilityLabel={tr('challenge.settings')} />
+            : undefined,
+        }}
       />
       <FlatList
         data={subs.data ?? []}

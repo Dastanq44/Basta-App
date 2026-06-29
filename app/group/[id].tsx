@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Animated, FlatList, Image, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
-import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
+import { type Href, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   Avatar,
   BottomSheet,
@@ -10,10 +10,9 @@ import {
   Card,
   CrownIcon,
   EmptyStateCard,
-  Icon,
+  HeaderActionButton,
   OrnamentDivider,
   Screen,
-  ScreenHeader,
   SegmentedControl,
   Text,
   useTheme,
@@ -154,19 +153,20 @@ export default function GroupScreen() {
     );
   };
 
-  // Access gate (runs before the member-data guards below).
+  // Access gate (runs before the member-data guards below). The native header (with back button) is
+  // on for this route; these states just set a title + drop the top safe-area edge.
   if (access.isPending) {
     return (
-      <Screen edges={['top', 'bottom']}>
-        <ScreenHeader title={tr('common.groups')} onBack={() => router.back()} />
+      <Screen edges={['bottom']}>
+        <Stack.Screen options={{ title: tr('common.groups') }} />
         <Text variant="muted">{tr('common.loading')}</Text>
       </Screen>
     );
   }
   if (access.isError || !access.data) {
     return (
-      <Screen edges={['top', 'bottom']}>
-        <ScreenHeader title={tr('common.groups')} onBack={() => router.back()} />
+      <Screen edges={['bottom']}>
+        <Stack.Screen options={{ title: tr('group.unavailable') }} />
         <View style={{ gap: t.spacing.md }}>
           <Text variant="title">{tr('group.unavailable')}</Text>
           <Text variant="muted">{tr('group.unavailableBody')}</Text>
@@ -181,8 +181,8 @@ export default function GroupScreen() {
   // ── Member detail from here. ──
   if (!groups.isPending && !group) {
     return (
-      <Screen edges={['top', 'bottom']}>
-        <ScreenHeader title={tr('common.groups')} onBack={() => router.back()} />
+      <Screen edges={['bottom']}>
+        <Stack.Screen options={{ title: tr('group.unavailable') }} />
         <View style={{ gap: t.spacing.md }}>
           <Text variant="title">{tr('group.unavailable')}</Text>
           <Text variant="muted">{tr('group.unavailableBody')}</Text>
@@ -192,16 +192,15 @@ export default function GroupScreen() {
   }
 
   return (
-    <Screen padded={false} edges={['top', 'bottom']}>
-      {/* Custom in-body header — replaces the native UINavigationBar so the bar-button
-          system tap-highlight ("white circle behind the icons") never renders. */}
-      <ScreenHeader
-        title={group?.name ?? tr('common.groups')}
-        onBack={() => router.back()}
-        rightAction={{
-          icon: <Icon name="settings" size={22} color={t.colors.foreground} />,
-          onPress: () => setMenuOpen(true),
-          accessibilityLabel: tr('group.settings'),
+    <Screen padded={false} edges={['bottom']}>
+      {/* Native stack header (like the Archive page): shared back chevron + centered title; the
+          gear/3-dot menu is the native `headerRight`. */}
+      <Stack.Screen
+        options={{
+          title: group?.name ?? tr('common.groups'),
+          headerRight: () => (
+            <HeaderActionButton onPress={() => setMenuOpen(true)} accessibilityLabel={tr('group.settings')} />
+          ),
         }}
       />
 

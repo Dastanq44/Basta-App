@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Keyboard, Platform, ScrollView, View } from 'react-native';
 import { Image } from 'expo-image';
-import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
-import { BottomSheet, BottomSheetMenuItem, Icon, ProofContextStrip, Screen, ScreenHeader, Text, useTheme } from '@/shared/ui';
+import { type Href, Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { BottomSheet, BottomSheetMenuItem, HeaderActionButton, ProofContextStrip, Screen, Text, useTheme } from '@/shared/ui';
 import type { ProofContextItem } from '@/shared/ui';
 import { useI18n } from '@/shared/i18n';
 import { splitChallengeTitle } from '@/features/challenges';
@@ -62,8 +62,8 @@ export default function SubmissionScreen() {
 
   if (submission.isPending) {
     return (
-      <Screen padded={false} edges={['top']}>
-        <ScreenHeader title={tr('common.proof')} onBack={() => router.back()} />
+      <Screen padded={false} edges={['bottom']}>
+        <Stack.Screen options={{ title: tr('common.proof') }} />
         <View style={{ padding: t.spacing.lg, alignItems: 'center', paddingTop: t.spacing.xxl }}>
           <ActivityIndicator color={t.colors.primary} />
         </View>
@@ -72,8 +72,8 @@ export default function SubmissionScreen() {
   }
   if (submission.isError || !submission.data) {
     return (
-      <Screen padded={false} edges={['top']}>
-        <ScreenHeader title={tr('common.proof')} onBack={() => router.back()} />
+      <Screen padded={false} edges={['bottom']}>
+        <Stack.Screen options={{ title: tr('common.proof') }} />
         <View style={{ padding: t.spacing.lg, gap: t.spacing.sm }}>
           <Text variant="title">{tr('submission.unavailable')}</Text>
           <Text variant="caption" style={{ color: t.colors.destructive }}>
@@ -92,8 +92,8 @@ export default function SubmissionScreen() {
   // Server-side RLS still allows reads; we'd need broader RLS work to enforce this everywhere.
   if (isBlocked) {
     return (
-      <Screen padded={false} edges={['top']}>
-        <ScreenHeader title={tr('submission.hidden')} onBack={() => router.back()} />
+      <Screen padded={false} edges={['bottom']}>
+        <Stack.Screen options={{ title: tr('submission.hidden') }} />
         <View style={{ padding: t.spacing.lg, gap: t.spacing.md }}>
           <Text variant="title">{tr('submission.hidden')}</Text>
           <Text variant="muted">{tr('submission.hiddenBody')}</Text>
@@ -160,20 +160,15 @@ export default function SubmissionScreen() {
   ];
 
   return (
-    <Screen padded={false} edges={['top', 'bottom']}>
-      {/* In-body header (native header is off) — title + back + non-owner 3-dot menu. */}
-      <ScreenHeader
-        title={s.title}
-        onBack={() => router.back()}
-        rightAction={
-          isMine
+    <Screen padded={false} edges={['bottom']}>
+      {/* Native stack header — back chevron + centered title; non-owner actions in the 3-dot menu. */}
+      <Stack.Screen
+        options={{
+          title: s.title,
+          headerRight: isMine
             ? undefined
-            : {
-                icon: <Icon name="settings" size={22} color={t.colors.foreground} />,
-                onPress: () => setMenuOpen(true),
-                accessibilityLabel: tr('submission.proofActions'),
-              }
-        }
+            : () => <HeaderActionButton onPress={() => setMenuOpen(true)} accessibilityLabel={tr('submission.proofActions')} />,
+        }}
       />
       <ScrollView
         ref={scrollRef}

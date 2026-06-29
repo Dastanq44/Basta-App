@@ -36,7 +36,7 @@ export { CalendarPicker } from './CalendarPicker';
 export type { CalendarPickerProps } from './CalendarPicker';
 export { BottomSheet, BottomSheetMenuItem } from './BottomSheet';
 export type { BottomSheetProps, BottomSheetMenuItemProps } from './BottomSheet';
-export { ScreenHeader, HeaderBackButton } from './ScreenHeader';
+export { ScreenHeader, HeaderBackButton, HeaderActionButton } from './ScreenHeader';
 export type { ScreenHeaderProps } from './ScreenHeader';
 export { ChevronLeftIcon } from './ChevronLeftIcon';
 export type { ChevronLeftIconProps } from './ChevronLeftIcon';

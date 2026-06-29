@@ -161,17 +161,21 @@ function RootNav() {
         headerStyle: { backgroundColor: t.colors.background },
         headerTintColor: t.colors.foreground,
         headerTitleStyle: { color: t.colors.foreground },
+        // Center the title on every platform so the bar reads neat: back (left) · title (center) ·
+        // action (right), matching iOS. (Android left-aligns titles by default.)
+        headerTitleAlign: 'center',
         headerShadowVisible: false,
       }}
     >
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="(onboarding)" />
-      {/* challenge/[id] + group/[id] render their OWN in-screen header (ScreenHeader)
-          because the native UINavigationBar's bar-button system tap-highlight (a small
-          circular tint behind the back / 3-dot icons that fades during transitions)
-          can't be disabled through React Navigation options. */}
-      <Stack.Screen name="challenge/[id]" options={{ headerShown: false }} />
+      {/* challenge/[id], group/[id] + submission/[id] use the NATIVE stack header — identical to the
+          Archive page: the shared back chevron (global `headerLeft`) + a centered title, with the
+          3-dot in `headerRight`. Each screen sets its dynamic title + headerRight via an inline
+          <Stack.Screen options=…>. (Replaces the hand-rolled in-body glass circles, which read as
+          squared boxes on device — see D-019.) */}
+      <Stack.Screen name="challenge/[id]" options={{ headerShown: true }} />
       <Stack.Screen name="challenge/new" options={{ headerShown: true, title: tr('today.newChallenge') }} />
       <Stack.Screen
         name="challenge/[id]/submit-proof"
@@ -186,7 +190,7 @@ function RootNav() {
         options={{ headerShown: true, presentation: 'modal', title: tr('challenge.editChallenge') }}
       />
       <Stack.Screen name="verify/[submissionId]" options={{ headerShown: true, title: tr('verify.title') }} />
-      <Stack.Screen name="group/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="group/[id]" options={{ headerShown: true }} />
       <Stack.Screen
         name="group/[id]/edit"
         options={{ headerShown: true, presentation: 'modal', title: tr('groupForm.editTitle') }}
@@ -196,9 +200,7 @@ function RootNav() {
         options={{ headerShown: true, presentation: 'modal', title: tr('groups.newGroup') }}
       />
       <Stack.Screen name="group/archived" options={{ headerShown: true, title: tr('groups.archived') }} />
-      {/* submission/[id] renders its own in-body ScreenHeader (like challenge/group) so the
-          native bar-button tap-highlight isn't visible. */}
-      <Stack.Screen name="submission/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="submission/[id]" options={{ headerShown: true }} />
       <Stack.Screen name="user/[id]" options={{ headerShown: true, title: tr('nav.profile') }} />
       <Stack.Screen name="blocked-users" options={{ headerShown: true, title: tr('blocked.title') }} />
       <Stack.Screen name="verifications" options={{ headerShown: true, title: tr('verify.titlePlural') }} />

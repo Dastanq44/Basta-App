@@ -362,3 +362,24 @@ Date · Status · Decision · Why · Consequences
 - **Not done (follow-up):** converting the remaining native-header modal/edit routes to in-body
   headers (they're now themed + use the shared chevron, so they're consistent; full conversion is
   optional). Real Liquid Glass is only verifiable on iOS 26 hardware.
+
+## D-019 — Detail screens use the NATIVE stack header (Apple bar buttons), not in-body glass circles (2026-06)   [Accepted; reverses D-018's header strategy for detail screens]
+- **Date:** 2026-06-29 (pm)
+- **Why:** D-018 routed `challenge/[id]`, `group/[id]`, `submission/[id]` (+ the public preview
+  components) through the in-body `ScreenHeader` with `GlassIconButton` **circles**. On real devices
+  those read as squared/floating boxes and didn't look like Apple's controls. The user asked for the
+  same buttons the Archive page already uses — i.e. the **native stack header**. The original reason
+  for going custom (hiding the native bar-button tap-highlight) is moot: on iOS 26 that highlight IS
+  the Liquid Glass, which is now desirable.
+- **What:** those routes now set `headerShown: true` (in `app/_layout`) and each screen sets its
+  dynamic `title` + `headerRight` via an inline `<Stack.Screen options=…>`. The back button comes
+  from the global `headerLeft` (`HeaderBackButton`, the shared `ChevronLeftIcon`) — exactly the
+  Archive page's back control; the 3-dot is a new flat **`HeaderActionButton`** (`headerRight`) —
+  Apple-style, no glass capsule. (Note: `headerLeft` is overridden globally, so the back button is our
+  flat chevron, not the system UIBarButtonItem — that's what the user pointed to; on iOS 26 the nav
+  bar itself is translucent/glass so the controls float on glass.) Titles are centered globally via
+  `headerTitleAlign:'center'` (neat on iOS + Android). Screens dropped the `'top'` safe-area edge
+  (the native header owns it).
+- **Kept but now unused by detail screens:** `ScreenHeader` / `GlassHeader` / `GlassIconButton` stay
+  exported (still fine for any floating-over-content use), but the detail/preview screens no longer
+  use them. The glass *fallback-shape* fix from W-044 still applies anywhere `GlassSurface` is used.

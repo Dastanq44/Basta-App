@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
 import { Text } from './Text';
+import { Icon } from './Icon';
 import { useTheme } from './theme';
 import { ChevronLeftIcon } from './ChevronLeftIcon';
 import { GlassIconButton } from './glass/GlassIconButton';
@@ -66,6 +67,41 @@ export function ScreenHeader({ title, onBack, rightAction }: ScreenHeaderProps) 
         <View style={{ width: 44, height: 44 }} />
       )}
     </View>
+  );
+}
+
+/**
+ * Standalone right-slot action for native stack headers (`headerRight`) — e.g. the 3-dot menu.
+ * A flat, Apple-style bar button (no glass capsule): just the icon, theme-tinted, with an opacity
+ * dim on press. It sits in the system nav bar opposite the back chevron. Defaults to the 3-dot
+ * "more" glyph; pass `icon` to override.
+ */
+export function HeaderActionButton({
+  onPress,
+  accessibilityLabel,
+  icon,
+}: {
+  onPress: () => void;
+  accessibilityLabel?: string;
+  icon?: ReactNode;
+}) {
+  const t = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      onPress={onPress}
+      hitSlop={8}
+      style={({ pressed }) => ({
+        width: 40,
+        height: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
+        opacity: pressed ? 0.5 : 1,
+      })}
+    >
+      {icon ?? <Icon name="settings" size={22} color={t.colors.foreground} />}
+    </Pressable>
   );
 }
 

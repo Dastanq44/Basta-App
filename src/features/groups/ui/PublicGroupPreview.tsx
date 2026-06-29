@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { type Href, useRouter } from 'expo-router';
+import { type Href, Stack, useRouter } from 'expo-router';
 import {
   Avatar,
   BottomSheet,
@@ -8,10 +8,9 @@ import {
   Button,
   Card,
   EmptyStateCard,
-  Icon,
+  HeaderActionButton,
   PublicPreviewBanner,
   Screen,
-  ScreenHeader,
   SegmentedControl,
   Text,
   useTheme,
@@ -41,19 +40,15 @@ export function PublicGroupPreview({ access }: { access: GroupAccess }) {
   const avatarUrl = groupAvatarUrl(access.avatarPath);
 
   return (
-    <Screen padded={false} edges={['top', 'bottom']}>
-      <ScreenHeader
-        title={access.name}
-        onBack={() => router.back()}
-        rightAction={
-          access.canReport
-            ? {
-                icon: <Icon name="settings" size={22} color={t.colors.foreground} />,
-                onPress: () => setMenuOpen(true),
-                accessibilityLabel: tr('group.settings'),
-              }
-            : undefined
-        }
+    <Screen padded={false} edges={['bottom']}>
+      {/* Native stack header — back chevron + centered title; Report lives in the native 3-dot. */}
+      <Stack.Screen
+        options={{
+          title: access.name,
+          headerRight: access.canReport
+            ? () => <HeaderActionButton onPress={() => setMenuOpen(true)} accessibilityLabel={tr('group.settings')} />
+            : undefined,
+        }}
       />
 
       <View style={{ paddingHorizontal: t.spacing.lg, paddingTop: t.spacing.md }}>

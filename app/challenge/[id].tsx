@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import {
   type Href,
+  Stack,
   useFocusEffect,
   useLocalSearchParams,
   useRouter,
@@ -19,9 +20,8 @@ import {
   BottomSheetMenuItem,
   Button,
   Card,
-  Icon,
+  HeaderActionButton,
   Screen,
-  ScreenHeader,
   Text,
   useTheme,
 } from '@/shared/ui';
@@ -102,17 +102,19 @@ export default function ChallengeDetailScreen() {
     [submissions.data, blockedIds],
   );
 
-  // Access gate (runs before the member-data guards below).
+  // Access gate (runs before the member-data guards below). The native header (with back button)
+  // is on for this route, so these states only set a title + drop the top safe-area edge.
   if (access.isPending) {
     return (
-      <Screen>
+      <Screen edges={['bottom']}>
         <Text variant="muted">{tr('common.loading')}</Text>
       </Screen>
     );
   }
   if (access.isError || !access.data) {
     return (
-      <Screen>
+      <Screen edges={['bottom']}>
+        <Stack.Screen options={{ title: tr('challenge.unavailable') }} />
         <Text variant="title">{tr('challenge.unavailable')}</Text>
         <Text variant="muted">{tr('challenge.unavailableBody')}</Text>
       </Screen>
@@ -125,14 +127,15 @@ export default function ChallengeDetailScreen() {
   // ── Member detail from here (memberId === id; the member hooks are enabled). ──
   if (challenge.isPending) {
     return (
-      <Screen>
+      <Screen edges={['bottom']}>
         <Text variant="muted">{tr('common.loading')}</Text>
       </Screen>
     );
   }
   if (challenge.isError || !challenge.data) {
     return (
-      <Screen>
+      <Screen edges={['bottom']}>
+        <Stack.Screen options={{ title: tr('challenge.unavailable') }} />
         <Text variant="title">{tr('challenge.unavailable')}</Text>
         <Text variant="caption" style={{ color: t.colors.destructive }}>
           {challenge.error instanceof Error ? challenge.error.message : tr('challenge.unavailableError')}
@@ -180,16 +183,15 @@ export default function ChallengeDetailScreen() {
   };
 
   return (
-    <Screen padded={false} edges={['top', 'bottom']}>
-      {/* Custom in-body header — replaces the native UINavigationBar so the bar-button
-          system tap-highlight ("white circle behind the icons") never renders. */}
-      <ScreenHeader
-        title={c.title}
-        onBack={() => router.back()}
-        rightAction={{
-          icon: <Icon name="settings" size={22} color={t.colors.foreground} />,
-          onPress: () => setMenuOpen(true),
-          accessibilityLabel: tr('challenge.settings'),
+    <Screen padded={false} edges={['bottom']}>
+      {/* Native stack header (like the Archive page): shared back chevron + centered title; the
+          3-dot menu is the native `headerRight`. */}
+      <Stack.Screen
+        options={{
+          title: c.title,
+          headerRight: () => (
+            <HeaderActionButton onPress={() => setMenuOpen(true)} accessibilityLabel={tr('challenge.settings')} />
+          ),
         }}
       />
       <FlatList
