@@ -1,11 +1,9 @@
 import { Pressable, View } from 'react-native';
 import { Avatar, Card, Icon, Text, useTheme } from '@/shared/ui';
+import { formatMemberRole, useI18n } from '@/shared/i18n';
 import { groupAvatarUrl } from '@/features/groups';
-import type { MemberRole } from '@/entities';
 import type { ProfileGroup } from '../api';
 import { Pill } from './Pill';
-
-const ROLE_LABEL: Record<MemberRole, string> = { owner: 'Leader', admin: 'Admin', member: 'Member' };
 
 export type ProfileGroupCardProps = {
   group: ProfileGroup;
@@ -18,8 +16,9 @@ export type ProfileGroupCardProps = {
  *  detail vs read-only public preview. Never shows the invite code. */
 export function ProfileGroupCard({ group, onPress, isOwn }: ProfileGroupCardProps) {
   const t = useTheme();
+  const { t: tr, tn, lang } = useI18n();
   const avatarUrl = groupAvatarUrl(group.avatarPath);
-  const roleLabel = group.targetRole ? ROLE_LABEL[group.targetRole] : null;
+  const roleLabel = group.targetRole ? formatMemberRole(lang, group.targetRole) : null;
 
   const body = (
     <Card style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.md }}>
@@ -27,10 +26,10 @@ export function ProfileGroupCard({ group, onPress, isOwn }: ProfileGroupCardProp
       <View style={{ flex: 1, gap: 2 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm }}>
           <Text variant="subtitle" numberOfLines={1} style={{ flex: 1 }}>{group.name}</Text>
-          {isOwn && !group.isPublic ? <Pill label="Private" tone="muted" /> : null}
+          {isOwn && !group.isPublic ? <Pill label={tr('pill.private')} tone="muted" /> : null}
         </View>
         <Text variant="caption" style={{ color: t.colors.mutedForeground }} numberOfLines={1}>
-          {group.memberCount} member{group.memberCount === 1 ? '' : 's'}{roleLabel ? ` · ${roleLabel}` : ''}
+          {tn('members', group.memberCount)}{roleLabel ? ` · ${roleLabel}` : ''}
         </Text>
         {group.description ? (
           <Text variant="caption" numberOfLines={1}>{group.description}</Text>

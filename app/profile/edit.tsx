@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Avatar, Button, Input, Screen, Text, useTheme, VisibilityToggle } from '@/shared/ui';
+import { useI18n } from '@/shared/i18n';
 import {
   deleteMyAvatar,
   displayNameSchema,
@@ -21,6 +22,7 @@ import { pickAvatar } from '@/shared/lib/pickAvatar';
 export default function EditProfileScreen() {
   const t = useTheme();
   const router = useRouter();
+  const { t: tr } = useI18n();
   const profile = useProfile();
   const update = useUpdateMyProfile();
 
@@ -55,7 +57,7 @@ export default function EditProfileScreen() {
   const onPickAvatar = async () => {
     const res = await pickAvatar({
       allowRemove: hasExistingAvatar || !!avatarUri,
-      title: hasExistingAvatar || avatarUri ? 'Change profile photo' : 'Add profile photo',
+      title: hasExistingAvatar || avatarUri ? tr('profileEdit.changePhotoSheet') : tr('profileEdit.addPhotoSheet'),
     });
     if (res.kind === 'picked') {
       setAvatarUri(res.uri);
@@ -72,17 +74,17 @@ export default function EditProfileScreen() {
 
     const parsedName = displayNameSchema.safeParse(displayName);
     if (!parsedName.success) {
-      setFieldError(parsedName.error.issues[0]?.message ?? 'Invalid name');
+      setFieldError(parsedName.error.issues[0]?.message ?? tr('profileEdit.invalidName'));
       return;
     }
     const parsedUsername = usernameSchema.safeParse(username);
     if (!parsedUsername.success) {
-      setFieldError(parsedUsername.error.issues[0]?.message ?? 'Invalid username');
+      setFieldError(parsedUsername.error.issues[0]?.message ?? tr('profileEdit.invalidUsername'));
       return;
     }
     const parsedDesc = profileDescriptionSchema.safeParse(description);
     if (!parsedDesc.success) {
-      setFieldError(parsedDesc.error.issues[0]?.message ?? 'Invalid description');
+      setFieldError(parsedDesc.error.issues[0]?.message ?? tr('profileEdit.invalidDesc'));
       return;
     }
 
@@ -96,8 +98,8 @@ export default function EditProfileScreen() {
         } catch (e) {
           setOpError(
             e instanceof Error
-              ? `Could not upload photo: ${e.message}. If this says "row-level security", check the Supabase project your app points at (EXPO_PUBLIC_SUPABASE_URL) has the "user-avatars" Storage bucket created — buckets are a manual Dashboard step, not part of the migration.`
-              : 'Could not upload photo. Try again.',
+              ? `${tr('profileEdit.couldNotUpload')} ${e.message}`
+              : tr('profileEdit.couldNotUpload'),
           );
           return;
         }
@@ -123,7 +125,7 @@ export default function EditProfileScreen() {
       });
       router.back();
     } catch (e) {
-      setOpError(e instanceof Error ? e.message : 'Could not save profile.');
+      setOpError(e instanceof Error ? e.message : tr('profileEdit.couldNotSave'));
     } finally {
       setBusy(false);
     }
@@ -132,8 +134,8 @@ export default function EditProfileScreen() {
   if (profile.isPending) {
     return (
       <Screen>
-        <Stack.Screen options={{ title: 'Edit profile' }} />
-        <Text variant="muted">Loading…</Text>
+        <Stack.Screen options={{ title: tr('profileEdit.title') }} />
+        <Text variant="muted">{tr('common.loading')}</Text>
       </Screen>
     );
   }
@@ -141,7 +143,7 @@ export default function EditProfileScreen() {
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <Screen padded={false} edges={['bottom']}>
-        <Stack.Screen options={{ title: 'Edit profile' }} />
+        <Stack.Screen options={{ title: tr('profileEdit.title') }} />
         <ScrollView
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.lg, paddingBottom: t.spacing.xl }}
@@ -151,35 +153,35 @@ export default function EditProfileScreen() {
             {previewUri ? (
               <Image source={{ uri: previewUri }} style={{ width: 96, height: 96, borderRadius: 48 }} />
             ) : (
-              <Avatar name={displayName || 'You'} size={96} />
+              <Avatar name={displayName || tr('profileEdit.you')} size={96} />
             )}
             <Text variant="caption" style={{ color: t.colors.primary, textAlign: 'center', marginTop: 6 }}>
-              {previewUri ? 'Change photo' : 'Add photo'}
+              {previewUri ? tr('profileEdit.changePhoto') : tr('profileEdit.addPhoto')}
             </Text>
           </Pressable>
 
           <Input
-            label="Display name"
+            label={tr('onboarding.displayName')}
             value={displayName}
             onChangeText={setDisplayName}
-            placeholder="Your name"
+            placeholder={tr('onboarding.displayNamePlaceholder')}
             autoCapitalize="words"
             editable={!busy}
           />
           <Input
-            label="Username"
+            label={tr('onboarding.username')}
             value={username}
             onChangeText={setUsername}
-            placeholder="username"
+            placeholder={tr('onboarding.usernamePlaceholder')}
             autoCapitalize="none"
             autoCorrect={false}
             editable={!busy}
           />
           <Input
-            label="Description (optional)"
+            label={tr('profileEdit.descLabel')}
             value={description}
             onChangeText={setDescription}
-            placeholder="A short bio about yourself"
+            placeholder={tr('profileEdit.descPlaceholder')}
             multiline
             maxLength={280}
             editable={!busy}
@@ -197,8 +199,8 @@ export default function EditProfileScreen() {
             <VisibilityToggle
               value={!isPublic}
               onValueChange={(next) => setIsPublic(!next)}
-              title="Private profile"
-              description="When this is on, your profile and posts will not appear in Global."
+              title={tr('profileEdit.privateProfile')}
+              description={tr('profileEdit.privateDesc')}
               disabled={busy}
             />
           </View>
@@ -216,11 +218,11 @@ export default function EditProfileScreen() {
 
           <View style={{ flexDirection: 'row', gap: t.spacing.md }}>
             <View style={{ flex: 1 }}>
-              <Button label="Cancel" variant="secondary" onPress={() => router.back()} disabled={busy} />
+              <Button label={tr('common.cancel')} variant="secondary" onPress={() => router.back()} disabled={busy} />
             </View>
             <View style={{ flex: 1 }}>
               <Button
-                label={busy ? 'Saving…' : 'Save'}
+                label={busy ? tr('common.saving') : tr('common.save')}
                 onPress={onSubmit}
                 loading={busy}
                 disabled={busy}

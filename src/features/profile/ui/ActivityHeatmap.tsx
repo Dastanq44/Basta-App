@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Pressable, View, useWindowDimensions } from 'react-native';
 import { Text, useTheme } from '@/shared/ui';
+import { useI18n } from '@/shared/i18n';
 import type { Submission } from '@/entities';
 
 // GitHub-style daily activity calendar, last 90 days.
@@ -15,6 +16,7 @@ const HEATMAP_GAP = 3;
 
 export function ActivityHeatmap({ submissions }: { submissions: Submission[] }) {
   const t = useTheme();
+  const { t: tr, tn, fmtDate } = useI18n();
   const { width: winW } = useWindowDimensions();
   const [selected, setSelected] = useState<{ date: Date; count: number; key: string } | null>(null);
 
@@ -61,10 +63,10 @@ export function ActivityHeatmap({ submissions }: { submissions: Submission[] }) 
     <View style={{ gap: t.spacing.xs }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
         <Text variant="label" style={{ color: t.colors.mutedForeground }}>
-          ACTIVITY · LAST 90 DAYS
+          {tr('profile.activity90').toUpperCase()}
         </Text>
         <Text variant="caption" style={{ color: t.colors.mutedForeground }}>
-          {submissions.length} submissions
+          {tn('proofsCount', submissions.length)}
         </Text>
       </View>
 
@@ -90,7 +92,7 @@ export function ActivityHeatmap({ submissions }: { submissions: Submission[] }) 
                   <Pressable
                     key={row}
                     accessibilityRole="button"
-                    accessibilityLabel={`${cell.date.toLocaleDateString()}, ${count} submission${count === 1 ? '' : 's'}`}
+                    accessibilityLabel={`${fmtDate(cell.date)}, ${tn('proofsCount', count)}`}
                     onPress={() =>
                       setSelected((prev) => (prev?.key === cell.key ? null : { date: cell.date, count, key: cell.key }))
                     }
@@ -125,15 +127,9 @@ export function ActivityHeatmap({ submissions }: { submissions: Submission[] }) 
             }}
           >
             <Text variant="subtitle">
-              {selected.date.toLocaleDateString(undefined, {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric',
-              })}
+              {fmtDate(selected.date, { day: 'numeric', month: 'long', year: 'numeric' })}
             </Text>
-            <Text variant="muted">
-              {selected.count} submission{selected.count === 1 ? '' : 's'}
-            </Text>
+            <Text variant="muted">{tn('proofsCount', selected.count)}</Text>
           </View>
         ) : null}
       </View>

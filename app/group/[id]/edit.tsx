@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Button, Input, Screen, Text, useTheme, VisibilityToggle } from '@/shared/ui';
+import { useI18n, type I18nKey } from '@/shared/i18n';
 import { useSession } from '@/features/auth';
 import {
   AvatarUploadError,
@@ -14,33 +15,29 @@ import {
   useUpdateGroupMeta,
 } from '@/features/groups';
 
-/** Map a typed avatar-upload failure to an actionable, user-facing message. */
-function avatarUploadMessage(e: unknown): string {
+const AVATAR_ERROR_KEY: Record<string, I18nKey> = {
+  'not-signed-in': 'avatar.notSignedIn',
+  'local-read': 'avatar.localRead',
+  'bucket-missing': 'avatar.bucketMissing',
+  'rls-denied': 'avatar.rlsDenied',
+  'too-large': 'avatar.tooLarge',
+  'invalid-type': 'avatar.invalidType',
+  unknown: 'avatar.generic',
+};
+
+/** Map a typed avatar-upload failure to a localized, actionable message. */
+function avatarUploadMessage(e: unknown, tr: (k: I18nKey) => string): string {
   if (e instanceof AvatarUploadError) {
-    switch (e.kind) {
-      case 'not-signed-in':
-        return 'You appear to be signed out. Sign in again, then retry the photo.';
-      case 'local-read':
-        return 'Could not read the selected image on this device. Pick it again, or try a different photo.';
-      case 'bucket-missing':
-        return 'Photo storage isn’t set up: the "group-avatars" bucket is missing. It’s a manual Supabase Dashboard step (Storage → New bucket), separate from the migrations. Check your app points at the right project (EXPO_PUBLIC_SUPABASE_URL).';
-      case 'rls-denied':
-        return 'Storage rejected the upload (row-level security). The "group-avatars" upload policy must allow writes under your own user-id folder. Re-check the policy from migration 20260613100000.';
-      case 'too-large':
-        return 'That image is too large for the storage bucket. Pick a smaller photo or lower its resolution.';
-      case 'invalid-type':
-        return 'That image type isn’t allowed by the storage bucket. Use a JPEG or PNG photo.';
-      default:
-        return `Could not upload photo: ${e.message}. Try again.`;
-    }
+    return tr(AVATAR_ERROR_KEY[e.kind] ?? 'avatar.generic');
   }
-  return 'Could not upload photo. Try again.';
+  return tr('avatar.generic');
 }
 
 // Thin route: owner edits name + description + avatar. Server enforces owner + not-archived.
 export default function EditGroupScreen() {
   const t = useTheme();
   const router = useRouter();
+  const { t: tr } = useI18n();
   const { id } = useLocalSearchParams<{ id: string }>();
   const session = useSession();
   const myUid = session.session?.user.id;
@@ -86,12 +83,12 @@ export default function EditGroupScreen() {
     setUploadError(null);
     const parsedName = groupNameSchema.safeParse(name);
     if (!parsedName.success) {
-      setFieldError(parsedName.error.issues[0]?.message ?? 'Invalid name');
+      setFieldError(parsedName.error.issues[0]?.message ?? tr('groupForm.invalidName'));
       return;
     }
     const parsedDesc = groupDescriptionSchema.safeParse(description);
     if (!parsedDesc.success) {
-      setFieldError(parsedDesc.error.issues[0]?.message ?? 'Invalid description');
+      setFieldError(parsedDesc.error.issues[0]?.message ?? tr('groupForm.invalidDesc'));
       return;
     }
     setBusy(true);
@@ -108,7 +105,7 @@ export default function EditGroupScreen() {
         try {
           avatarPath = await uploadGroupAvatar(id, avatarUri);
         } catch (e) {
-          setUploadError(avatarUploadMessage(e));
+          setUploadError(avatarUploadMessage(e, tr));
           return;
         }
       } else if (removeAvatar) {
@@ -134,25 +131,25 @@ export default function EditGroupScreen() {
   if (groups.isPending) {
     return (
       <Screen>
-        <Stack.Screen options={{ title: 'Edit group' }} />
-        <Text variant="muted">Loading…</Text>
+        <Stack.Screen options={{ title: tr('groupForm.editTitle') }} />
+        <Text variant="muted">{tr('common.loading')}</Text>
       </Screen>
     );
   }
   if (!group) {
     return (
       <Screen>
-        <Stack.Screen options={{ title: 'Edit group' }} />
-        <Text variant="title">Group unavailable</Text>
-        <Text variant="muted">This group is archived or you&apos;re no longer a member.</Text>
+        <Stack.Screen options={{ title: tr('groupForm.editTitle') }} />
+        <Text variant="title">{tr('group.unavailable')}</Text>
+        <Text variant="muted">{tr('group.unavailableBody')}</Text>
       </Screen>
     );
   }
   if (!isOwner) {
     return (
       <Screen>
-        <Stack.Screen options={{ title: 'Edit group' }} />
-        <Text variant="title">Only the owner can edit this group</Text>
+        <Stack.Screen options={{ title: tr('groupForm.editTitle') }} />
+        <Text variant="title">{tr('groupForm.onlyOwner')}</Text>
       </Screen>
     );
   }
@@ -163,7 +160,7 @@ export default function EditGroupScreen() {
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <Screen padded={false} edges={['bottom']}>
-        <Stack.Screen options={{ title: 'Edit group' }} />
+        <Stack.Screen options={{ title: tr('groupForm.editTitle') }} />
         <ScrollView
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.lg, paddingBottom: t.spacing.xl }}
@@ -184,19 +181,19 @@ export default function EditGroupScreen() {
             }
           />
           <Input
-            label="Group name"
+            label={tr('groupForm.name')}
             value={name}
             onChangeText={setName}
             autoCapitalize="words"
-            placeholder="Group name"
+            placeholder={tr('groupForm.name')}
             error={fieldError ?? undefined}
             editable={!busy}
           />
           <Input
-            label="Description (optional)"
+            label={tr('groupForm.description')}
             value={description}
             onChangeText={setDescription}
-            placeholder="What's this group about?"
+            placeholder={tr('groupForm.descriptionPlaceholder')}
             multiline
             maxLength={280}
             editable={!busy}
@@ -213,8 +210,8 @@ export default function EditGroupScreen() {
             <VisibilityToggle
               value={!isPublic}
               onValueChange={(next) => setIsPublic(!next)}
-              title="Private group"
-              description="Private groups hide group challenge posts from Global. Members can still use the group normally."
+              title={tr('groupForm.private')}
+              description={tr('privacy.group.private')}
               disabled={busy}
             />
           </View>
@@ -230,10 +227,10 @@ export default function EditGroupScreen() {
           ) : null}
           <View style={{ flexDirection: 'row', gap: t.spacing.md }}>
             <View style={{ flex: 1 }}>
-              <Button label="Cancel" variant="secondary" onPress={() => router.back()} disabled={busy} />
+              <Button label={tr('common.cancel')} variant="secondary" onPress={() => router.back()} disabled={busy} />
             </View>
             <View style={{ flex: 1 }}>
-              <Button label={busy ? 'Saving…' : 'Save'} onPress={onSubmit} loading={busy} disabled={busy} />
+              <Button label={busy ? tr('common.saving') : tr('common.save')} onPress={onSubmit} loading={busy} disabled={busy} />
             </View>
           </View>
         </ScrollView>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { Button, Icon, Input, Text, useTheme, VisibilityToggle } from '@/shared/ui';
+import { useI18n } from '@/shared/i18n';
 // Relative imports keep this free of a self-cycle once `index.ts` re-exports ui.
 import { createGroupInput, groupDescriptionSchema, INVITE_CODE_LENGTH, joinGroupInput } from '../model';
 import { useCreateGroup, useJoinGroup, useUpdateGroupMeta } from '../hooks';
@@ -33,6 +34,7 @@ export function GroupCreateOrJoinForm({
   headerCopy,
 }: GroupCreateOrJoinFormProps) {
   const t = useTheme();
+  const { t: tr } = useI18n();
   const [mode, setMode] = useState<Mode>(initialMode);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -55,12 +57,12 @@ export function GroupCreateOrJoinForm({
     if (mode === 'create') {
       const parsed = createGroupInput.safeParse({ name });
       if (!parsed.success) {
-        setFieldError(parsed.error.issues[0]?.message ?? 'Invalid group name');
+        setFieldError(parsed.error.issues[0]?.message ?? tr('groupForm.invalidName'));
         return;
       }
       const descParsed = groupDescriptionSchema.safeParse(description);
       if (!descParsed.success) {
-        setFieldError(descParsed.error.issues[0]?.message ?? 'Invalid description');
+        setFieldError(descParsed.error.issues[0]?.message ?? tr('groupForm.invalidDesc'));
         return;
       }
       try {
@@ -88,7 +90,7 @@ export function GroupCreateOrJoinForm({
     } else {
       const parsed = joinGroupInput.safeParse({ code });
       if (!parsed.success) {
-        setFieldError(parsed.error.issues[0]?.message ?? 'Invalid invite code');
+        setFieldError(parsed.error.issues[0]?.message ?? tr('groupForm.invalidCode'));
         return;
       }
       try {
@@ -113,19 +115,19 @@ export function GroupCreateOrJoinForm({
         <>
           <GroupAvatarPicker uri={avatarUri} onPick={setAvatarUri} />
           <Input
-            label="Group name"
+            label={tr('groupForm.name')}
             value={name}
             onChangeText={setName}
             autoCapitalize="words"
-            placeholder="e.g. Morning runners"
+            placeholder={tr('groupForm.namePlaceholder')}
             error={fieldError ?? undefined}
             editable={!submitting}
           />
           <Input
-            label="Description (optional)"
+            label={tr('groupForm.description')}
             value={description}
             onChangeText={setDescription}
-            placeholder="What's this group about?"
+            placeholder={tr('groupForm.descriptionPlaceholder')}
             multiline
             maxLength={280}
             editable={!submitting}
@@ -142,22 +144,22 @@ export function GroupCreateOrJoinForm({
             <VisibilityToggle
               value={!isPublic}
               onValueChange={(next) => setIsPublic(!next)}
-              title="Private group"
-              description="Private groups do not appear in Global. Invite codes are never shown publicly."
+              title={tr('groupForm.private')}
+              description={tr('groupForm.privateDesc')}
               disabled={submitting}
             />
           </View>
         </>
       ) : (
         <Input
-          label="Invite code"
+          label={tr('groupForm.inviteCode')}
           value={code}
           onChangeText={(v) => setCode(v.replace(/[^A-Za-z0-9]/g, '').slice(0, INVITE_CODE_LENGTH))}
           autoCapitalize="none"
           autoCorrect={false}
           autoComplete="off"
           maxLength={INVITE_CODE_LENGTH}
-          placeholder="12-character code"
+          placeholder={tr('groupForm.codePlaceholder')}
           error={fieldError ?? undefined}
           editable={!submitting}
         />
@@ -173,11 +175,11 @@ export function GroupCreateOrJoinForm({
         label={
           submitting
             ? mode === 'create'
-              ? 'Creating…'
-              : 'Joining…'
+              ? tr('groupForm.creating')
+              : tr('groupForm.joining')
             : mode === 'create'
-              ? 'Create group'
-              : 'Join group'
+              ? tr('groupForm.create')
+              : tr('groupForm.join')
         }
         onPress={onSubmit}
         loading={submitting}
@@ -190,9 +192,10 @@ export function GroupCreateOrJoinForm({
 /** Create vs Join presented as two deliberate choice cards (not a thin toggle) — each with an
  *  icon, title, and one-line description; the selected card gets a primary border + soft fill. */
 function ModeToggle({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => void }) {
+  const { t: tr } = useI18n();
   const options: { value: Mode; icon: 'plus' | 'groups'; title: string; sub: string }[] = [
-    { value: 'create', icon: 'plus', title: 'Create a group', sub: 'Start your own and invite friends' },
-    { value: 'join', icon: 'groups', title: 'Join with a code', sub: 'Enter an invite code from a friend' },
+    { value: 'create', icon: 'plus', title: tr('groupForm.createTitle'), sub: tr('groupForm.createSub') },
+    { value: 'join', icon: 'groups', title: tr('groupForm.joinTitle'), sub: tr('groupForm.joinSub') },
   ];
   return (
     <View style={{ gap: 10 }}>

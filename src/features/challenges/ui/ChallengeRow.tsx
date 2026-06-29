@@ -1,7 +1,7 @@
 import { Pressable, View } from 'react-native';
 import { Link } from 'expo-router';
 import { Card, Icon, ProgressBar, Text, useTheme } from '@/shared/ui';
-import { useI18n } from '@/shared/i18n';
+import { formatChallengeCategory, useI18n } from '@/shared/i18n';
 import type { Challenge } from '@/entities';
 
 export type ChallengeRowProps = {
@@ -16,7 +16,7 @@ export type ChallengeRowProps = {
  */
 export function ChallengeRow({ challenge }: ChallengeRowProps) {
   const t = useTheme();
-  const { t: tr } = useI18n();
+  const { t: tr, lang } = useI18n();
 
   const startTs = parseLocalMidnight(challenge.startDate);
   const todayDay = startTs == null ? null : Math.round((localMidnightTs(new Date()) - startTs) / 86_400_000);
@@ -56,11 +56,11 @@ export function ChallengeRow({ challenge }: ChallengeRowProps) {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm }}>
                 <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: t.radius.full, backgroundColor: t.colors.primarySoft }}>
                   <Text style={{ fontSize: t.fontSize.xs, fontWeight: '700', color: t.colors.primary }} numberOfLines={1}>
-                    {challenge.category}
+                    {formatChallengeCategory(lang, challenge.category)}
                   </Text>
                 </View>
                 <Text variant="caption" numberOfLines={1}>
-                  {challenge.mode === 'group' ? tr('common.groups') : 'Solo'}
+                  {challenge.mode === 'group' ? tr('mode.group') : tr('mode.solo')}
                 </Text>
               </View>
             </View>

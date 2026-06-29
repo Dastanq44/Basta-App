@@ -3,9 +3,11 @@ import { KeyboardAvoidingView, Platform, View } from 'react-native';
 import { Link, Stack } from 'expo-router';
 import { forgotPasswordInput, useRequestPasswordReset } from '@/features/auth';
 import { Button, Input, Screen, Text, useTheme } from '@/shared/ui';
+import { useI18n } from '@/shared/i18n';
 
 export default function ForgotPasswordScreen() {
   const t = useTheme();
+  const { t: tr } = useI18n();
   const [email, setEmail] = useState('');
   const [fieldError, setFieldError] = useState<string | undefined>();
   const mutation = useRequestPasswordReset();
@@ -13,7 +15,7 @@ export default function ForgotPasswordScreen() {
   const onSubmit = () => {
     const parsed = forgotPasswordInput.safeParse({ email });
     if (!parsed.success) {
-      setFieldError(parsed.error.issues[0]?.message ?? 'Enter a valid email');
+      setFieldError(parsed.error.issues[0]?.message ?? tr('auth.invalidEmail'));
       return;
     }
     setFieldError(undefined);
@@ -22,22 +24,20 @@ export default function ForgotPasswordScreen() {
 
   return (
     <Screen>
-      <Stack.Screen options={{ title: 'Reset password' }} />
+      <Stack.Screen options={{ title: tr('auth.resetTitle') }} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
       >
         <View style={{ flex: 1, justifyContent: 'center', gap: t.spacing.lg }}>
-          <Text variant="title">Forgot your password?</Text>
-          <Text variant="muted">
-            Enter the email you signed up with. We'll send a link to reset your password.
-          </Text>
+          <Text variant="title">{tr('auth.forgotQ')}</Text>
+          <Text variant="muted">{tr('auth.forgotBodyLong')}</Text>
 
           <Input
-            label="Email"
+            label={tr('auth.email')}
             value={email}
             onChangeText={setEmail}
-            placeholder="you@example.com"
+            placeholder={tr('auth.emailPlaceholder')}
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
@@ -49,25 +49,21 @@ export default function ForgotPasswordScreen() {
 
           {mutation.isError ? (
             <Text variant="caption" style={{ color: t.colors.destructive }}>
-              {mutation.error instanceof Error ? mutation.error.message : 'Could not send email.'}
+              {mutation.error instanceof Error ? mutation.error.message : tr('auth.couldNotSend')}
             </Text>
           ) : null}
 
           {mutation.isSuccess ? (
-            <Text variant="muted">
-              Check your inbox. The email has a link that opens the app on the reset screen. If
-              nothing happens when you tap it, deep-link configuration may still be pending —
-              see W-020. You can resend below if needed.
-            </Text>
+            <Text variant="muted">{tr('auth.resetEmailSentBody')}</Text>
           ) : null}
 
           <Button
             label={
               mutation.isPending
-                ? 'Sending…'
+                ? tr('auth.sending')
                 : mutation.isSuccess
-                  ? 'Resend email'
-                  : 'Send reset email'
+                  ? tr('auth.resendEmail')
+                  : tr('auth.sendResetEmail')
             }
             onPress={onSubmit}
             loading={mutation.isPending}
@@ -75,9 +71,7 @@ export default function ForgotPasswordScreen() {
           />
 
           <Link href="/(auth)/sign-in">
-            <Text variant="muted" style={{ textAlign: 'center' }}>
-              Back to sign in
-            </Text>
+            <Text variant="muted" style={{ textAlign: 'center' }}>{tr('auth.backToSignIn')}</Text>
           </Link>
         </View>
       </KeyboardAvoidingView>

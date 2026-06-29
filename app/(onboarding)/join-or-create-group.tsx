@@ -1,6 +1,7 @@
 import { KeyboardAvoidingView, Platform, View } from 'react-native';
 import { router } from 'expo-router';
 import { Screen, Text, useTheme } from '@/shared/ui';
+import { useI18n } from '@/shared/i18n';
 import { GroupCreateOrJoinForm } from '@/features/groups';
 import { useCompleteOnboarding } from '@/features/onboarding';
 
@@ -8,6 +9,7 @@ import { useCompleteOnboarding } from '@/features/onboarding';
 // validation + create/join RPCs; this screen just wires the post-success behavior.
 export default function JoinOrCreateGroupScreen() {
   const t = useTheme();
+  const { t: tr } = useI18n();
   const complete = useCompleteOnboarding();
 
   const finish = async () => {
@@ -22,11 +24,11 @@ export default function JoinOrCreateGroupScreen() {
     >
       <Screen padded={false}>
         <View style={{ padding: t.spacing.lg, gap: t.spacing.md }}>
-          <Text variant="title">Join or create a group</Text>
+          <Text variant="title">{tr('groupForm.joinOrCreate')}</Text>
           <GroupCreateOrJoinForm
             onCreated={finish}
             onJoined={finish}
-            headerCopy="Friends keep each other honest. Start a new group or join one with an invite code."
+            headerCopy={tr('groupForm.headerCopy')}
           />
         </View>
       </Screen>

@@ -1,5 +1,6 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Screen, Text, useTheme } from '@/shared/ui';
+import { useI18n } from '@/shared/i18n';
 import {
   ProofComposer,
   useProofSignedUrl,
@@ -13,6 +14,7 @@ import {
 export default function EditProofModal() {
   const t = useTheme();
   const router = useRouter();
+  const { t: tr } = useI18n();
   const { id } = useLocalSearchParams<{ id: string }>();
   const today = useTodaySubmission(id);
   const existingImage = useProofSignedUrl(today.data?.mediaRemotePath);
@@ -21,20 +23,18 @@ export default function EditProofModal() {
   if (today.isPending) {
     return (
       <Screen>
-        <Stack.Screen options={{ title: 'Edit proof', presentation: 'modal' }} />
-        <Text variant="muted">Loading…</Text>
+        <Stack.Screen options={{ title: tr('proof.editTitle'), presentation: 'modal' }} />
+        <Text variant="muted">{tr('common.loading')}</Text>
       </Screen>
     );
   }
   if (today.isError || !today.data) {
     return (
       <Screen>
-        <Stack.Screen options={{ title: 'Edit proof', presentation: 'modal' }} />
-        <Text variant="title">Nothing to edit</Text>
+        <Stack.Screen options={{ title: tr('proof.editTitle'), presentation: 'modal' }} />
+        <Text variant="title">{tr('proof.nothingToEdit')}</Text>
         <Text variant="muted" style={{ color: t.colors.mutedForeground }}>
-          {today.error instanceof Error
-            ? today.error.message
-            : "You haven't submitted today's proof yet."}
+          {today.error instanceof Error ? today.error.message : tr('proof.notSubmittedYet')}
         </Text>
       </Screen>
     );
@@ -51,8 +51,8 @@ export default function EditProofModal() {
         initialTitle={today.data.title}
         initialComment={today.data.comment}
         initialImageUrl={existingImage.data}
-        ctaLabel={redact.isPending ? 'Saving…' : 'Save changes'}
-        intro="Edit your title, photo, and description. Changing the photo makes group voters re-verify."
+        ctaLabel={redact.isPending ? tr('common.saving') : tr('proof.save')}
+        intro={tr('proof.editIntro')}
         onSubmit={async ({ title, mediaLocalUri, comment }) => {
           if (!id) return;
           await redact.mutateAsync({

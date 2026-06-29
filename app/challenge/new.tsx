@@ -118,34 +118,34 @@ export default function CreateChallengeScreen() {
     switch (target) {
       case 'group':
         if (!groupId) {
-          setError('Pick a group');
+          setError(tr('wizard.errPickGroup'));
           return false;
         }
         return true;
       case 'name':
         if (name.trim().length === 0) {
-          setError('Give your challenge a name');
+          setError(tr('wizard.errName'));
           return false;
         }
         return true;
       case 'start':
         if (!isISO(startDate)) {
-          setError('Pick a start date');
+          setError(tr('wizard.errStart'));
           return false;
         }
         return true;
       case 'end': {
         const days = diffDaysInclusive(startDate, endDate);
         if (days == null) {
-          setError('Pick an end date');
+          setError(tr('wizard.errEnd'));
           return false;
         }
         if (days < 1) {
-          setError('End date must be on or after the start date');
+          setError(tr('wizard.errEndAfter'));
           return false;
         }
         if (days > 365) {
-          setError('Challenge can be at most 365 days');
+          setError(tr('wizard.errMax365'));
           return false;
         }
         return true;
@@ -180,7 +180,7 @@ export default function CreateChallengeScreen() {
       isPublic,
     });
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? 'Please check your inputs');
+      setError(parsed.error.issues[0]?.message ?? tr('wizard.errCheck'));
       return;
     }
     try {
@@ -258,8 +258,8 @@ export default function CreateChallengeScreen() {
           <View style={{ gap: t.spacing.md }}>
             <Text variant="heading">{tr('wizard.type.title')}</Text>
             <View style={{ flexDirection: 'row', gap: t.spacing.sm }}>
-              <Chip label="Solo" selected={mode === 'solo'} onPress={() => onPickMode('solo')} />
-              <Chip label="Group" selected={mode === 'group'} onPress={() => onPickMode('group')} />
+              <Chip label={tr('wizard.solo')} selected={mode === 'solo'} onPress={() => onPickMode('solo')} />
+              <Chip label={tr('wizard.group')} selected={mode === 'group'} onPress={() => onPickMode('group')} />
             </View>
           </View>
         );
@@ -268,9 +268,9 @@ export default function CreateChallengeScreen() {
           <View style={{ gap: t.spacing.md }}>
             <Text variant="heading">{tr('wizard.group.title')}</Text>
             {groups.isPending ? (
-              <Text variant="muted">Loading groups…</Text>
+              <Text variant="muted">{tr('wizard.loadingGroups')}</Text>
             ) : !groups.data || groups.data.length === 0 ? (
-              <Text variant="muted">You&apos;re not in a group yet. Create or join one first.</Text>
+              <Text variant="muted">{tr('wizard.noGroups')}</Text>
             ) : (
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.spacing.sm }}>
                 {groups.data.map((g) => (
@@ -301,10 +301,10 @@ export default function CreateChallengeScreen() {
           <View style={{ gap: t.spacing.md }}>
             <Text variant="heading">{tr('wizard.name.title')}</Text>
             <Input
-              label="Name"
+              label={tr('challenge.nameLabel')}
               value={name}
               onChangeText={setName}
-              placeholder="e.g. Morning run"
+              placeholder={tr('challenge.namePlaceholder')}
               autoCapitalize="sentences"
               editable={!create.isPending}
             />
@@ -419,16 +419,16 @@ export default function CreateChallengeScreen() {
           <View style={{ gap: t.spacing.md }}>
             {/* "(optional)" rendered inline, non-bold, muted color to match the spec. */}
             <Text variant="heading">
-              Description
+              {tr('wizard.descLabel')}
               <Text style={{ color: t.colors.mutedForeground, fontWeight: '400' }}>
-                {' '}(optional)
+                {' '}({tr('common.optional')})
               </Text>
             </Text>
             <Input
-              label="What's the challenge about? / what proof to submit"
+              label={tr('wizard.descInputLabel')}
               value={description}
               onChangeText={setDescription}
-              placeholder="e.g. a photo of your completed run"
+              placeholder={tr('wizard.descPlaceholder')}
               multiline
               maxLength={280}
               editable={!create.isPending}
@@ -438,7 +438,7 @@ export default function CreateChallengeScreen() {
       case 'visibility':
         return (
           <View style={{ gap: t.spacing.md }}>
-            <Text variant="heading">Who can see this?</Text>
+            <Text variant="heading">{tr('wizard.visibilityTitle')}</Text>
             <View
               style={{
                 backgroundColor: t.colors.card,
@@ -451,12 +451,8 @@ export default function CreateChallengeScreen() {
               <VisibilityToggle
                 value={!isPublic}
                 onValueChange={(next) => setIsPublic(!next)}
-                title="Hide from profile and Global"
-                description={
-                  mode === 'group'
-                    ? 'When hidden, this challenge is only visible to participants and its proofs will not appear in Global. Group challenge posts also require the group to be public.'
-                    : 'When hidden, this challenge is only visible to participants and its proofs will not appear in Global.'
-                }
+                title={tr('wizard.hideTitle')}
+                description={mode === 'group' ? tr('wizard.hideDescGroup') : tr('wizard.hideDescSolo')}
                 disabled={create.isPending}
               />
             </View>

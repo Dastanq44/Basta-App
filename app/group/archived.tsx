@@ -1,6 +1,7 @@
 import { Alert, FlatList, RefreshControl, View } from 'react-native';
 import { Stack } from 'expo-router';
 import { Button, Card, Screen, Text, useTheme } from '@/shared/ui';
+import { useI18n } from '@/shared/i18n';
 import { useSession } from '@/features/auth';
 import { useMyArchivedGroups, useRestoreGroup } from '@/features/groups';
 import type { Group } from '@/entities';
@@ -9,6 +10,7 @@ import type { Group } from '@/entities';
 // Non-owners (any member who hasn't left) see the row read-only.
 export default function ArchivedGroupsScreen() {
   const t = useTheme();
+  const { t: tr } = useI18n();
   const session = useSession();
   const myUid = session.session?.user.id;
   const archived = useMyArchivedGroups();
@@ -16,16 +18,16 @@ export default function ArchivedGroupsScreen() {
 
   const confirmRestore = (groupId: string) => {
     Alert.alert(
-      'Restore this group?',
-      'It will reappear in your active groups list. Members and history are preserved.',
+      tr('archived.restoreTitle'),
+      tr('archived.restoreBody'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: tr('common.cancel'), style: 'cancel' },
         {
-          text: 'Restore',
+          text: tr('archived.restore'),
           onPress: () =>
             restore.mutate(groupId, {
               onError: (e: unknown) =>
-                Alert.alert('Could not restore', e instanceof Error ? e.message : 'Unknown error'),
+                Alert.alert(tr('archived.couldNotRestore'), e instanceof Error ? e.message : tr('common.error')),
             }),
         },
       ],
@@ -35,24 +37,20 @@ export default function ArchivedGroupsScreen() {
 
   return (
     <Screen padded={false}>
-      <Stack.Screen options={{ title: 'Archived groups' }} />
+      <Stack.Screen options={{ title: tr('groups.archived') }} />
       <FlatList
         data={archived.data ?? []}
         keyExtractor={(g) => g.id}
         contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.md, paddingBottom: t.spacing.xl }}
         ListEmptyComponent={
           archived.isPending ? (
-            <Text variant="muted">Loading…</Text>
+            <Text variant="muted">{tr('common.loading')}</Text>
           ) : archived.isError ? (
             <Text variant="caption" style={{ color: t.colors.destructive }}>
-              {archived.error instanceof Error
-                ? archived.error.message
-                : 'Could not load archived groups.'}
+              {archived.error instanceof Error ? archived.error.message : tr('archived.loadError')}
             </Text>
           ) : (
-            <Text variant="muted">
-              No archived groups. Groups you archive from their settings will show up here.
-            </Text>
+            <Text variant="muted">{tr('archived.empty')}</Text>
           )
         }
         refreshControl={
@@ -86,19 +84,18 @@ function ArchivedRow({
   onRestore: () => void;
 }) {
   const t = useTheme();
+  const { t: tr, fmtDate } = useI18n();
   return (
     <Card>
       <View style={{ gap: t.spacing.xs }}>
         <Text variant="heading">{group.name}</Text>
         {group.archivedAt ? (
-          <Text variant="caption">
-            Archived {new Date(group.archivedAt).toLocaleDateString()}
-          </Text>
+          <Text variant="caption">{tr('archived.on', { date: fmtDate(group.archivedAt) })}</Text>
         ) : null}
         {isOwner ? (
           <View style={{ marginTop: t.spacing.sm }}>
             <Button
-              label={restoring ? 'Restoring…' : 'Restore group'}
+              label={restoring ? tr('archived.restoring') : tr('archived.restore')}
               variant="secondary"
               size="sm"
               onPress={onRestore}
@@ -107,7 +104,7 @@ function ArchivedRow({
             />
           </View>
         ) : (
-          <Text variant="caption">Only the owner can restore this group.</Text>
+          <Text variant="caption">{tr('archived.onlyOwner')}</Text>
         )}
       </View>
     </Card>

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Alert, Image, KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Button, Card, Input, Screen, Text, useTheme } from '@/shared/ui';
+import { useI18n } from '@/shared/i18n';
 
 export type ProofComposerSubmit = (input: {
   title: string;
@@ -48,6 +49,7 @@ export function ProofComposer({
   initialImageUrl,
 }: ProofComposerProps) {
   const t = useTheme();
+  const { t: tr } = useI18n();
   const [title, setTitle] = useState(initialTitle ?? '');
   const [mediaLocalUri, setMediaLocalUri] = useState<string | null>(null);
   const [comment, setComment] = useState(initialComment ?? '');
@@ -62,7 +64,7 @@ export function ProofComposer({
     setPickerError(null);
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      setPickerError('Photo library access denied. Enable it in Settings.');
+      setPickerError(tr('proof.libDenied'));
       return;
     }
     const res = await ImagePicker.launchImageLibraryAsync({
@@ -77,7 +79,7 @@ export function ProofComposer({
     setPickerError(null);
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) {
-      setPickerError('Camera access denied. Enable it in Settings.');
+      setPickerError(tr('proof.camDenied'));
       return;
     }
     const res = await ImagePicker.launchCameraAsync({
@@ -90,11 +92,11 @@ export function ProofComposer({
 
   const handleSubmit = async () => {
     if (!trimmedTitle) {
-      setPickerError('Add a title.');
+      setPickerError(tr('proof.addTitle'));
       return;
     }
     if (!hasImage) {
-      setPickerError('Pick a photo first.');
+      setPickerError(tr('proof.pickPhoto'));
       return;
     }
     try {
@@ -105,17 +107,17 @@ export function ProofComposer({
         comment: comment.trim() || undefined,
       });
     } catch (e) {
-      Alert.alert('Could not save proof', e instanceof Error ? e.message : 'Unknown error');
+      Alert.alert(tr('proof.couldNotSave'), e instanceof Error ? e.message : tr('common.error'));
     }
   };
 
   const ChangeButtons = (
     <View style={{ flexDirection: 'row', gap: t.spacing.sm }}>
       <View style={{ flex: 1 }}>
-        <Button label="Take photo" onPress={takePhoto} disabled={submitting} />
+        <Button label={tr('proof.takePhoto')} onPress={takePhoto} disabled={submitting} />
       </View>
       <View style={{ flex: 1 }}>
-        <Button label="From library" variant="secondary" onPress={pickFromLibrary} disabled={submitting} />
+        <Button label={tr('proof.fromLibrary')} variant="secondary" onPress={pickFromLibrary} disabled={submitting} />
       </View>
     </View>
   );
@@ -127,16 +129,14 @@ export function ProofComposer({
           contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.lg, paddingBottom: t.spacing.xl }}
           keyboardShouldPersistTaps="handled"
         >
-          <Text variant="title">{screenTitle ?? "Today's proof"}</Text>
-          <Text variant="muted">
-            {intro ?? 'Give it a title, snap a photo, and add a description if you want.'}
-          </Text>
+          <Text variant="title">{screenTitle ?? tr('proof.todaysProof')}</Text>
+          <Text variant="muted">{intro ?? tr('proof.intro')}</Text>
 
           <Input
-            label="Title"
+            label={tr('proof.titleLabel')}
             value={title}
             onChangeText={(v) => setTitle(v.slice(0, TITLE_MAX))}
-            placeholder="Short headline for today"
+            placeholder={tr('proof.titleHeadline')}
             maxLength={TITLE_MAX}
             editable={!submitting}
             returnKeyType="done"
@@ -147,14 +147,14 @@ export function ProofComposer({
               <Card>
                 <Image
                   source={{ uri: shownImage! }}
-                  accessibilityLabel="Proof photo"
+                  accessibilityLabel={tr('proof.photoA11y')}
                   style={{ width: '100%', aspectRatio: 1, borderRadius: t.radius.md }}
                   resizeMode="cover"
                 />
               </Card>
               {/* Photo is shown but replaceable — the existing one never just disappears. */}
               <Text variant="caption" style={{ color: t.colors.mutedForeground }}>
-                {mediaLocalUri ? 'New photo selected.' : 'Current photo — change it below if you want.'}
+                {mediaLocalUri ? tr('proof.newPhoto') : tr('proof.currentPhoto')}
               </Text>
               {ChangeButtons}
             </View>
@@ -167,10 +167,10 @@ export function ProofComposer({
           ) : null}
 
           <Input
-            label="Description (optional)"
+            label={tr('proof.descLabel')}
             value={comment}
             onChangeText={setComment}
-            placeholder="What did you do today?"
+            placeholder={tr('proof.descPlaceholder2')}
             multiline
             numberOfLines={3}
             editable={!submitting}
@@ -179,7 +179,7 @@ export function ProofComposer({
           {/* No per-submission public/private control — visibility is inherited from the profile,
               challenge, and group (Spotify-playlist model). Server is the source of truth. */}
           <Text variant="caption" style={{ color: t.colors.mutedForeground }}>
-            Verified proofs from visible challenges and public profiles can appear in Global.
+            {tr('proof.globalNote')}
           </Text>
 
           {errorMessage ? (
@@ -187,7 +187,7 @@ export function ProofComposer({
           ) : null}
 
           <Button
-            label={ctaLabel ?? (submitting ? 'Saving…' : 'Submit proof')}
+            label={ctaLabel ?? (submitting ? tr('common.saving') : tr('proof.submit'))}
             onPress={handleSubmit}
             loading={submitting}
             disabled={submitting || !trimmedTitle || !hasImage}

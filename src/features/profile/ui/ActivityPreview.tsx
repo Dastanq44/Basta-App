@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { BottomSheet, Card, Text, useTheme } from '@/shared/ui';
+import { useI18n } from '@/shared/i18n';
 import type { Submission } from '@/entities';
 import { ActivityHeatmap } from './ActivityHeatmap';
 
@@ -24,6 +25,7 @@ type Cell = { date: Date; key: string; isFuture: boolean; isToday: boolean };
 
 export function ActivityPreview({ submissions, selected, onSelect }: ActivityPreviewProps) {
   const t = useTheme();
+  const { t: tr, tn, fmtDate } = useI18n();
   const [sheetOpen, setSheetOpen] = useState(false);
 
   const { weeks, counts } = useMemo(() => {
@@ -61,9 +63,9 @@ export function ActivityPreview({ submissions, selected, onSelect }: ActivityPre
   return (
     <View style={{ gap: t.spacing.xs }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <Text variant="label" style={{ color: t.colors.mutedForeground }}>ACTIVITY · LAST 30 DAYS</Text>
+        <Text variant="label" style={{ color: t.colors.mutedForeground }}>{tr('profile.activity').toUpperCase()}</Text>
         <Pressable accessibilityRole="button" onPress={() => setSheetOpen(true)} hitSlop={6}>
-          <Text variant="caption" style={{ color: t.colors.primary }}>View full activity →</Text>
+          <Text variant="caption" style={{ color: t.colors.primary }}>{tr('profile.viewFull')} →</Text>
         </Pressable>
       </View>
 
@@ -81,7 +83,7 @@ export function ActivityPreview({ submissions, selected, onSelect }: ActivityPre
                   key={di}
                   style={{ flex: 1 }}
                   accessibilityRole="button"
-                  accessibilityLabel={`${cell.date.toLocaleDateString()}, ${count} submission${count === 1 ? '' : 's'}`}
+                  accessibilityLabel={`${fmtDate(cell.date)}, ${tn('proofsCount', count)}`}
                   onPress={() => onSelect(isSel ? null : { key: cell.key, date: cell.date, count })}
                 >
                   <View
@@ -116,9 +118,9 @@ export function ActivityPreview({ submissions, selected, onSelect }: ActivityPre
           }}
         >
           <Text variant="subtitle">
-            {selected.date.toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })}
+            {fmtDate(selected.date, { day: 'numeric', month: 'long', year: 'numeric' })}
           </Text>
-          <Text variant="muted">{selected.count} submission{selected.count === 1 ? '' : 's'}</Text>
+          <Text variant="muted">{tn('proofsCount', selected.count)}</Text>
         </View>
       ) : null}
 

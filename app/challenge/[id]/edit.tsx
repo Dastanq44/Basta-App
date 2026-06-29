@@ -11,6 +11,7 @@ import {
 } from '@/features/challenges';
 import { useSession } from '@/features/auth';
 import { Button, Input, Screen, Text, useTheme, VisibilityToggle } from '@/shared/ui';
+import { formatChallengeCategory, useI18n } from '@/shared/i18n';
 
 type FieldErrors = Partial<Record<keyof UpdateChallengeInput, string>>;
 
@@ -20,6 +21,7 @@ type FieldErrors = Partial<Record<keyof UpdateChallengeInput, string>>;
 export default function EditChallengeScreen() {
   const t = useTheme();
   const router = useRouter();
+  const { t: tr, lang } = useI18n();
   const { id } = useLocalSearchParams<{ id: string }>();
   const session = useSession();
   const myUid = session.session?.user.id;
@@ -48,18 +50,18 @@ export default function EditChallengeScreen() {
   if (challenge.isPending) {
     return (
       <Screen>
-        <Stack.Screen options={{ title: 'Edit challenge' }} />
-        <Text variant="muted">Loading…</Text>
+        <Stack.Screen options={{ title: tr('challenge.editChallenge') }} />
+        <Text variant="muted">{tr('common.loading')}</Text>
       </Screen>
     );
   }
   if (challenge.isError || !challenge.data) {
     return (
       <Screen>
-        <Stack.Screen options={{ title: 'Edit challenge' }} />
-        <Text variant="title">Challenge unavailable</Text>
+        <Stack.Screen options={{ title: tr('challenge.editChallenge') }} />
+        <Text variant="title">{tr('challenge.unavailable')}</Text>
         <Text variant="caption" style={{ color: t.colors.destructive }}>
-          {challenge.error instanceof Error ? challenge.error.message : 'Could not load.'}
+          {challenge.error instanceof Error ? challenge.error.message : tr('challenge.unavailableError')}
         </Text>
       </Screen>
     );
@@ -72,17 +74,17 @@ export default function EditChallengeScreen() {
   if (!isCreator) {
     return (
       <Screen>
-        <Stack.Screen options={{ title: 'Edit challenge' }} />
-        <Text variant="title">Only the creator can edit this challenge</Text>
+        <Stack.Screen options={{ title: tr('challenge.editChallenge') }} />
+        <Text variant="title">{tr('edit.onlyCreator')}</Text>
       </Screen>
     );
   }
   if (isArchived) {
     return (
       <Screen>
-        <Stack.Screen options={{ title: 'Edit challenge' }} />
-        <Text variant="title">Archived challenges can't be edited</Text>
-        <Text variant="muted">Restore the challenge first (not yet supported) to edit it.</Text>
+        <Stack.Screen options={{ title: tr('challenge.editChallenge') }} />
+        <Text variant="title">{tr('edit.archivedTitle')}</Text>
+        <Text variant="muted">{tr('edit.archivedBody')}</Text>
       </Screen>
     );
   }
@@ -119,26 +121,26 @@ export default function EditChallengeScreen() {
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <Screen padded={false}>
-        <Stack.Screen options={{ title: 'Edit challenge' }} />
+        <Stack.Screen options={{ title: tr('challenge.editChallenge') }} />
         <ScrollView
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.lg, paddingBottom: t.spacing.xl }}
         >
           <Input
-            label="Title"
+            label={tr('edit.title')}
             value={title}
             onChangeText={setTitle}
-            placeholder="e.g. 30 days of pushups"
+            placeholder={tr('edit.titlePlaceholder')}
             error={errors.title}
             editable={!update.isPending}
           />
           <View style={{ gap: t.spacing.xs }}>
-            <Text variant="caption">Category</Text>
+            <Text variant="caption">{tr('edit.category')}</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.spacing.xs }}>
               {CHALLENGE_CATEGORIES.map((cat) => (
                 <Chip
                   key={cat}
-                  label={cat}
+                  label={formatChallengeCategory(lang, cat)}
                   selected={category === cat}
                   onPress={() => setCategory(cat)}
                 />
@@ -149,19 +151,19 @@ export default function EditChallengeScreen() {
             ) : null}
           </View>
           <Input
-            label="Duration (days)"
+            label={tr('edit.duration')}
             value={durationDays}
             onChangeText={(v) => setDurationDays(v.replace(/\D/g, '').slice(0, 3))}
-            placeholder="30"
+            placeholder={tr('edit.durationPlaceholder')}
             keyboardType="number-pad"
             error={errors.durationDays}
             editable={!update.isPending}
           />
           <Input
-            label="Proof requirement (optional)"
+            label={tr('edit.proofReq')}
             value={proofRequirement}
             onChangeText={setProofRequirement}
-            placeholder="e.g. photo of completed workout"
+            placeholder={tr('edit.proofReqPlaceholder')}
             error={errors.proofRequirement}
             editable={!update.isPending}
           />
@@ -177,12 +179,8 @@ export default function EditChallengeScreen() {
             <VisibilityToggle
               value={!isPublic}
               onValueChange={(next) => setIsPublic(!next)}
-              title="Hide from profile and Global"
-              description={
-                c.mode === 'group'
-                  ? 'When hidden, this challenge is only visible to participants and its proofs will not appear in Global. Group challenge posts also require the group to be public.'
-                  : 'When hidden, this challenge is only visible to participants and its proofs will not appear in Global.'
-              }
+              title={tr('wizard.hideTitle')}
+              description={c.mode === 'group' ? tr('wizard.hideDescGroup') : tr('wizard.hideDescSolo')}
               disabled={update.isPending}
             />
           </View>
@@ -192,7 +190,7 @@ export default function EditChallengeScreen() {
           <View style={{ flexDirection: 'row', gap: t.spacing.md }}>
             <View style={{ flex: 1 }}>
               <Button
-                label="Cancel"
+                label={tr('common.cancel')}
                 variant="secondary"
                 onPress={() => router.back()}
                 disabled={update.isPending}
@@ -200,7 +198,7 @@ export default function EditChallengeScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Button
-                label={update.isPending ? 'Saving…' : 'Save'}
+                label={update.isPending ? tr('common.saving') : tr('common.save')}
                 onPress={onSubmit}
                 loading={update.isPending}
                 disabled={update.isPending}

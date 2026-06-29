@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Text, useTheme } from '@/shared/ui';
+import { useI18n } from '@/shared/i18n';
 
 export type ProfileStatsGridProps = {
   currentStreak: number;
@@ -15,15 +16,16 @@ type Tone = 'streak' | 'primary' | 'success' | 'warning';
  *  with the counter value sized to match below it. */
 export function ProfileStatsGrid({ currentStreak, bestStreak, activeChallenges, groups }: ProfileStatsGridProps) {
   const t = useTheme();
+  const { t: tr, tn } = useI18n();
   return (
     <View style={{ gap: t.spacing.sm }}>
       <View style={{ flexDirection: 'row', gap: t.spacing.sm }}>
-        <ProfileStatCard tone="streak" icon="🔥" label="Current Streak" value={currentStreak} unit={currentStreak === 1 ? 'day' : 'days'} />
-        <ProfileStatCard tone="primary" icon="🏆" label="Best Streak" value={bestStreak} unit={bestStreak === 1 ? 'day' : 'days'} />
+        <ProfileStatCard tone="streak" icon="🔥" label={tr('challenge.currentStreak')} value={currentStreak} unit={tn('unit.day', currentStreak)} />
+        <ProfileStatCard tone="primary" icon="🏆" label={tr('challenge.bestStreak')} value={bestStreak} unit={tn('unit.day', bestStreak)} />
       </View>
       <View style={{ flexDirection: 'row', gap: t.spacing.sm }}>
-        <ProfileStatCard tone="success" icon="🎯" label="Challenges" value={activeChallenges} unit="active" />
-        <ProfileStatCard tone="warning" icon="👥" label="Groups" value={groups} unit="joined" />
+        <ProfileStatCard tone="success" icon="🎯" label={tr('common.challenges')} value={activeChallenges} unit={tr('stats.active')} />
+        <ProfileStatCard tone="warning" icon="👥" label={tr('common.groups')} value={groups} unit={tr('stats.joined')} />
       </View>
     </View>
   );

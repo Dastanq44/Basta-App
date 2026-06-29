@@ -3,6 +3,7 @@ import { KeyboardAvoidingView, Platform, View } from 'react-native';
 import { Link, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { resetPasswordInput, useUpdatePassword } from '@/features/auth';
 import { Button, Input, Screen, Text, useTheme } from '@/shared/ui';
+import { useI18n } from '@/shared/i18n';
 
 // Reached via deep link from the Supabase reset email:
 //   basta://reset-password?code=<recovery-code>
@@ -11,6 +12,7 @@ import { Button, Input, Screen, Text, useTheme } from '@/shared/ui';
 export default function ResetPasswordScreen() {
   const t = useTheme();
   const router = useRouter();
+  const { t: tr } = useI18n();
   const params = useLocalSearchParams<{ code?: string }>();
   const code = params.code;
   const [password, setPassword] = useState('');
@@ -20,12 +22,12 @@ export default function ResetPasswordScreen() {
 
   const onSubmit = () => {
     if (password !== confirm) {
-      setFieldError("Passwords don't match");
+      setFieldError(tr('auth.passwordsNoMatch'));
       return;
     }
     const parsed = resetPasswordInput.safeParse({ password });
     if (!parsed.success) {
-      setFieldError(parsed.error.issues[0]?.message ?? 'Pick a stronger password');
+      setFieldError(parsed.error.issues[0]?.message ?? tr('auth.strongerPassword'));
       return;
     }
     setFieldError(undefined);
@@ -45,21 +47,13 @@ export default function ResetPasswordScreen() {
   if (!code) {
     return (
       <Screen>
-        <Stack.Screen options={{ title: 'Reset password' }} />
+        <Stack.Screen options={{ title: tr('auth.resetTitle') }} />
         <View style={{ flex: 1, justifyContent: 'center', gap: t.spacing.lg }}>
-          <Text variant="title">Open the reset link</Text>
-          <Text variant="muted">
-            Open the password-reset email on this phone and tap the link. It should open this
-            screen with everything filled in.
-          </Text>
-          <Text variant="caption">
-            If tapping the link does nothing, deep-link configuration on the Supabase project
-            may not be set yet (W-020).
-          </Text>
+          <Text variant="title">{tr('auth.openResetLink')}</Text>
+          <Text variant="muted">{tr('auth.openResetLinkBody')}</Text>
+          <Text variant="caption">{tr('auth.deepLinkHint')}</Text>
           <Link href="/(auth)/sign-in">
-            <Text variant="muted" style={{ textAlign: 'center' }}>
-              Back to sign in
-            </Text>
+            <Text variant="muted" style={{ textAlign: 'center' }}>{tr('auth.backToSignIn')}</Text>
           </Link>
         </View>
       </Screen>
@@ -68,17 +62,17 @@ export default function ResetPasswordScreen() {
 
   return (
     <Screen>
-      <Stack.Screen options={{ title: 'New password' }} />
+      <Stack.Screen options={{ title: tr('auth.newPasswordTitle') }} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
       >
         <View style={{ flex: 1, justifyContent: 'center', gap: t.spacing.lg }}>
-          <Text variant="title">Choose a new password</Text>
-          <Text variant="muted">At least 8 characters.</Text>
+          <Text variant="title">{tr('auth.chooseNewPassword')}</Text>
+          <Text variant="muted">{tr('auth.passwordHintDot')}</Text>
 
           <Input
-            label="New password"
+            label={tr('auth.newPassword')}
             value={password}
             onChangeText={setPassword}
             secureTextEntry
@@ -89,7 +83,7 @@ export default function ResetPasswordScreen() {
             editable={!mutation.isPending}
           />
           <Input
-            label="Confirm password"
+            label={tr('auth.confirmPassword')}
             value={confirm}
             onChangeText={setConfirm}
             secureTextEntry
@@ -103,11 +97,11 @@ export default function ResetPasswordScreen() {
 
           {mutation.isError ? (
             <Text variant="caption" style={{ color: t.colors.destructive }}>
-              {mutation.error instanceof Error ? mutation.error.message : 'Could not reset password.'}
+              {mutation.error instanceof Error ? mutation.error.message : tr('auth.couldNotReset')}
             </Text>
           ) : null}
 
-          <Button label="Update password" onPress={onSubmit} loading={mutation.isPending} />
+          <Button label={tr('auth.updatePassword')} onPress={onSubmit} loading={mutation.isPending} />
         </View>
       </KeyboardAvoidingView>
     </Screen>

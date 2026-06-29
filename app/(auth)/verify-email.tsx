@@ -3,6 +3,7 @@ import { KeyboardAvoidingView, Platform, View } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { OTP_MAX_LENGTH, useVerifyOtp, verifyOtpInput } from '@/features/auth';
 import { Button, Input, Screen, Text, useTheme } from '@/shared/ui';
+import { useI18n } from '@/shared/i18n';
 
 // Email verification via OTP code delivered to the user's inbox.
 // We never put the token in a URL (W-005) — user copies it from the email body.
@@ -14,6 +15,7 @@ import { Button, Input, Screen, Text, useTheme } from '@/shared/ui';
 //      too so they can verify a previously-sent code without re-sending.
 export default function VerifyEmailScreen() {
   const t = useTheme();
+  const { t: tr } = useI18n();
   const params = useLocalSearchParams<{ email?: string }>();
   const emailFromParam = !!params.email;
   const [email, setEmail] = useState(params.email ?? '');
@@ -40,25 +42,25 @@ export default function VerifyEmailScreen() {
 
   return (
     <Screen>
-      <Stack.Screen options={{ title: 'Verify email' }} />
+      <Stack.Screen options={{ title: tr('auth.verifyEmailTitle') }} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
       >
         <View style={{ flex: 1, justifyContent: 'center', gap: t.spacing.lg }}>
-          <Text variant="title">Check your email</Text>
+          <Text variant="title">{tr('auth.checkEmail')}</Text>
           <Text variant="muted">
             {emailFromParam
-              ? `We sent a verification code to ${email}. Enter it below to finish creating your account.`
-              : 'Enter the email you signed up with and the verification code from your inbox.'}
+              ? tr('auth.verifyEmailBodyParam', { email })
+              : tr('auth.verifyEmailBodyNoParam')}
           </Text>
 
           {emailFromParam ? null : (
             <Input
-              label="Email"
+              label={tr('auth.email')}
               value={email}
               onChangeText={setEmail}
-              placeholder="you@example.com"
+              placeholder={tr('auth.emailPlaceholder')}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
@@ -70,10 +72,10 @@ export default function VerifyEmailScreen() {
           )}
 
           <Input
-            label="Verification code"
+            label={tr('auth.code')}
             value={token}
             onChangeText={(v) => setToken(v.replace(/\D/g, '').slice(0, OTP_MAX_LENGTH))}
-            placeholder="123456"
+            placeholder={tr('auth.codePlaceholder')}
             keyboardType="number-pad"
             autoComplete="one-time-code"
             textContentType="oneTimeCode"
@@ -83,10 +85,10 @@ export default function VerifyEmailScreen() {
           />
           {mutation.isError ? (
             <Text variant="caption" style={{ color: t.colors.destructive }}>
-              {mutation.error instanceof Error ? mutation.error.message : 'Verification failed.'}
+              {mutation.error instanceof Error ? mutation.error.message : tr('auth.verifyFailed')}
             </Text>
           ) : null}
-          <Button label="Verify" onPress={onSubmit} loading={mutation.isPending} />
+          <Button label={tr('auth.verify')} onPress={onSubmit} loading={mutation.isPending} />
         </View>
       </KeyboardAvoidingView>
     </Screen>

@@ -3,6 +3,7 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'rea
 import { router } from 'expo-router';
 import { ZodError } from 'zod';
 import { Button, Input, Screen, Text, useTheme } from '@/shared/ui';
+import { useI18n } from '@/shared/i18n';
 import {
   CURRENT_TERMS_VERSION,
   profileSetupInput,
@@ -25,6 +26,7 @@ type FieldErrors = Partial<Record<'username' | 'displayName' | 'acceptedTerms', 
 
 export default function ProfileSetupScreen() {
   const t = useTheme();
+  const { t: tr } = useI18n();
   const profile = useProfile();
   const upsert = useUpsertProfile();
   const [username, setUsername] = useState('');
@@ -84,32 +86,30 @@ export default function ProfileSetupScreen() {
           contentContainerStyle={{ gap: t.spacing.lg, paddingBottom: t.spacing.xl }}
         >
           <View style={{ gap: t.spacing.xs }}>
-            <Text variant="title">Set up your profile</Text>
-            <Text variant="muted">
-              Pick a username and a display name. You can change the display name later.
-            </Text>
+            <Text variant="title">{tr('onboarding.profileTitle')}</Text>
+            <Text variant="muted">{tr('onboarding.profileSetupSub')}</Text>
           </View>
 
           <Input
-            label="Username"
+            label={tr('onboarding.username')}
             value={username}
             onChangeText={setUsername}
             autoCapitalize="none"
             autoCorrect={false}
             autoComplete="username-new"
             textContentType="username"
-            placeholder="e.g. dastan42"
+            placeholder={tr('onboarding.usernameEg')}
             error={errors.username}
-            hint={errors.username ? undefined : '3–30 letters, digits, or underscores'}
+            hint={errors.username ? undefined : tr('onboarding.usernameHint')}
           />
 
           <Input
-            label="Display name"
+            label={tr('onboarding.displayName')}
             value={displayName}
             onChangeText={setDisplayName}
             autoCapitalize="words"
             autoCorrect
-            placeholder="e.g. Дастан"
+            placeholder={tr('onboarding.displayNameEg')}
             error={errors.displayName}
           />
 
@@ -126,7 +126,7 @@ export default function ProfileSetupScreen() {
           ) : null}
 
           <Button
-            label={submitting ? 'Saving…' : 'Continue'}
+            label={submitting ? tr('common.saving') : tr('common.continue')}
             onPress={onSubmit}
             loading={submitting}
             disabled={submitting}
@@ -147,6 +147,7 @@ function TermsCheckbox({
   error?: string;
 }) {
   const t = useTheme();
+  const { t: tr } = useI18n();
   return (
     <View style={{ gap: t.spacing.xs }}>
       <Pressable
@@ -178,7 +179,7 @@ function TermsCheckbox({
           ) : null}
         </View>
         <Text variant="body" style={{ flex: 1 }}>
-          I accept the Terms of Service and Privacy Policy
+          {tr('onboarding.terms')}
         </Text>
       </Pressable>
       {error ? (

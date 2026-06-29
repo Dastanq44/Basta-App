@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, View } from 'react-native';
 import { type Href, useRouter } from 'expo-router';
 import { Card, Icon, Screen, SegmentedControl, Text, useTheme } from '@/shared/ui';
+import { useI18n } from '@/shared/i18n';
 import { usePublicProfile, userAvatarUrl } from '@/features/onboarding';
 import { useUserRecentSubmissions } from '@/features/proofs';
 import type { ProfileChallenge, ProfileGroup } from '../api';
@@ -33,6 +34,7 @@ export type ProfileScreenProps = {
 export function ProfileScreen({ userId, isOwn = false, onOpenSettings }: ProfileScreenProps) {
   const t = useTheme();
   const router = useRouter();
+  const { t: tr } = useI18n();
 
   const profile = usePublicProfile(userId);
   const overview = useProfileOverview(userId);
@@ -73,17 +75,15 @@ export function ProfileScreen({ userId, isOwn = false, onOpenSettings }: Profile
     return (
       <Screen edges={isOwn ? ['top'] : ['bottom']}>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: t.spacing.sm }}>
-          <Text variant="heading" style={{ textAlign: 'center' }}>This profile is private</Text>
-          <Text variant="muted" style={{ textAlign: 'center' }}>
-            You don&apos;t have access to this profile.
-          </Text>
+          <Text variant="heading" style={{ textAlign: 'center' }}>{tr('profile.private')}</Text>
+          <Text variant="muted" style={{ textAlign: 'center' }}>{tr('profile.privateBody')}</Text>
         </View>
       </Screen>
     );
   }
 
   const p = profile.data;
-  const displayName = p.displayName || p.username || 'Member';
+  const displayName = p.displayName || p.username || tr('common.member');
   const username = p.username ? `@${p.username}` : null;
 
   const activeData: RowItem[] =
@@ -119,9 +119,9 @@ export function ProfileScreen({ userId, isOwn = false, onOpenSettings }: Profile
   };
 
   const emptyCopy: Record<Tab, string> = {
-    submissions: isOwn ? 'No submissions yet.' : 'No visible submissions yet.',
-    challenges: isOwn ? 'No challenges yet.' : 'No visible challenges yet.',
-    groups: isOwn ? 'No groups yet.' : 'No visible groups yet.',
+    submissions: isOwn ? tr('profile.emptyProofsOwn') : tr('profile.emptyProofsOther'),
+    challenges: isOwn ? tr('profile.emptyChallengesOwn') : tr('profile.emptyChallengesOther'),
+    groups: isOwn ? tr('profile.emptyGroupsOwn') : tr('profile.emptyGroupsOther'),
   };
 
   const header = (
@@ -141,13 +141,11 @@ export function ProfileScreen({ userId, isOwn = false, onOpenSettings }: Profile
       {/* World Rank card hidden — no real ranking data yet (no placeholder by default). */}
       <ActivityPreview submissions={submissions.data ?? []} selected={activityDay} onSelect={setActivityDay} />
       <SegmentedControl
-        options={
-          [
-            { label: 'Proofs', value: 'submissions' },
-            { label: 'Challenges', value: 'challenges' },
-            { label: 'Groups', value: 'groups' },
-          ] as const
-        }
+        options={[
+          { label: tr('profile.proofs'), value: 'submissions' as Tab },
+          { label: tr('profile.challenges'), value: 'challenges' as Tab },
+          { label: tr('profile.groups'), value: 'groups' as Tab },
+        ]}
         value={tab}
         onChange={setTab}
       />
@@ -168,11 +166,11 @@ export function ProfileScreen({ userId, isOwn = false, onOpenSettings }: Profile
           }}
         >
           <Text variant="title" numberOfLines={1} style={{ flex: 1, marginRight: t.spacing.sm }}>
-            Profile
+            {tr('nav.profile')}
           </Text>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Profile settings"
+            accessibilityLabel={tr('profile.settingsA11y')}
             onPress={onOpenSettings}
             hitSlop={8}
             style={({ pressed }) => ({ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.5 : 1 })}
