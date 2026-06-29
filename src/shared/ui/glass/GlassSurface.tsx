@@ -45,11 +45,15 @@ export function GlassSurface({ children, tone = 'regular', radius, tintColor, bo
   }
 
   if (mode === 'blur') {
-    const intensity = tone === 'clear' ? 24 : 40;
+    const intensity = tone === 'clear' ? 22 : 38;
+    // Overlay alpha: a tinted (active) control reads stronger; an inactive 'clear' control gets only
+    // a whisper of tint so light themes don't render a muddy grey disc (the reported darkening).
+    const overlayBase = tintColor ?? t.glass.tint;
+    const overlayAlpha = tintColor ? '55' : tone === 'clear' ? (t.isDark ? '2E' : '24') : t.isDark ? '40' : '3A';
     return (
       <BlurView intensity={intensity} tint={t.glass.blurTint} style={common}>
         {/* A subtle theme tint over the blur keeps brand identity + contrast across all 4 themes. */}
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: (tintColor ?? t.glass.tint) + (t.isDark ? '40' : '4D') }]} />
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: overlayBase + overlayAlpha }]} />
         {children}
       </BlurView>
     );

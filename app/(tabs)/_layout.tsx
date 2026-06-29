@@ -1,4 +1,5 @@
-import { Platform, View } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { Animated, Platform, View } from 'react-native';
 import { Tabs } from 'expo-router';
 import { NativeTabs, Icon as NativeTabIcon, Label } from 'expo-router/unstable-native-tabs';
 import { Icon, isGlassAvailable, useTheme } from '@/shared/ui';
@@ -88,20 +89,36 @@ function FallbackTabs() {
   );
 }
 
-/** Tab icon wrapped in a primary-tinted lozenge when active — a clear active state for the fallback. */
+/**
+ * Tab icon in a primary-tinted lozenge when active. The pill is slightly LARGER and animates its
+ * scale from the CENTER on focus (the indicator grows/shrinks toward the middle, per the user's
+ * request) — this is the custom-owned fallback bar, so we control the motion here.
+ *
+ * NOTE: on the iOS 26 NATIVE tab bar (`NativeTabs`) the slider/minimize geometry + collapse origin
+ * are OWNED by UIKit and not exposed by the API, so we keep the native `minimizeBehavior` there
+ * rather than fighting the OS — the center-origin grow only applies to this fallback bar.
+ */
 function TabIcon({ name, color, focused }: { name: IconName; color: string; focused: boolean }) {
   const t = useTheme();
+  const scale = useRef(new Animated.Value(focused ? 1 : 0.7)).current;
+  useEffect(() => {
+    Animated.spring(scale, { toValue: focused ? 1 : 0.7, useNativeDriver: true, speed: 30, bounciness: 9 }).start();
+  }, [focused, scale]);
+
   return (
-    <View
-      style={{
-        width: 54,
-        height: 30,
-        borderRadius: t.radius.full,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: focused ? t.colors.primarySoft : 'transparent',
-      }}
-    >
+    <View style={{ width: 64, height: 34, alignItems: 'center', justifyContent: 'center' }}>
+      {/* Lozenge scales from the center (transform origin is the view center). */}
+      <Animated.View
+        style={{
+          position: 'absolute',
+          width: 64,
+          height: 34,
+          borderRadius: t.radius.full,
+          backgroundColor: t.colors.primarySoft,
+          opacity: focused ? 1 : 0,
+          transform: [{ scale }],
+        }}
+      />
       <Icon name={name} color={color} size={22} />
     </View>
   );

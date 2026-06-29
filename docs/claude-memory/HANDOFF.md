@@ -21,6 +21,45 @@
 
 ---
 
+## 2026-06-29 — Claude (opus) / i18n completion (PATCH A) + glass/header/theme polish (PATCH B)
+
+**Did:** Two separate commits (D-018).
+- `a861339` **fix(i18n): complete ru and kk localization coverage** — ru/kk now cover ALL en keys
+  (verified 0 missing via a key-diff script). Localized every remaining surface: all profile UI
+  (StatsGrid/Screen/ActivityPreview/Heatmap/Challenge+GroupCard), ChallengeRow (category/mode),
+  challenge/new (inputs/placeholders/visibility/errors), challenge & group edit, group/archived,
+  join-or-create (+form+onboarding), profile/edit, onboarding/profile-setup, ProofComposer +
+  submit/edit-proof, and the 3 auth secondary screens. Enum mappers + `fmtDate`/`tn` used throughout.
+- `<PATCH B hash>` **fix(ui): polish liquid glass controls themes and localization** — see below.
+
+**PATCH B details:**
+- **Header unification:** in-body `ScreenHeader` back + action are now ALWAYS `GlassIconButton`
+  circles (real glass iOS 26, frosted blur elsewhere, solid under Reduce Transparency) — fixes the
+  square fallback controls. New shared **`ChevronLeftIcon`** (react-native-svg, optically centered)
+  replaces the border-rotate chevron + `marginLeft` hacks; used by ScreenHeader, GlassHeader,
+  HeaderBackButton.
+- **Nav theme bridge (B5/B6/B7):** `app/_layout` wraps the navigator in `@react-navigation/native`
+  `ThemeProvider` (mapped from the active app theme) + sets `headerTintColor`/`headerTitleStyle.color`
+  = foreground. Fixes light-theme glass darkening/flicker and dark-theme black header titles.
+  Inactive glass uses the lighter `clear` tone + whisper tint so light themes aren't muddy.
+- **Green theme (B8):** `sageGrowth` redesigned to a distinct green theme — emerald primary
+  `#15803D` (CTA/selected/ring), sage background, mint primarySoft, greener glass tint. The ONE
+  theme whose CTA is green (user authorized).
+- **Tab bar (B9):** fallback active pill larger + scales from center on focus. Native iOS 26
+  `NativeTabs` minimize is OS-owned (collapse origin not exposed) — kept native, documented in code.
+
+**Checks:** typecheck + lint + expo-doctor (18/18) green after BOTH patches. **No backend/migration.**
+
+**Next up / residual:** (1) optionally convert the remaining native-header modal/edit routes
+(`challenge/new`, `*/edit`, `verify`, `blocked-users`, `verifications`, `profile/*`,
+`group/join-or-create|archived`, `user/[id]`) to in-body `ScreenHeader` — they're now themed + use
+the shared chevron so they're consistent; full conversion is optional. (2) Liquid Glass + the
+center-collapse + green theme are only fully verifiable on real iOS 26 hardware.
+
+**Branch / commit:** `mvp`. Packages: none added this round (`@react-navigation/native` already a dep).
+
+---
+
 ## 2026-06-28 (pm) — Claude (opus) / full localization (Phase A) + Liquid Glass (Phase B)
 
 **Did:** Two-phase update (D-017). Three commits on `mvp`:

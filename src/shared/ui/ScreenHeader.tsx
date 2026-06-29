@@ -2,8 +2,8 @@ import type { ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
 import { Text } from './Text';
 import { useTheme } from './theme';
+import { ChevronLeftIcon } from './ChevronLeftIcon';
 import { GlassIconButton } from './glass/GlassIconButton';
-import { useGlassMode } from './glass/glassSupport';
 
 export type ScreenHeaderProps = {
   /** Centered title. */
@@ -19,41 +19,30 @@ export type ScreenHeaderProps = {
 };
 
 /**
- * In-body screen header — used as a replacement for the native iOS UINavigationBar on
- * screens where the system bar-button highlight (the white circular tap-tint that
- * fades in/out during screen transitions) is visible and undesirable.
- *
- * Render right at the top of the screen body when the screen has `headerShown: false`.
- * Buttons here are plain `<Pressable>`s with an opacity dip on press — no system
- * styling, no UIKit ornament, no native tap-highlight rectangle. Symmetric 40×40 slots
- * on either side keep the centered title visually balanced even when only one slot has
- * a button.
+ * In-body app header — the single header strategy for app-owned screens (`headerShown: false`).
+ * Back + action controls are ALWAYS rendered as `GlassIconButton` circles, so the shape language is
+ * identical on every screen and platform: real Liquid Glass on iOS 26, a frosted blur fallback on
+ * older iOS / Android, and a solid themed circle under Reduce Transparency. The back chevron is the
+ * shared `ChevronLeftIcon` (optically centered, no per-screen margin hacks). 44×44 slots keep the
+ * centered title balanced. Title uses the theme foreground (readable in every theme).
  */
 export function ScreenHeader({ title, onBack, rightAction }: ScreenHeaderProps) {
   const t = useTheme();
-  // On iOS 26 (Liquid Glass available) the back + action controls float in glass circles;
-  // everywhere else they stay the lightweight plain Pressables (no glass dependency at runtime).
-  const glass = useGlassMode() === 'liquid';
-
   return (
     <View
       style={{
-        height: glass ? 52 : 44,
+        height: 52,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: t.spacing.sm,
       }}
     >
-      {/* Left slot — back chevron or empty spacer to keep the title centered. */}
+      {/* Left slot — glass back circle or empty spacer to keep the title centered. */}
       {onBack ? (
-        glass ? (
-          <GlassIconButton icon={<BackChevron color={t.colors.foreground} />} onPress={onBack} accessibilityLabel="Back" />
-        ) : (
-          <HeaderBackButton onPress={onBack} />
-        )
+        <GlassIconButton icon={<ChevronLeftIcon />} onPress={onBack} accessibilityLabel="Back" />
       ) : (
-        <View style={{ width: glass ? 44 : 40, height: glass ? 44 : 40 }} />
+        <View style={{ width: 44, height: 44 }} />
       )}
 
       {/* Title — centered. flex: 1 so it absorbs the middle column. */}
@@ -70,56 +59,19 @@ export function ScreenHeader({ title, onBack, rightAction }: ScreenHeaderProps) 
         {title ?? ''}
       </Text>
 
-      {/* Right slot — action button or empty spacer. */}
+      {/* Right slot — glass action circle or empty spacer. */}
       {rightAction ? (
-        glass ? (
-          <GlassIconButton icon={rightAction.icon} onPress={rightAction.onPress} accessibilityLabel={rightAction.accessibilityLabel} />
-        ) : (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={rightAction.accessibilityLabel}
-            onPress={rightAction.onPress}
-            hitSlop={8}
-            style={({ pressed }) => ({
-              width: 40,
-              height: 40,
-              alignItems: 'center',
-              justifyContent: 'center',
-              opacity: pressed ? 0.5 : 1,
-            })}
-          >
-            {rightAction.icon}
-          </Pressable>
-        )
+        <GlassIconButton icon={rightAction.icon} onPress={rightAction.onPress} accessibilityLabel={rightAction.accessibilityLabel} />
       ) : (
-        <View style={{ width: glass ? 44 : 40, height: glass ? 44 : 40 }} />
+        <View style={{ width: 44, height: 44 }} />
       )}
     </View>
   );
 }
 
-/** Dep-free back chevron drawn from a single rotated View (used inside the glass back button). */
-function BackChevron({ color }: { color: string }) {
-  return (
-    <View
-      style={{
-        width: 11,
-        height: 11,
-        borderTopWidth: 2.2,
-        borderLeftWidth: 2.2,
-        borderColor: color,
-        transform: [{ rotate: '-45deg' }],
-        marginLeft: 3,
-      }}
-    />
-  );
-}
-
-/** Standalone back chevron — used both here and as the native-stack `headerLeft`
- *  for any screens still relying on the system header. Dep-free chevron drawn from a
- *  single rotated `View`. */
+/** Standalone back control for the few routes still on a native stack header (`headerLeft`).
+ *  Uses the same shared SVG chevron, optically centered, theme-aware. */
 export function HeaderBackButton({ onPress }: { onPress: () => void }) {
-  const t = useTheme();
   return (
     <Pressable
       accessibilityRole="button"
@@ -134,16 +86,7 @@ export function HeaderBackButton({ onPress }: { onPress: () => void }) {
         opacity: pressed ? 0.5 : 1,
       })}
     >
-      <View
-        style={{
-          width: 11,
-          height: 11,
-          borderTopWidth: 2.2,
-          borderLeftWidth: 2.2,
-          borderColor: t.colors.foreground,
-          transform: [{ rotate: '-45deg' }],
-        }}
-      />
+      <ChevronLeftIcon />
     </Pressable>
   );
 }

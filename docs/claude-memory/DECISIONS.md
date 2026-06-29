@@ -331,3 +331,34 @@ Date · Status · Decision · Why · Consequences
 - **Consequences:** Liquid Glass is only the *real* effect on iOS 26 hardware (can't be verified in
   this dev environment); everywhere else it's a frosted-blur / solid fallback. BottomSheet glass +
   remaining localization screens are tracked follow-ups.
+
+## D-018 — Header unification, glass/theme polish, green theme (2026-06)   [Accepted; refines D-017]
+- **Date:** 2026-06-29
+- **Localization:** ru-RU and kk-KZ are now COMPLETE (0 missing keys vs en). All user-facing strings
+  go through `tr`/`tn`/`fmtDate`/enum mappers — no hardcoded English on app screens. (Committed
+  separately as `fix(i18n): complete ru and kk localization coverage`.)
+- **Header system (one strategy):** app-owned screens use the in-body `ScreenHeader`, whose back +
+  action controls are now ALWAYS `GlassIconButton` circles (real Liquid Glass on iOS 26, frosted
+  blur fallback elsewhere, solid under Reduce Transparency) — so the shape language is identical
+  everywhere; no more square controls on the non-iOS26 fallback. The back chevron is a single shared
+  **`ChevronLeftIcon`** (react-native-svg, optically centered) — replaces the border-rotated View +
+  per-screen `marginLeft` hacks. `HeaderBackButton` (native `headerLeft`) and `GlassHeader` use the
+  same chevron.
+- **Native theme bridge (fixes flicker + black titles):** `app/_layout` now wraps the navigator in
+  `@react-navigation/native`'s `ThemeProvider`, mapping the active app theme → a nav `Theme`
+  (Default/Dark + app colors). Native headers/tabs + iOS 26 glass now get the correct light/dark
+  appearance, and native header `headerTintColor` + `headerTitleStyle.color` follow the theme
+  foreground (no more black-on-dark titles). Inactive glass controls use the lighter `clear` tone +
+  a whisper-light tint overlay so light themes don't render a muddy grey disc during animation.
+  Press animation is scale (transform), never parent opacity.
+- **Green theme (sageGrowth) redesign:** now a clearly distinct GREEN "growth" theme — emerald
+  primary `#15803D` (the CTA + selected + focus ring in this theme), sage-green background, pale-mint
+  primarySoft, faintly green glass tint. Gold stays the streak accent. Contrast kept AA. This is the
+  one theme where the primary is NOT blue (the user explicitly authorized it).
+- **Tab bar:** the custom fallback active pill is slightly larger and **scales from the center** on
+  focus (the indicator grows/shrinks toward the middle). The iOS 26 NATIVE tab bar keeps its
+  OS-owned `minimizeBehavior` — UIKit doesn't expose collapse-origin control, so we don't fight it
+  (documented in code).
+- **Not done (follow-up):** converting the remaining native-header modal/edit routes to in-body
+  headers (they're now themed + use the shared chevron, so they're consistent; full conversion is
+  optional). Real Liquid Glass is only verifiable on iOS 26 hardware.

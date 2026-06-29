@@ -13,6 +13,18 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
 
 ## Active warnings (not bugs — traps to respect)
 
+## [OPEN] W-043 — Liquid Glass + native tab collapse are only verifiable on real iOS 26 hardware
+- **Date:** 2026-06-29 · **Area:** ui / glass (D-018)
+- **What:** the true Apple Liquid Glass effect (`GlassView` via `isLiquidGlassAvailable()`) and the
+  native `NativeTabs` minimize/collapse only render on **iOS 26 devices**. Everywhere else (Android,
+  older iOS, simulators without it, this dev env) you get the **frosted-blur / solid fallback** — that
+  fallback IS the coherent design, not a bug. The user's "collapse toward center" request applies
+  only to the custom fallback tab pill (implemented); the iOS 26 native tab bar's collapse origin is
+  **OS-owned and not exposed by the API**, so it keeps `minimizeBehavior` — do NOT hack around this.
+- **Theme bridge:** native headers/tabs now read appearance from the `@react-navigation/native`
+  `ThemeProvider` mapped in `app/_layout`. If you add a new theme, it flows through automatically
+  (light/dark decided by `t.isDark`). All header titles/icons follow `t.colors.foreground`.
+
 ## [OPEN] W-042 — First-launch preferences flow shows once for EXISTING users after the D-016 update
 - **Date:** 2026-06-28 · **Area:** navigation / preferences
 - **What:** the local-preference gate (`app/_layout` + `PreferencesGateProvider`) shows

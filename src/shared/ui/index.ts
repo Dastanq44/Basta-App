@@ -38,6 +38,8 @@ export { BottomSheet, BottomSheetMenuItem } from './BottomSheet';
 export type { BottomSheetProps, BottomSheetMenuItemProps } from './BottomSheet';
 export { ScreenHeader, HeaderBackButton } from './ScreenHeader';
 export type { ScreenHeaderProps } from './ScreenHeader';
+export { ChevronLeftIcon } from './ChevronLeftIcon';
+export type { ChevronLeftIconProps } from './ChevronLeftIcon';
 export { OrnamentDivider } from './OrnamentDivider';
 export type { OrnamentDividerProps } from './OrnamentDivider';
 export { OrnamentMedallion } from './OrnamentMedallion';

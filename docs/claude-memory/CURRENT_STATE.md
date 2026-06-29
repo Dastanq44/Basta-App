@@ -3,7 +3,19 @@
 > **Live snapshot of the repo.** Update this at the end of every session. If this disagrees with
 > reality, fix it before doing anything else.
 
-_Last updated: 2026-06-28 (pm) — by: Claude (opus) (full i18n + Liquid Glass)_
+_Last updated: 2026-06-29 — by: Claude (opus) (i18n completion + glass/header/theme polish)_
+
+> **2026-06-29 (D-018):** Two patches. **PATCH A** `fix(i18n): complete ru and kk localization
+> coverage` — ru/kk now cover ALL en keys (0 missing); every app screen localizes (profile UI,
+> challenge wizard/edit, group edit/archived/join, auth secondary, onboarding, ProofComposer, etc.)
+> via `tr`/`tn`/`fmtDate`/enum mappers. **PATCH B** `fix(ui): polish liquid glass controls themes
+> and localization` — unified header (in-body `ScreenHeader` controls are ALWAYS `GlassIconButton`
+> circles in every mode; shared SVG `ChevronLeftIcon`, optically centered, no margin hacks); nav
+> theme bridge (`@react-navigation/native` ThemeProvider mapped from app theme) + `headerTintColor`/
+> title color → fixes light-theme glass flicker + dark-theme black header titles; inactive glass uses
+> lighter `clear` tone; **green `sageGrowth` redesigned** (emerald primary `#15803D`, sage surfaces —
+> the one theme whose CTA is green); fallback tab pill larger + center-scale (native iOS 26 tab
+> minimize is OS-owned, documented). typecheck+lint+expo-doctor (18/18) green. No backend/migration.
 
 > **2026-06-28 (pm) full localization + Liquid Glass (D-017):** the core daily loop + all detail
 > screens now localize in the selected app language, with **app-language date/number formatting**

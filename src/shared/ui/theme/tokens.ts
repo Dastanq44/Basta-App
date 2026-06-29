@@ -173,31 +173,32 @@ const steppeSkyColors: ColorTokens = {
   ring: '#0E5AA8',
 };
 
-// ── 4. Sage Growth — soft green surfaces; BLUE remains the primary CTA, green supports ──────────
+// ── 4. Sage Growth — a distinct GREEN "growth" theme (emerald primary, sage surfaces). Clearly
+// different from whiteBlue; green is the action color here, gold stays the streak/rank accent. ────
 const sageGrowthColors: ColorTokens = {
-  background: '#F1F6F1',
-  foreground: '#16241D',
+  background: '#EAF4EC', // fresh soft green-tinted off-white (more obviously green than whiteBlue)
+  foreground: '#13241B',
   card: '#FFFFFF',
-  cardForeground: '#16241D',
-  primary: '#2563EB', // blue stays the brand action color
+  cardForeground: '#13241B',
+  primary: '#15803D', // emerald — the primary CTA + selected + focus in this theme
   primaryForeground: '#FFFFFF',
-  primarySoft: '#DBEAFE',
-  secondary: '#E3EFE3', // sage pill
-  secondaryForeground: '#16241D',
-  muted: '#E6F0E6',
-  mutedForeground: '#566B5C',
-  accent: '#2E7D55', // supporting green — chips, selected highlights, ornaments
+  primarySoft: '#D2EEDB', // pale mint tint (selected rows / chips / progress track)
+  secondary: '#DCEDDF',
+  secondaryForeground: '#13241B',
+  muted: '#E2EFE4',
+  mutedForeground: '#52685A',
+  accent: '#15803D', // coordinated green accent
   accentForeground: '#FFFFFF',
-  success: '#1E7A4F',
+  success: '#157A45',
   successForeground: '#FFFFFF',
-  warning: '#C99412',
-  warningForeground: '#3A2B00',
-  streak: '#C99412',
+  warning: '#B5740C',
+  warningForeground: '#FFFFFF',
+  streak: '#C99412', // gold flame stays warm/legible on green
   streakForeground: '#3A2B00',
-  destructive: '#C44536',
+  destructive: '#C0392B',
   destructiveForeground: '#FFFFFF',
-  border: '#D1E3D2',
-  ring: '#2563EB',
+  border: '#C7E0CC',
+  ring: '#15803D',
 };
 
 // Glass derives mostly from light/dark; steppeSky gets a faintly warm tint to keep its character.
@@ -205,7 +206,9 @@ function glassFor(id: ThemeId, isDark: boolean): GlassTokens {
   if (isDark) {
     return { tint: '#13233A', tintStrong: '#0C1828', border: '#86A9D6', highlight: '#FFFFFF', backdrop: '#000000', blurTint: 'dark' };
   }
-  const tint = id === 'steppeSky' ? '#FFFDF7' : '#FFFFFF';
+  // Light themes: white glass, but steppeSky leans faintly warm and sageGrowth faintly green so the
+  // glass keeps each theme's character instead of reading as a neutral grey.
+  const tint = id === 'steppeSky' ? '#FFFDF7' : id === 'sageGrowth' ? '#F4FBF5' : '#FFFFFF';
   return { tint, tintStrong: tint, border: '#FFFFFF', highlight: '#FFFFFF', backdrop: '#0A2540', blurTint: 'light' };
 }
 

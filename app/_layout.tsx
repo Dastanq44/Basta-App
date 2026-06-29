@@ -3,6 +3,7 @@ import { ActivityIndicator, View } from 'react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { type Href, Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { DarkTheme, DefaultTheme, ThemeProvider as NavThemeProvider, type Theme as NavTheme } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { queryClient } from '@/shared/lib/queryClient';
 import { SessionProvider, useSession } from '@/features/auth';
@@ -121,7 +122,25 @@ function RootNav() {
     );
   }
 
+  // Bridge the active app theme to the native navigation system so native headers + native tabs
+  // (and iOS 26 Liquid Glass surfaces) pick the correct light/dark appearance + brand colors —
+  // fixes the light-theme flashing and the dark-theme black header text (D-018, B5/B6/B7).
+  const navTheme: NavTheme = {
+    ...(t.isDark ? DarkTheme : DefaultTheme),
+    dark: t.isDark,
+    colors: {
+      ...(t.isDark ? DarkTheme : DefaultTheme).colors,
+      primary: t.colors.primary,
+      background: t.colors.background,
+      card: t.colors.card,
+      text: t.colors.foreground,
+      border: t.colors.border,
+      notification: t.colors.primary,
+    },
+  };
+
   return (
+    <NavThemeProvider value={navTheme}>
     <View style={{ flex: 1, backgroundColor: t.colors.background }}>
       <OfflineBanner />
       <Stack
@@ -137,9 +156,11 @@ function RootNav() {
         headerLeft: ({ canGoBack }) =>
           canGoBack ? <HeaderBackButton onPress={() => router.back()} /> : null,
         // Match the header bar background to the SCREEN background so there's no
-        // contrasting white strip behind the buttons (which read as "the buttons are
-        // sitting in white circles" on phones). Also kill the iOS hairline shadow.
+        // contrasting white strip behind the buttons. Tint + title color follow the theme
+        // foreground so titles/icons stay readable in dark themes (B7).
         headerStyle: { backgroundColor: t.colors.background },
+        headerTintColor: t.colors.foreground,
+        headerTitleStyle: { color: t.colors.foreground },
         headerShadowVisible: false,
       }}
     >
@@ -185,5 +206,6 @@ function RootNav() {
       <Stack.Screen name="profile/preferences" options={{ headerShown: true, title: tr('settings.languageTheme') }} />
       </Stack>
     </View>
+    </NavThemeProvider>
   );
 }

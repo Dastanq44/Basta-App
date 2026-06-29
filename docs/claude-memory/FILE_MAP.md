@@ -191,7 +191,9 @@ app.config.ts  eas.json  package.json                                           
 | Steppe-Sky ornaments (react-native-svg) | `src/shared/ui/OrnamentDivider.tsx` · `OrnamentMedallion.tsx` | live (D-015) |
 | Redesign shared UI: read-only banner / proof context strip / branded empty | `src/shared/ui/PublicPreviewBanner.tsx` · `ProofContextStrip.tsx` · `BrandEmptyState.tsx` | live (D-015) |
 | In-house i18n (en/kk/ru, persistence, `tn()` plurals, `fmtDate/fmtDateTime/fmtNumber`, enum mappers) | `src/shared/i18n/index.ts` | live (D-015/16/17) |
-| Liquid Glass component layer (GlassSurface/Pill/IconButton/Header + capability hooks) | `src/shared/ui/glass/*` | live (D-017) |
+| Liquid Glass component layer (GlassSurface/Pill/IconButton/Header + capability hooks) | `src/shared/ui/glass/*` | live (D-017/18) |
+| Shared SVG back chevron (optically centered; used by all headers) | `src/shared/ui/ChevronLeftIcon.tsx` | live (D-018) |
+| Native nav theme bridge (app theme → @react-navigation ThemeProvider) | `app/_layout.tsx` (RootNav) | live (D-018) |
 | Native Liquid Glass tab bar (iOS 26) + refined JS fallback | `app/(tabs)/_layout.tsx` (`expo-router/unstable-native-tabs`) | live (D-017) |
 | App preferences (language / themeId / first-launch flag, SecureStore + backward-compat) | `src/shared/lib/appPreferences.ts` | live (D-016) |
 | Shared robust local-image reader (expo-file-system; user + group avatar uploads) | `src/shared/lib/localImage.ts` | live (D-016) |

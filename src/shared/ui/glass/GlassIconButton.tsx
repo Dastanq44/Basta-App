@@ -33,6 +33,9 @@ export function GlassIconButton({ icon, onPress, accessibilityLabel, size = 44, 
     >
       <Animated.View style={{ transform: [{ scale }] }}>
         <GlassSurface
+          // Inactive controls use the lighter 'clear' tone so light themes don't read as a muddy
+          // grey disc; the active state fills with a soft primary tint at 'regular' frost.
+          tone={active ? 'regular' : 'clear'}
           radius={size / 2}
           tintColor={active ? t.colors.primary : undefined}
           style={{ width: size, height: size }}

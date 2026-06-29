@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { View } from 'react-native';
 import { Text } from '../Text';
 import { useTheme } from '../theme';
+import { ChevronLeftIcon } from '../ChevronLeftIcon';
 import { GlassIconButton } from './GlassIconButton';
 
 export type GlassHeaderProps = {
@@ -24,19 +25,6 @@ export type GlassHeaderProps = {
  */
 export function GlassHeader({ title, onBack, rightAction }: GlassHeaderProps) {
   const t = useTheme();
-  const chevron = (
-    <View
-      style={{
-        width: 11,
-        height: 11,
-        borderTopWidth: 2.2,
-        borderLeftWidth: 2.2,
-        borderColor: t.colors.foreground,
-        transform: [{ rotate: '-45deg' }],
-        marginLeft: 3,
-      }}
-    />
-  );
   return (
     <View
       style={{
@@ -48,7 +36,7 @@ export function GlassHeader({ title, onBack, rightAction }: GlassHeaderProps) {
       }}
     >
       {onBack ? (
-        <GlassIconButton icon={chevron} onPress={onBack} accessibilityLabel="Back" />
+        <GlassIconButton icon={<ChevronLeftIcon />} onPress={onBack} accessibilityLabel="Back" />
       ) : (
         <View style={{ width: 44, height: 44 }} />
       )}
