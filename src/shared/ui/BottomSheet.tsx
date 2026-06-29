@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   Animated,
+  Easing,
   Modal,
   Pressable,
   Text as RNText,
@@ -20,8 +21,8 @@ export type BottomSheetProps = {
   minHeight?: number;
 };
 
-const OPEN_DURATION = 260;
-const CLOSE_DURATION = 200;
+const OPEN_DURATION = 240;
+const CLOSE_DURATION = 190;
 const BACKDROP_OPACITY = 0.4;
 
 /**
@@ -57,13 +58,40 @@ export function BottomSheet({ visible, onClose, children, showHandle = true, min
       backdrop.setValue(0);
       sheetY.setValue(winH);
       Animated.parallel([
-        Animated.timing(backdrop, { toValue: BACKDROP_OPACITY, duration: OPEN_DURATION, useNativeDriver: true }),
-        Animated.timing(sheetY, { toValue: 0, duration: OPEN_DURATION, useNativeDriver: true }),
+        Animated.timing(backdrop, {
+          toValue: BACKDROP_OPACITY,
+          duration: OPEN_DURATION,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+        // The sheet rises on a NEAR-CRITICAL spring (smooth iOS-style decelerate, not a linear
+        // ramp). `overshootClamping` stops it at rest so a bottom-pinned sheet never lifts past the
+        // edge (which would flash a gap). Native driver → runs on the UI thread at 60/120fps.
+        Animated.spring(sheetY, {
+          toValue: 0,
+          stiffness: 300,
+          damping: 34,
+          mass: 1,
+          overshootClamping: true,
+          restDisplacementThreshold: 0.5,
+          restSpeedThreshold: 1,
+          useNativeDriver: true,
+        }),
       ]).start();
     } else if (mounted) {
       Animated.parallel([
-        Animated.timing(backdrop, { toValue: 0, duration: CLOSE_DURATION, useNativeDriver: true }),
-        Animated.timing(sheetY, { toValue: winH, duration: CLOSE_DURATION, useNativeDriver: true }),
+        Animated.timing(backdrop, {
+          toValue: 0,
+          duration: CLOSE_DURATION,
+          easing: Easing.in(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(sheetY, {
+          toValue: winH,
+          duration: CLOSE_DURATION,
+          easing: Easing.in(Easing.cubic),
+          useNativeDriver: true,
+        }),
       ]).start(({ finished }) => {
         if (finished) setMounted(false);
       });

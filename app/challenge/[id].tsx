@@ -201,7 +201,7 @@ export default function ChallengeDetailScreen() {
         ListHeaderComponent={
           <View style={{ gap: t.spacing.md, marginBottom: t.spacing.md }}>
             {/* On-page identity: the emoji as the challenge icon + the name (the compact title
-                still lives in the ScreenHeader above; this is the larger in-body version). */}
+                still lives in the native header above; this is the larger in-body version). */}
             <ChallengeIdentity emoji={emoji} name={name} />
             {/* Encapsulated, divided metadata chips. */}
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.spacing.xs }}>

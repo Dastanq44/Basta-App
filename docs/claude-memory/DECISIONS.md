@@ -383,3 +383,9 @@ Date · Status · Decision · Why · Consequences
 - **Kept but now unused by detail screens:** `ScreenHeader` / `GlassHeader` / `GlassIconButton` stay
   exported (still fine for any floating-over-content use), but the detail/preview screens no longer
   use them. The glass *fallback-shape* fix from W-044 still applies anywhere `GlassSurface` is used.
+- **Follow-up (2026-06-29 pm·3):** the shared header chrome now lives in ONE hook,
+  **`useAppStackScreenOptions()`**, spread into BOTH the root stack and the nested **(auth) stack**, so
+  the back button + centered title are identical on every native-header screen (the (auth) stack
+  previously used the default system back button). The profile tab's own settings/3-dot button and
+  the back-less (onboarding) stack are intentionally NOT changed. BottomSheet open uses a
+  near-critical spring (`overshootClamping`) instead of a linear ramp for a smoother rise.

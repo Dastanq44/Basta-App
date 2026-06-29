@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import type { NativeStackNavigationOptions } from '@react-navigation/native-stack';
 import { Text } from './Text';
 import { Icon } from './Icon';
 import { useTheme } from './theme';
@@ -103,6 +105,31 @@ export function HeaderActionButton({
       {icon ?? <Icon name="settings" size={22} color={t.colors.foreground} />}
     </Pressable>
   );
+}
+
+/**
+ * The single source of truth for native stack header chrome. Spread into a navigator's
+ * `screenOptions` so EVERY native-header stack (the root stack AND the nested (auth) stack) shows
+ * identical controls: the shared flat `ChevronLeftIcon` back button (no system chevron / "Back"
+ * text / tap-highlight), a centered themed title, and a transparent themed bar. Set `headerShown`
+ * yourself — this only owns the chrome, not visibility.
+ */
+export function useAppStackScreenOptions(): NativeStackNavigationOptions {
+  const t = useTheme();
+  const router = useRouter();
+  return {
+    // Belt-and-suspenders against RN-nav version differences: both hide the native back-text.
+    headerBackTitle: '',
+    headerBackButtonDisplayMode: 'minimal',
+    headerLeft: ({ canGoBack }) => (canGoBack ? <HeaderBackButton onPress={() => router.back()} /> : null),
+    // Bar matches the screen background (no contrasting strip); tint + title follow the foreground.
+    headerStyle: { backgroundColor: t.colors.background },
+    headerTintColor: t.colors.foreground,
+    headerTitleStyle: { color: t.colors.foreground },
+    // Centered title on every platform (Android left-aligns by default): back · title · action.
+    headerTitleAlign: 'center',
+    headerShadowVisible: false,
+  };
 }
 
 /** Standalone back control for the few routes still on a native stack header (`headerLeft`).

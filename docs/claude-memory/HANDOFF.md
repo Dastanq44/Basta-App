@@ -21,6 +21,27 @@
 
 ---
 
+## 2026-06-29 (pm·3) — Claude (opus) / unify ALL header buttons + smoother BottomSheet
+
+**Did (committed + pushed):**
+1. **One shared native-header config for every stack.** Extracted the header chrome (flat
+   `ChevronLeftIcon` back, centered themed title, transparent bar) into **`useAppStackScreenOptions()`**
+   (`src/shared/ui/ScreenHeader.tsx`). The root stack (`app/_layout`) AND the nested **(auth) stack**
+   (`app/(auth)/_layout`) now spread it, so the back button on forgot/reset-password etc. matches the
+   rest of the app (previously the (auth) stack used the DEFAULT system back button — the divergence
+   the user reported). Root/detail/modal/edit-profile screens were already on the root config; the
+   (auth) stack was the gap. **Left as-is on purpose:** the profile tab's own settings/3-dot button
+   (user said "except the 3-dot in profile") and the (onboarding) stack (deliberately back-less).
+2. **Smoother BottomSheet rise** (`src/shared/ui/BottomSheet.tsx`): the sheet now rises on a
+   near-critical **spring** (`stiffness 300 / damping 34 / mass 1`, `overshootClamping` so a
+   bottom-pinned sheet never lifts past the edge) instead of a LINEAR `Animated.timing` ramp; the
+   backdrop fades with `Easing.out/in(quad)`. Already native-driver (60/120fps) — the roughness was
+   the linear curve, now eased. Open/close durations trimmed (240/190ms).
+
+**Checks:** typecheck + lint clean. No deps/migrations/secrets.
+
+---
+
 ## 2026-06-29 (pm·2) — Claude (opus) / native headers for detail screens (D-019)
 
 **Did (committed `83becbb` was the prior round; THIS round not yet committed):** replaced the in-body

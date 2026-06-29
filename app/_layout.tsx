@@ -7,7 +7,7 @@ import { DarkTheme, DefaultTheme, ThemeProvider as NavThemeProvider, type Theme 
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { queryClient } from '@/shared/lib/queryClient';
 import { SessionProvider, useSession } from '@/features/auth';
-import { HeaderBackButton, KeyboardDoneAccessory, OfflineBanner, ThemeProvider, useTheme, useThemeMode } from '@/shared/ui';
+import { KeyboardDoneAccessory, OfflineBanner, ThemeProvider, useAppStackScreenOptions, useTheme, useThemeMode } from '@/shared/ui';
 import { I18nProvider, useI18n } from '@/shared/i18n';
 import { PreferencesGateProvider, usePreferencesGate } from '@/features/preferences';
 import { isAtTarget, useOnboardingGate } from '@/navigation/guards';
@@ -60,9 +60,9 @@ function ThemedStatusBar() {
   return <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />;
 }
 
-// HeaderBackButton lives in src/shared/ui/ScreenHeader.tsx — same component is used
-// both as the native-stack `headerLeft` here AND inside the custom in-body ScreenHeader
-// on screens where the native UINavigationBar's bar-button highlight is undesirable.
+// The shared native-header chrome (flat chevron back, centered themed title, transparent bar) lives
+// in useAppStackScreenOptions() — applied to BOTH this root stack and the nested (auth) stack so the
+// back/title controls are identical on every native-header screen.
 
 function RootNav() {
   const t = useTheme();
@@ -71,6 +71,7 @@ function RootNav() {
   const prefsGate = usePreferencesGate();
   const segments = useSegments() as string[];
   const router = useRouter();
+  const headerOptions = useAppStackScreenOptions();
   const session = useSession();
 
   const atPreferences = segments[0] === '(onboarding)' && segments[1] === 'preferences';
@@ -144,28 +145,10 @@ function RootNav() {
     <View style={{ flex: 1, backgroundColor: t.colors.background }}>
       <OfflineBanner />
       <Stack
-      screenOptions={{
-        headerShown: false,
-        // Replace the native back chevron + tap-tint with a custom Pressable that
-        // dims via opacity (no system color flash / white-circle tap highlight).
-        // Both options below keep the back-text invisible: headerBackTitle: '' is the
-        // older API, headerBackButtonDisplayMode: 'minimal' is the newer one. They're
-        // belt-and-suspenders against version differences.
-        headerBackTitle: '',
-        headerBackButtonDisplayMode: 'minimal',
-        headerLeft: ({ canGoBack }) =>
-          canGoBack ? <HeaderBackButton onPress={() => router.back()} /> : null,
-        // Match the header bar background to the SCREEN background so there's no
-        // contrasting white strip behind the buttons. Tint + title color follow the theme
-        // foreground so titles/icons stay readable in dark themes (B7).
-        headerStyle: { backgroundColor: t.colors.background },
-        headerTintColor: t.colors.foreground,
-        headerTitleStyle: { color: t.colors.foreground },
-        // Center the title on every platform so the bar reads neat: back (left) · title (center) ·
-        // action (right), matching iOS. (Android left-aligns titles by default.)
-        headerTitleAlign: 'center',
-        headerShadowVisible: false,
-      }}
+      // Native headers default OFF (screens opt in per route). The shared chrome — flat chevron
+      // back, centered themed title, transparent bar — comes from useAppStackScreenOptions(), the
+      // SAME hook the (auth) stack uses, so every native-header screen looks identical.
+      screenOptions={{ headerShown: false, ...headerOptions }}
     >
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="(auth)" />
