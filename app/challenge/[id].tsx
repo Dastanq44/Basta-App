@@ -27,6 +27,7 @@ import {
 } from '@/shared/ui';
 import {
   PublicChallengePreview,
+  splitChallengeTitle,
   useChallenge,
   useChallengeAccess,
   useChallengeStreak,
@@ -141,6 +142,7 @@ export default function ChallengeDetailScreen() {
   }
 
   const c = challenge.data;
+  const { emoji, name } = splitChallengeTitle(c.title);
   const isCreator = !!myUid && c.creatorId === myUid;
   const isArchived = !!c.archivedAt;
   const hostGroup = c.groupId ? groups.data?.find((g) => g.id === c.groupId) : undefined;
@@ -196,7 +198,9 @@ export default function ChallengeDetailScreen() {
         contentContainerStyle={{ padding: t.spacing.lg, paddingBottom: t.spacing.xl, gap: t.spacing.md }}
         ListHeaderComponent={
           <View style={{ gap: t.spacing.md, marginBottom: t.spacing.md }}>
-            {/* Title is owned by the ScreenHeader above — not duplicated here. */}
+            {/* On-page identity: the emoji as the challenge icon + the name (the compact title
+                still lives in the ScreenHeader above; this is the larger in-body version). */}
+            <ChallengeIdentity emoji={emoji} name={name} />
             {/* Encapsulated, divided metadata chips. */}
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.spacing.xs }}>
               <MetaChip label={formatChallengeCategory(lang, c.category)} />
@@ -391,6 +395,37 @@ function computePrimaryAction(args: {
 // --------------------------------------------------------------------------------------
 // Subcomponents
 // --------------------------------------------------------------------------------------
+
+/** On-page challenge identity — the emoji in a tinted tile (the icon) beside the name. Mirrors the
+ *  public preview so both the member and non-member views show the same header block in-body. */
+function ChallengeIdentity({ emoji, name }: { emoji: string | null; name: string }) {
+  const t = useTheme();
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.md }}>
+      <View
+        style={{
+          width: 56,
+          height: 56,
+          borderRadius: t.radius.lg,
+          backgroundColor: t.colors.primarySoft,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        {emoji ? (
+          <Text style={{ fontSize: 30 }}>{emoji}</Text>
+        ) : (
+          <Text style={{ fontSize: 22, fontWeight: '800', color: t.colors.primary }}>
+            {name.slice(0, 1).toUpperCase()}
+          </Text>
+        )}
+      </View>
+      <Text variant="title" style={{ flex: 1 }} numberOfLines={2}>
+        {name}
+      </Text>
+    </View>
+  );
+}
 
 function MetaChip({ label }: { label: string }) {
   const t = useTheme();

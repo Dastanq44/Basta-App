@@ -3,6 +3,7 @@ import { Link } from 'expo-router';
 import { Card, Icon, ProgressBar, Text, useTheme } from '@/shared/ui';
 import { formatChallengeCategory, useI18n } from '@/shared/i18n';
 import type { Challenge } from '@/entities';
+import { splitChallengeTitle } from '../model';
 
 export type ChallengeRowProps = {
   challenge: Challenge;
@@ -31,6 +32,9 @@ export function ChallengeRow({ challenge }: ChallengeRowProps) {
       ? tr('challenges.finished')
       : tr('challenges.dayOf', { current: clampedDay + 1, total });
   const statusColor = finished ? t.colors.success : upcoming ? t.colors.mutedForeground : t.colors.primary;
+  // The chosen emoji IS the challenge icon now (the old generic "document" glyph is gone). Keep the
+  // status-tinted tile; fall back to the name's initial only when a challenge has no emoji.
+  const { emoji, name } = splitChallengeTitle(challenge.title);
 
   return (
     <Link href={{ pathname: '/challenge/[id]', params: { id: challenge.id } }} asChild>
@@ -47,11 +51,17 @@ export function ChallengeRow({ challenge }: ChallengeRowProps) {
                 justifyContent: 'center',
               }}
             >
-              <Icon name="tasks" size={22} color={statusColor} />
+              {emoji ? (
+                <Text style={{ fontSize: 24 }}>{emoji}</Text>
+              ) : (
+                <Text style={{ fontSize: 18, fontWeight: '800', color: statusColor }}>
+                  {name.slice(0, 1).toUpperCase()}
+                </Text>
+              )}
             </View>
             <View style={{ flex: 1, gap: 4 }}>
               <Text variant="subtitle" numberOfLines={1}>
-                {challenge.title}
+                {name}
               </Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm }}>
                 <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: t.radius.full, backgroundColor: t.colors.primarySoft }}>

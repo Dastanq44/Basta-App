@@ -203,6 +203,7 @@ app.config.ts  eas.json  package.json                                           
 | First-launch personalization flow (Language → Theme) | `app/(onboarding)/preferences.tsx` | live (D-016) |
 | Combined Language & theme settings screen (replaces Appearance) | `app/profile/preferences.tsx` | live (D-016) |
 | Challenge icon suggestions per category + picker section map | `src/features/challenges/model/iconSuggestions.ts` | live (D-016) |
+| Split a stored challenge title into `{emoji, name}` (emoji-as-icon) | `src/features/challenges/model/title.ts` | live |
 | Theme mode (light/dark/system) + persistence | `src/shared/ui/theme/ThemeProvider.tsx` · `src/shared/lib/themePreference.ts` | live |
 | Reusable group create/join form | `src/features/groups/ui/GroupCreateOrJoinForm.tsx` | live (T-026) |
 | Group create/join modal route | `app/group/join-or-create.tsx` | live (T-026) |

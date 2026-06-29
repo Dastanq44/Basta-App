@@ -16,7 +16,7 @@ export {
 } from './hooks';
 export { getChallengeAccess, listPublicChallengeSubmissions } from './api';
 export type { ChallengeAccess, ChallengeAccessMode } from './api';
-export { CHALLENGE_CATEGORIES, createChallengeInput, updateChallengeInput, EMOJI_SUGGESTIONS, CATEGORY_EMOJI_SECTION } from './model';
+export { CHALLENGE_CATEGORIES, createChallengeInput, updateChallengeInput, EMOJI_SUGGESTIONS, CATEGORY_EMOJI_SECTION, splitChallengeTitle } from './model';
 export type { ChallengeCategory, CreateChallengeInput, UpdateChallengeInput } from './model';
 export { ChallengeRow } from './ui/ChallengeRow';
 export type { ChallengeRowProps } from './ui/ChallengeRow';

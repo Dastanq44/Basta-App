@@ -5,6 +5,7 @@ import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { BottomSheet, BottomSheetMenuItem, Icon, ProofContextStrip, Screen, ScreenHeader, Text, useTheme } from '@/shared/ui';
 import type { ProofContextItem } from '@/shared/ui';
 import { useI18n } from '@/shared/i18n';
+import { splitChallengeTitle } from '@/features/challenges';
 import { useSession } from '@/features/auth';
 import { SyncBadge, useProofSignedUrl, useSubmission } from '@/features/proofs';
 import { CommentsSection, ReactionBar } from '@/features/social';
@@ -123,6 +124,9 @@ export default function SubmissionScreen() {
     );
   };
 
+  // Split the challenge title into its emoji (shown as the row icon) + name.
+  const { emoji: challengeEmoji, name: challengeName } = splitChallengeTitle(s.challengeTitle);
+
   // Context strip rows: author · challenge (with day) · group. Always tappable — the destination
   // route resolves full member detail vs read-only public preview (or "unavailable").
   const contextItems: ProofContextItem[] = [
@@ -137,7 +141,9 @@ export default function SubmissionScreen() {
     {
       key: 'challenge',
       label: tr('submission.challenge'),
-      value: s.challengeTitle ?? tr('submission.challenge'),
+      // Show the challenge emoji as the row icon + the name on its own (not crammed together).
+      value: challengeName || tr('submission.challenge'),
+      emoji: challengeEmoji,
       sub: tr('day.n', { n: s.challengeDay + 1 }),
       onPress: () => router.push(`/challenge/${s.challengeId}` as Href),
     },

@@ -15,6 +15,8 @@ export type ProofContextItem = {
   /** When set, lead the row with an initials/image avatar instead of the eyebrow glyph. */
   avatarName?: string | null;
   avatarUri?: string | null;
+  /** When set (and no avatar), lead the row with this emoji in a tinted tile (e.g. a challenge). */
+  emoji?: string | null;
 };
 
 export type ProofContextStripProps = {
@@ -68,9 +70,13 @@ export function ProofContextStrip({ items, style }: ProofContextStripProps) {
                   justifyContent: 'center',
                 }}
               >
-                <Text style={{ color: t.colors.primary, fontWeight: '800', fontSize: t.fontSize.xs }}>
-                  {item.label.slice(0, 1).toUpperCase()}
-                </Text>
+                {item.emoji ? (
+                  <Text style={{ fontSize: 20 }}>{item.emoji}</Text>
+                ) : (
+                  <Text style={{ color: t.colors.primary, fontWeight: '800', fontSize: t.fontSize.xs }}>
+                    {item.label.slice(0, 1).toUpperCase()}
+                  </Text>
+                )}
               </View>
             )}
             <View style={{ flex: 1, gap: 1 }}>

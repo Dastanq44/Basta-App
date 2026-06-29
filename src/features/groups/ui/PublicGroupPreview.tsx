@@ -17,6 +17,7 @@ import {
   useTheme,
 } from '@/shared/ui';
 import { formatChallengeCategory, formatDays, useI18n } from '@/shared/i18n';
+import { splitChallengeTitle } from '@/features/challenges';
 import { ReportSheet } from '@/features/moderation';
 import type { Submission } from '@/entities';
 import { groupAvatarUrl, type GroupAccess, type PublicGroupChallenge } from '../api';
@@ -152,12 +153,29 @@ export function PublicGroupPreview({ access }: { access: GroupAccess }) {
 function PublicChallengeRow({ challenge, onPress }: { challenge: PublicGroupChallenge; onPress: () => void }) {
   const t = useTheme();
   const { lang } = useI18n();
+  const { emoji, name } = splitChallengeTitle(challenge.title);
   return (
     <Pressable accessibilityRole="button" onPress={onPress}>
       <Card>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.md, justifyContent: 'space-between' }}>
+          <View
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: t.radius.md,
+              backgroundColor: t.colors.primarySoft,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {emoji ? (
+              <Text style={{ fontSize: 22 }}>{emoji}</Text>
+            ) : (
+              <Text style={{ fontSize: 16, fontWeight: '800', color: t.colors.primary }}>{name.slice(0, 1).toUpperCase()}</Text>
+            )}
+          </View>
           <View style={{ flex: 1, gap: 2 }}>
-            <Text variant="subtitle" numberOfLines={1}>{challenge.title}</Text>
+            <Text variant="subtitle" numberOfLines={1}>{name}</Text>
             <Text variant="muted">{formatChallengeCategory(lang, challenge.category)} · {formatDays(lang, challenge.durationDays)}</Text>
           </View>
           <Text variant="muted">›</Text>

@@ -20,7 +20,7 @@ import {
 } from '@/shared/ui';
 import { formatChallengeCategory, formatDays, useI18n } from '@/shared/i18n';
 import { useSession } from '@/features/auth';
-import { useChallenges } from '@/features/challenges';
+import { splitChallengeTitle, useChallenges } from '@/features/challenges';
 import {
   PublicGroupPreview,
   useArchiveGroup,
@@ -474,6 +474,7 @@ function GroupChallengeRow({
 }) {
   const t = useTheme();
   const { lang } = useI18n();
+  const { emoji, name } = splitChallengeTitle(challenge.title);
   return (
     <Pressable accessibilityRole="button" onPress={onPress}>
       <Card>
@@ -485,9 +486,10 @@ function GroupChallengeRow({
             justifyContent: 'space-between',
           }}
         >
+          <ChallengeEmojiTile emoji={emoji} name={name} />
           <View style={{ flex: 1, gap: 2 }}>
             <Text variant="subtitle" numberOfLines={1}>
-              {challenge.title}
+              {name}
             </Text>
             <Text variant="muted">
               {formatChallengeCategory(lang, challenge.category)} · {formatDays(lang, challenge.durationDays)}
@@ -497,6 +499,31 @@ function GroupChallengeRow({
         </View>
       </Card>
     </Pressable>
+  );
+}
+
+/** Compact emoji-as-icon tile for a challenge row (falls back to the name's initial). */
+function ChallengeEmojiTile({ emoji, name }: { emoji: string | null; name: string }) {
+  const t = useTheme();
+  return (
+    <View
+      style={{
+        width: 40,
+        height: 40,
+        borderRadius: t.radius.md,
+        backgroundColor: t.colors.primarySoft,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      {emoji ? (
+        <Text style={{ fontSize: 22 }}>{emoji}</Text>
+      ) : (
+        <Text style={{ fontSize: 16, fontWeight: '800', color: t.colors.primary }}>
+          {name.slice(0, 1).toUpperCase()}
+        </Text>
+      )}
+    </View>
   );
 }
 

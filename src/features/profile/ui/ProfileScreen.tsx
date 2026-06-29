@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { type Href, useRouter } from 'expo-router';
 import { Card, Icon, Screen, SegmentedControl, Text, useTheme } from '@/shared/ui';
 import { useI18n } from '@/shared/i18n';
@@ -35,6 +36,7 @@ export function ProfileScreen({ userId, isOwn = false, onOpenSettings }: Profile
   const t = useTheme();
   const router = useRouter();
   const { t: tr } = useI18n();
+  const insets = useSafeAreaInsets();
 
   const profile = usePublicProfile(userId);
   const overview = useProfileOverview(userId);
@@ -184,7 +186,14 @@ export function ProfileScreen({ userId, isOwn = false, onOpenSettings }: Profile
         data={activeData}
         keyExtractor={(item) => (item as { id: string }).id}
         renderItem={renderItem}
-        contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.sm, paddingBottom: t.spacing.xxl, flexGrow: 1 }}
+        // Own tab sits under the floating bottom tab bar — clear it (+ safe-area inset) so the
+        // last row / empty-state copy is fully visible and the list always scrolls past the bar.
+        contentContainerStyle={{
+          padding: t.spacing.lg,
+          gap: t.spacing.sm,
+          paddingBottom: t.spacing.xxl + (isOwn ? insets.bottom + 64 : 0),
+          flexGrow: 1,
+        }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListHeaderComponent={header}
         showsVerticalScrollIndicator={false}

@@ -89,7 +89,6 @@ export default function GroupsScreen() {
               opacity: pressed ? 0.6 : 1,
             })}
           >
-            <Icon name="settings" size={16} color={t.colors.mutedForeground} />
             <Text variant="caption" style={{ flex: 1 }}>
               {tr('groups.archived')}{archivedCount > 0 ? ` · ${archivedCount}` : ''}
             </Text>

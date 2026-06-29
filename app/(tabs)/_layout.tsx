@@ -29,8 +29,17 @@ export default function TabsLayout() {
 /** iOS 26 native Liquid Glass tab bar — SF Symbol icons, localized labels, minimize on scroll. */
 function NativeGlassTabs({ labels }: { labels: { today: string; challenges: string; groups: string; global: string; profile: string } }) {
   const t = useTheme();
+  // Light themes: pin the bar to the theme's card color (white) so the system glass material
+  // doesn't render a muddy grey over white content (W-045). `disableTransparentOnScrollEdge`
+  // keeps that solid background at the scroll edge instead of fading to translucent grey.
+  // Dark theme is left untouched — its glass already reads well on the dark canvas.
   return (
-    <NativeTabs minimizeBehavior="onScrollDown" tintColor={t.colors.primary}>
+    <NativeTabs
+      minimizeBehavior="onScrollDown"
+      tintColor={t.colors.primary}
+      backgroundColor={t.isDark ? undefined : t.colors.card}
+      disableTransparentOnScrollEdge={!t.isDark}
+    >
       <NativeTabs.Trigger name="index">
         <NativeTabIcon sf="house.fill" />
         <Label>{labels.today}</Label>

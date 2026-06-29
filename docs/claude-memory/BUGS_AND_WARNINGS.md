@@ -13,6 +13,22 @@ Date · Area · What's wrong / the trap · Repro (if a bug) · Workaround / fix 
 
 ## Active warnings (not bugs — traps to respect)
 
+## [OPEN] W-045 — Light-theme native tab bar is pinned to `card` (white) instead of system glass
+- **Date:** 2026-06-29 · **Area:** ui / native tabs (`app/(tabs)/_layout.tsx`)
+- **What:** the iOS 26 `NativeTabs` glass material rendered **grey over white content** in the light
+  themes. We now pass `backgroundColor={t.colors.card}` + `disableTransparentOnScrollEdge` for
+  non-dark themes so the bar stays white (user request). **Dark theme is untouched** (its glass reads
+  well on the dark canvas). Trade-off: the light tab bar is now a solid card surface, not translucent
+  glass — that's intentional. If a future theme wants glass back, gate this on the specific theme id.
+
+## [OPEN] W-044 — Glass controls must be clipped by a ROUNDED PARENT, not their own `borderRadius`
+- **Date:** 2026-06-29 · **Area:** ui / glass (`src/shared/ui/glass/GlassSurface.tsx`)
+- **What:** both the native `GlassView` (iOS 26) and Android's `BlurView` **ignore a `borderRadius`
+  set on themselves** → back/3-dot controls rendered as squares. Fix: `GlassSurface` now wraps the
+  effect layer in ONE container `View` with `borderRadius + overflow:'hidden'`, and the glass/blur is
+  an `absoluteFill` sibling behind the children. Keep this structure — do NOT move the radius back
+  onto the GlassView/BlurView, or the squares return on real devices.
+
 ## [OPEN] W-043 — Liquid Glass + native tab collapse are only verifiable on real iOS 26 hardware
 - **Date:** 2026-06-29 · **Area:** ui / glass (D-018)
 - **What:** the true Apple Liquid Glass effect (`GlassView` via `isLiquidGlassAvailable()`) and the

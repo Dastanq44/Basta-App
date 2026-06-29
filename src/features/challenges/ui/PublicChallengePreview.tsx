@@ -7,6 +7,7 @@ import { ReportSheet } from '@/features/moderation';
 import type { Submission } from '@/entities';
 import type { ChallengeAccess } from '../api';
 import { usePublicChallengeSubmissions } from '../hooks';
+import { splitChallengeTitle } from '../model';
 
 const DATE_FMT: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short', day: 'numeric' };
 
@@ -20,6 +21,7 @@ export function PublicChallengePreview({ access }: { access: ChallengeAccess }) 
   const [menuOpen, setMenuOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const isGroup = access.mode === 'group';
+  const { emoji, name } = splitChallengeTitle(access.title);
 
   return (
     <Screen padded={false} edges={['top', 'bottom']}>
@@ -42,7 +44,30 @@ export function PublicChallengePreview({ access }: { access: ChallengeAccess }) 
         contentContainerStyle={{ padding: t.spacing.lg, gap: t.spacing.sm, paddingBottom: t.spacing.xl }}
         ListHeaderComponent={
           <View style={{ gap: t.spacing.md, marginBottom: t.spacing.sm }}>
-            {/* Title is owned by the ScreenHeader — not duplicated here. */}
+            {/* On-page identity: emoji-as-icon + name (the compact title also lives in the header). */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.md }}>
+              <View
+                style={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: t.radius.lg,
+                  backgroundColor: t.colors.primarySoft,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {emoji ? (
+                  <Text style={{ fontSize: 30 }}>{emoji}</Text>
+                ) : (
+                  <Text style={{ fontSize: 22, fontWeight: '800', color: t.colors.primary }}>
+                    {name.slice(0, 1).toUpperCase()}
+                  </Text>
+                )}
+              </View>
+              <Text variant="title" style={{ flex: 1 }} numberOfLines={2}>
+                {name}
+              </Text>
+            </View>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.spacing.xs }}>
               <Chip label={formatChallengeCategory(lang, access.category)} />
               <Chip label={isGroup ? (access.groupName ? `${tr('common.groups')} · ${access.groupName}` : tr('common.groups')) : tr('mode.solo')} />

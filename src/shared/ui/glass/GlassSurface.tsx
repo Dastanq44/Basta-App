@@ -30,17 +30,19 @@ export function GlassSurface({ children, tone = 'regular', radius, tintColor, bo
   const mode = useGlassMode();
   const r = radius ?? t.radius.full;
   const border = bordered ? { borderWidth: StyleSheet.hairlineWidth, borderColor: t.glass.border + '55' } : null;
-  const common: StyleProp<ViewStyle> = [{ borderRadius: r, overflow: 'hidden' }, border, style];
+  // ONE rounded, clipping container shared by every mode. The effect layer (real glass / blur /
+  // solid) is an absolutely-filled sibling BEHIND the children, and the container's
+  // `borderRadius + overflow:hidden` masks it to a true circle/capsule. This is what fixes the
+  // "squared" controls (W-044): both the native `GlassView` and Android's `BlurView` ignore a
+  // borderRadius set on themselves, but they ARE clipped by a rounded parent.
+  const container: StyleProp<ViewStyle> = [{ borderRadius: r, overflow: 'hidden' }, border, style];
 
   if (mode === 'liquid') {
     return (
-      <GlassView
-        glassEffectStyle={tone}
-        tintColor={tintColor}
-        style={[{ borderRadius: r }, border, style]}
-      >
+      <View style={container}>
+        <GlassView glassEffectStyle={tone} tintColor={tintColor} style={[StyleSheet.absoluteFill, { borderRadius: r }]} />
         {children}
-      </GlassView>
+      </View>
     );
   }
 
@@ -51,17 +53,18 @@ export function GlassSurface({ children, tone = 'regular', radius, tintColor, bo
     const overlayBase = tintColor ?? t.glass.tint;
     const overlayAlpha = tintColor ? '55' : tone === 'clear' ? (t.isDark ? '2E' : '24') : t.isDark ? '40' : '3A';
     return (
-      <BlurView intensity={intensity} tint={t.glass.blurTint} style={common}>
+      <View style={container}>
+        <BlurView intensity={intensity} tint={t.glass.blurTint} style={StyleSheet.absoluteFill} />
         {/* A subtle theme tint over the blur keeps brand identity + contrast across all 4 themes. */}
         <View style={[StyleSheet.absoluteFill, { backgroundColor: overlayBase + overlayAlpha }]} />
         {children}
-      </BlurView>
+      </View>
     );
   }
 
   // solid (Reduce Transparency) — opaque themed surface, no blur.
   return (
-    <View style={[common, { backgroundColor: tintColor ?? t.colors.card }]}>
+    <View style={[container, { backgroundColor: tintColor ?? t.colors.card }]}>
       {children}
     </View>
   );

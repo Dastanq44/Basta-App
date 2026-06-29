@@ -21,6 +21,35 @@
 
 ---
 
+## 2026-06-29 (pm) — Claude (opus) / UX polish round (6 user-reported items)
+
+**Did (NOT yet committed — awaiting user's go-ahead):** 15 files touched (+ new `model/title.ts`).
+typecheck + lint both clean. No deps, no migrations, no secrets.
+1. **Profile scrolls past the tab bar** — `ProfileScreen` FlatList `paddingBottom` now adds
+   `insets.bottom + 64` on the own tab so the empty-state copy / last row clears the floating bar.
+2. **Square back/3-dot controls → real circles** — `GlassSurface` rewritten to clip via a rounded
+   parent `View` (`overflow:hidden`) with the glass/blur as an `absoluteFill` sibling. See **W-044**.
+   Fixes squares on iOS 26 `GlassView` AND Android `BlurView` (both ignore self `borderRadius`).
+3. **Simpler crown** — `CrownIcon` is now one clean SVG path (3 peaks + base bar), was a fussy
+   multi-`View` peaks+gems build.
+4. **White theme tab bar stays white** — `NativeTabs` gets `backgroundColor={card}` +
+   `disableTransparentOnScrollEdge` for light themes (grey glass over white was the complaint). Dark
+   theme untouched. See **W-045**.
+5. **Emoji is the challenge icon everywhere** — new `splitChallengeTitle(title) → {emoji,name}`
+   (Hermes-safe, no `\p{}`) parses the stored `"<emoji> <name>"`. The old "document" (`tasks`) glyph
+   is gone; the emoji sits in the tinted tile and the name shows on its own. Applied to: `ChallengeRow`
+   (Today + Challenges), `GroupChallengeRow` (group detail), `PublicChallengeRow` (public group),
+   `ProofContextStrip` challenge row (proof post, via new `emoji` field), and **added an on-page
+   emoji+name identity block** to `challenge/[id]` (member) and `PublicChallengePreview` (the compact
+   title still lives in the ScreenHeader — both now show on the page too, per request).
+6. **Groups Archive footer** — removed the leading 3-dot (`settings`) icon; text + chevron remain.
+
+**Next up / verify on iOS 26 hardware:** circular glass controls (W-044) and the white native tab
+bar (W-045) are best confirmed on a real device. ProfileChallengeCard intentionally left as-is (it
+has no icon tile to convert).
+
+---
+
 ## 2026-06-29 — Claude (opus) / i18n completion (PATCH A) + glass/header/theme polish (PATCH B)
 
 **Did:** Two separate commits (D-018).
